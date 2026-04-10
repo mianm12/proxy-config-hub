@@ -1,0 +1,13 @@
+# File name = rule-set id, behavior defaults to classical.
+# Supported rule types: DOMAIN, DOMAIN-SUFFIX, DOMAIN-KEYWORD, IP-CIDR, IP-CIDR6
+#
+# Usage:
+# 1. Copy this file and rename it, for example `my-service.yaml`
+# 2. Insert the new source into `rules/sources.yaml`
+# 3. Set `target_group` to an existing id from GROUP_DEFINITIONS
+# 4. Commit the change and let CI publish the dist artifact later
+
+payload:
+  - DOMAIN-SUFFIX,example.com
+  - DOMAIN,www.example.com
+  - IP-CIDR,1.2.3.0/24,no-resolve
