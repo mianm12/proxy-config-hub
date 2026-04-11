@@ -777,7 +777,7 @@ _lib/
 └── validator.js           # 校验函数
 ```
 
-构建时由 `tools/bundle.js` 内联到各覆写脚本（`main.js`、`routing-only.js`、`dns-leak-fix.js`），产出自包含脚本。
+源码入口通过标准 `require()` 引用 `_lib/` 模块；v1 默认 `_lib/` 各文件互不依赖，作为独立模块维护。构建时由 `tools/bundle.js` 解析入口文件中的静态本地依赖并打包到各覆写脚本（`main.js`、`routing-only.js`、`dns-leak-fix.js`），产出自包含脚本。
 
 另外提供两个轻量替代入口：`routing-only.js` **只生成动态策略组和分流规则**，不碰 DNS / 端口 / sniffer / geodata 等运行时字段，适用于已有完整基础配置只想补上分组和规则的场景；`dns-leak-fix.js` **只注入 DNS 防泄漏配置**，不生成策略组和分流规则，适用于已有完整配置只想补 DNS 的场景。
 
@@ -983,7 +983,7 @@ proxy-config-hub/
 │
 ├── scripts/
 │   ├── override/                         # 覆写脚本（Mihomo 为主）
-│   │   ├── main.js                       # Full-profile 覆写（源码，含 @bundle-import）
+│   │   ├── main.js                       # Full-profile 覆写（源码，标准 require 依赖 _lib）
 │   │   ├── routing-only.js               # 仅路由覆写（动态策略组 + 分流规则，不碰 DNS/端口等）
 │   │   └── dns-leak-fix.js               # 仅 DNS 防泄漏（轻量替代）
 │   │
@@ -992,7 +992,7 @@ proxy-config-hub/
 │   │   ├── node-filter.js
 │   │   └── node-sort.js
 │   │
-│   └── _lib/                             # 共享工具库（构建时内联，不直接引用）
+│   └── _lib/                             # 共享工具库（源码层通过 require 引用，v1 默认互不依赖）
 │       ├── base-config.js                # BASE_CONFIG 常量
 │       ├── dns-preset.js                 # DNS_CONFIG 常量
 │       ├── proxy-utils.js                # 地区识别、节点分类
@@ -1073,7 +1073,7 @@ push to main
         │   └─ 远程 URL 可达性检查（不可达则报警，不阻断构建）
         ├─ bundle:
         │   ├─ 读取 _lib/*.js 和 sources.yaml
-        │   ├─ 按 @bundle-import 标记将工具函数内联到覆写脚本
+        │   ├─ 解析入口文件中的静态本地 require 依赖并打包到覆写脚本
         │   ├─ 将 sources.yaml 数据序列化为 SOURCES_DATA 常量内联
         │   └─ 功能脚本原样复制
         ├─ copy: rules/custom/*.yaml → dist/

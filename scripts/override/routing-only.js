@@ -1,9 +1,9 @@
 "use strict";
 
-// @bundle-inline ../_lib/group-definitions.js
-// @bundle-inline ../_lib/proxy-utils.js
-// @bundle-inline ../_lib/rule-builder.js
-// @bundle-inline ../_lib/validator.js
+const { GROUP_DEFINITIONS, GROUP_ORDER } = require("../_lib/group-definitions");
+const { buildProxyGroups, getNamedProxies } = require("../_lib/proxy-utils");
+const { buildRuleProviders } = require("../_lib/rule-builder");
+const { validate } = require("../_lib/validator");
 
 const SOURCES_DATA = __SOURCES_DATA__;
 

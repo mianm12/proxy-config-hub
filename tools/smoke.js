@@ -33,6 +33,16 @@ function withCapturedConsoleLogs(run) {
   }
 }
 
+function assertBundlePurity(relativePath) {
+  const filePath = path.join(REPO_ROOT, "dist", relativePath);
+  const bundledCode = fs.readFileSync(filePath, "utf8");
+
+  assert(!/\brequire\s*\(/.test(bundledCode), `${relativePath} should not contain require() calls`);
+  assert(!/__SOURCES_DATA__/.test(bundledCode), `${relativePath} should not contain unresolved sources placeholder`);
+  assert(!/@bundle-inline/.test(bundledCode), `${relativePath} should not contain legacy bundle-inline markers`);
+  assert(!/\.\.\/_lib\//.test(bundledCode), `${relativePath} should not reference _lib paths at runtime`);
+}
+
 function createSampleConfig() {
   return {
     proxies: [
@@ -215,6 +225,9 @@ function emitExampleConfig(outputTarget) {
 function main(argv = process.argv.slice(2)) {
   const outputTarget = resolveExampleOutputTarget(argv);
 
+  assertBundlePurity("scripts/override/main.js");
+  assertBundlePurity("scripts/override/routing-only.js");
+  assertBundlePurity("scripts/override/dns-leak-fix.js");
   testMainBundle();
   testRoutingOnlyBundle();
   testDnsOnlyBundle();

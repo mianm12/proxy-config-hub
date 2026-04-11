@@ -1,6 +1,6 @@
 "use strict";
 
-// @bundle-inline ../_lib/dns-preset.js
+const { applyDnsConfig } = require("../_lib/dns-preset");
 
 function main(config) {
   const workingConfig = config && typeof config === "object" ? config : {};
