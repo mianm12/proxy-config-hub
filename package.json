@@ -2,14 +2,18 @@
   "name": "proxy-config-hub",
   "version": "0.0.0",
   "private": true,
+  "type": "module",
   "description": "Unified proxy config repository for Mihomo and experimental Sub-Store compatibility.",
   "scripts": {
-    "validate": "node tools/validate.js",
-    "check-urls": "node tools/validate.js --check-urls",
-    "build": "node tools/bundle.js",
-    "smoke": "node tools/smoke.js"
+    "dev": "node scripts/override/main.js",
+    "rules:build": "node tools/yaml-to-js.js",
+    "build": "npm run rules:build && node build.js"
   },
   "engines": {
     "node": ">=20"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.0",
+    "esbuild-plugin-yaml": "^0.0.1"
   }
 }
