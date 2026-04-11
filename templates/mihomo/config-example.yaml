@@ -205,13 +205,21 @@ rule-providers:
     type: http
     behavior: domain
     format: yaml
-    url: https://cdn.jsdelivr.net/gh/{OWNER}/proxy-config-hub@dist/rules/provided/private.yaml
+    url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/private.yaml
     path: ./ruleset/private.yaml
+    interval: 86400
+  private-ip:
+    type: http
+    behavior: ipcidr
+    format: yaml
+    url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/private.yaml
+    path: ./ruleset/private-ip.yaml
     interval: 86400
 
 rules:
   - RULE-SET,youtube,📹 YouTube
   - RULE-SET,apple,🍎 Apple
   - RULE-SET,private,DIRECT
+  - RULE-SET,private-ip,DIRECT,no-resolve
   - GEOIP,CN,DIRECT
   - MATCH,🐟 漏网之鱼

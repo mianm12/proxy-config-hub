@@ -5,17 +5,20 @@
 为 Sub-Store、Mihomo (Clash.Meta) 建立统一配置仓库。
 
 **v1 范围（本文档）**：
+
 - 设计基线：**仅 Mihomo**
 - Sub-Store：**实验性兼容**——仅在其脚本运行环境支持 ES2018+（含负向后行断言）且满足输入契约（`config.proxies` 已展开）时可尝试复用覆写脚本；否则仅保留节点处理的功能脚本
 - 通过 raw URL 直接引用覆写脚本和规则集
 - 支持灵活添加自定义分流规则集（如 E-Hentai、Steam 等）
 
 **v1 明确不做**：
+
 - Loon / Quantumult X / Surge 适配（无目录骨架、无转换器、无 CI 产物）
 - 运行时自动回退机制
 - 通用跨平台抽象
 
 **未来工作**（v2+ 视需求再开）：
+
 - 跨平台规则格式转换
 - 多平台覆写脚本
 
@@ -38,7 +41,7 @@
 **Sub-Store 运行环境兼容矩阵**：
 
 | 部署方式 | JS 引擎 | ES2018 lookbehind | 兼容状态 |
-|---------|---------|-------------------|---------|
+| --------- | --------- | ------------------- | --------- |
 | Docker / VPS（Node.js ≥ 10） | V8 | ✅ 支持 | 已验证 |
 | Vercel / Cloudflare Workers | V8 | ✅ 支持 | 预期兼容，待验证 |
 | iOS Loon / Surge（JSC） | JavaScriptCore | ❌ 不支持 | 不兼容 |
@@ -49,7 +52,7 @@
 v1 提供三个覆写入口，覆盖不同使用场景：
 
 | 入口 | 职责 | 适用场景 |
-|------|------|---------|
+| ------ | ------ | --------- |
 | **`main.js`** | **Full-profile 覆写**：接管 DNS、端口、sniffer、geodata 等全部运行时字段 + 动态策略组 + 分流规则 | 从只有节点的裸订阅生成完整可用配置（最常用） |
 | **`routing-only.js`** | **仅路由覆写**：只生成 proxy-groups、rule-providers、rules，不碰 DNS / 端口 / sniffer / geodata 等 | 已有完整基础配置，只想补上动态分组和分流规则 |
 | **`dns-leak-fix.js`** | **仅 DNS 覆写**：只注入 DNS 防泄漏配置 | 已有完整配置，只想补 DNS 防泄漏 |
@@ -83,7 +86,7 @@ function main(config) {
 
 ```
 需要动态策略组和分流规则的脚本（main.js / routing-only.js）要求：
-  config.proxies 为已展开的节点数组（非空）
+  config.proxies 为已展开的节点数组，且至少包含一个可引用的节点名
 
 仅 DNS 覆写的脚本（dns-leak-fix.js）无此要求。
 
@@ -104,7 +107,8 @@ function main(config) {
 ```javascript
 // main.js 的空节点降级路径
 const proxies = config.proxies || [];
-if (proxies.length === 0) {
+const namedProxies = proxies.filter(p => typeof p?.name === "string" && p.name.length > 0);
+if (namedProxies.length === 0) {
   console.log("[override] ERROR: config.proxies 为空，无法生成策略组和分流规则");
   console.log("[override] 降级为 DNS-only 模式，仅注入 DNS 防泄漏，其他字段保留上游原样");
   config.dns = DNS_CONFIG;  // 仅注入 DNS，不动其他字段
@@ -113,7 +117,8 @@ if (proxies.length === 0) {
 
 // routing-only.js 的空节点降级路径
 const proxies = config.proxies || [];
-if (proxies.length === 0) {
+const namedProxies = proxies.filter(p => typeof p?.name === "string" && p.name.length > 0);
+if (namedProxies.length === 0) {
   console.log("[override] ERROR: config.proxies 为空，无法生成策略组和分流规则");
   console.log("[override] routing-only 入口不碰 DNS 和运行时字段，原样返回");
   return config;  // 不改写任何字段
@@ -134,18 +139,17 @@ if (proxies.length === 0) {
 | v1 默认格式 | meta 分支 `.yaml` 明文（可读、可改、便于调试） |
 
 **geox-url 与 rule-provider 分开管理**：
+
 - `geox-url`（geoip.dat / geosite.dat / country.mmdb）→ **release 分支**（mihomo 全局 geodata 引擎，只有二进制格式）
 - `rule-providers` → **meta 分支 yaml 明文**（具体业务分流规则，优先可读性）
 
 ### 3.2 已知缺失规则的处理
 
-meta 分支存在已知缺失（如 [Issue #108](https://github.com/MetaCubeX/meta-rules-dat/issues/108) 的 `geosite:private`）。
+`meta-rules-dat` 历史上曾缺失过 `geosite:private`。截至 **2026-04-11**，`geosite/private.yaml` 与 `geoip/private.yaml` 已可直接使用。
 
-**v1 处理方式：静态解决，不做运行时回退**。
+**v1 当前处理方式：优先复用上游，不做运行时回退**。
 
-对于已知缺失的规则，直接在本仓库 `rules/provided/` 下维护替代版本，`sources.yaml` 中 URL 直接指向本仓库 dist。不存在"远程优先 + 自动回退"的运行时机制——这种机制在 CI 构建时探活不等于用户运行时可达，且 mihomo rule-provider 本身没有 fallback URL 能力。
-
-如果 MetaCubeX 将来补上了缺失规则，维护者手动将 URL 切回远程即可。
+只有在上游确实缺失、且短期内必须落地时，才在本仓库维护替代版本。不存在"远程优先 + 自动回退"的运行时机制——这种机制在 CI 构建时探活不等于用户运行时可达，且 mihomo rule-provider 本身没有 fallback URL 能力。
 
 ### 3.3 rule-provider URL 模式
 
@@ -159,6 +163,14 @@ youtube:
   path: ./ruleset/youtube.yaml
   interval: 86400
 
+private:
+  type: http
+  behavior: domain
+  format: yaml
+  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/private.yaml"
+  path: ./ruleset/private.yaml
+  interval: 86400
+
 # 本仓库提供的规则（自定义 / 远程缺失替代）
 e-hentai:
   type: http
@@ -166,14 +178,6 @@ e-hentai:
   format: yaml
   url: "https://cdn.jsdelivr.net/gh/{OWNER}/proxy-config-hub@dist/rules/custom/e-hentai.yaml"
   path: ./ruleset/e-hentai.yaml
-  interval: 86400
-
-private:
-  type: http
-  behavior: domain
-  format: yaml
-  url: "https://cdn.jsdelivr.net/gh/{OWNER}/proxy-config-hub@dist/rules/provided/private.yaml"
-  path: ./ruleset/private.yaml
   interval: 86400
 ```
 
@@ -228,12 +232,14 @@ const REGION_PATTERNS = [
 ```
 
 **已知局限（v1）**：
+
 - 地区识别是启发式的，依赖节点名称中包含地区信息。如果节点名称无地区标识（如纯 IP 或编号），该节点会归入"其他"
 - 短 token 误匹配风险已通过边界断言 `(?<![A-Z])..(?![A-Z])` 缓解，但不能完全消除
 - 正则中使用了 ES2018 负向后行断言 `(?<!...)`。Mihomo Party / Clash Verge Rev 的 JS 引擎（QuickJS / V8）支持此语法；但 Sub-Store 在非 V8/Node 环境（如 iOS JSC）下可能不支持，需替换为前向匹配方案
 - 在 proxy-providers-only 输入下，此算法不工作（见 2.3 输入契约）
 
 **分类规则**：
+
 - 遍历节点，首个命中的 pattern 决定归属
 - 0 节点的地区不生成分组（直接跳过，不用 DIRECT 占位）
 - 未匹配任何 pattern 的节点归入隐含的 OTHER 集合（不单独建组，仅进入手动选择和自动选择）
@@ -260,11 +266,21 @@ function buildRegionGroups(regionMap) {
 
 ```javascript
 // 手动选择：包含所有节点
-{ name: "🔧 手动选择", type: "select", proxies: allProxyNames }
+{ 
+  name: "🔧 手动选择",
+  type: "select",
+  proxies: allProxyNames
+}
 
 // 自动选择：包含所有节点，自动测速
-{ name: "⚡ 自动选择", type: "url-test", proxies: allProxyNames,
-  url: "http://www.gstatic.com/generate_204", interval: 300, tolerance: 50 }
+{
+  name: "⚡ 自动选择",
+  type: "url-test",
+  proxies: allProxyNames,
+  url: "http://www.gstatic.com/generate_204",
+  interval: 300,
+  tolerance: 50
+}
 ```
 
 **关于全量节点 url-test 的已知问题**：当节点数量很大（100+）时，全量 url-test 会产生较高的测速流量。v1 先保持此设计（简单且普遍），如果实际使用中发现性能问题，可在 v2 中优化为：按地区分组各自 url-test + 顶层 fallback，或引入 `filter` 过滤掉高倍率节点。
@@ -272,8 +288,11 @@ function buildRegionGroups(regionMap) {
 ### 4.4 Step 4：生成代理选择分组
 
 ```javascript
-{ name: "🚀 代理选择", type: "select",
-  proxies: [...regionGroupNames, "🔧 手动选择", "⚡ 自动选择", "DIRECT"] }
+{
+  name: "🚀 代理选择",
+  type: "select",
+  proxies: [...regionGroupNames, "🔧 手动选择", "⚡ 自动选择", "DIRECT"]
+}
 ```
 
 ### 4.5 Step 5：生成业务分流分组
@@ -323,15 +342,15 @@ proxy-groups:
 1. sources.yaml 中所有 source 的 `id` 全局唯一（否则 providers 会被覆盖）
 2. 正向引用：每条 source 的 `target_group` 必须在 GROUP_DEFINITIONS 中已注册
 3. 反向覆盖：GROUP_DEFINITIONS 中由 RULE-SET 驱动的组（除 fallback 外）必须在 sources.yaml 中至少被一条 source 引用——防止新增业务组后忘记添加规则源
-4. custom / provided 目录下的 `.yaml` 文件 payload 语法合法
+4. custom 目录下的 `.yaml` 文件 payload 语法合法
 5. 远程 URL 可达性检查（HEAD 请求，不可达时报警但不阻断构建——这是第三方依赖，用户运行时自行承担）
 
 **运行时校验（覆写脚本 validate 函数）**：
 
-6. 空节点防护：`config.proxies` 为空则走各入口对应的降级路径（见 2.3）
-7. 空地区组不生成
-8. 引用完整性：所有 RULE-SET 引用的策略组名必须存在于 proxy-groups
-9. 业务组纯净性：业务分流组的 proxies 中不允许出现具体节点名
+1. 空节点防护：`config.proxies` 为空则走各入口对应的降级路径（见 2.3）
+2. 空地区组不生成
+3. 引用完整性：所有 RULE-SET 引用的策略组名必须存在于 proxy-groups
+4. 业务组纯净性：业务分流组的 proxies 中不允许出现具体节点名
 
 ---
 
@@ -345,37 +364,45 @@ v1 只定义有实际规则源支撑的最小集合。`mode` 含义：
 - `"direct"`：proxies = DIRECT + 代理选择
 - `"reject"`：proxies = REJECT + DIRECT
 
+实现中额外带有 `category` 字段，用于区分 `special` / `business` / `fallback` 三类分组并驱动最终输出顺序；该字段不参与 rule-provider 绑定，只服务于组装顺序。
+
 ```javascript
 // v1 只定义有实际规则源支撑的最小集合
 // 由 RULE-SET 驱动的组（非 fallback）必须在 sources.yaml 中至少有一条 source 指向它
 // fallback 组由最终 MATCH 规则自动引用，不受此约束
 const GROUP_DEFINITIONS = {
   // 特殊分组
-  ad_block:       { name: "🛑 广告拦截",   mode: "reject" },
-  private:        { name: "🏠 私有网络",   mode: "direct" },
-  cn_service:     { name: "🔒 国内服务",   mode: "direct" },
-  fallback:       { name: "🐟 漏网之鱼",   mode: "full" },
+  ad_block:       { name: "🛑 广告拦截",   mode: "reject", category: "special" },
+  private:        { name: "🏠 私有网络",   mode: "direct", category: "special" },
+  cn_service:     { name: "🔒 国内服务",   mode: "direct", category: "special" },
+  fallback:       { name: "🐟 漏网之鱼",   mode: "full", category: "fallback" },
 
   // 业务分流分组（均为 mode: "full"，每组在 sources.yaml 中有 ≥1 条规则源）
-  ai_service:     { name: "🤖 AI 服务",    mode: "full" },
-  youtube:        { name: "📹 油管视频",    mode: "full" },
-  google:         { name: "🔍 谷歌服务",    mode: "full" },
-  microsoft:      { name: "Ⓜ️ 微软服务",   mode: "full" },
-  apple:          { name: "🍏 苹果服务",    mode: "full" },
-  telegram:       { name: "📲 电报消息",    mode: "full" },
-  twitter:        { name: "🐦 推特/X",     mode: "full" },
-  meta_social:    { name: "📘 Meta 系",    mode: "full" },
-  discord:        { name: "🎙️ Discord",   mode: "full" },
-  social_other:   { name: "💬 其他社交",    mode: "full" },
-  netflix:        { name: "🎬 奈飞",       mode: "full" },
-  disney:         { name: "🏰 迪士尼+",    mode: "full" },
-  steam:          { name: "🎮 Steam",     mode: "full" },
-  game_pc:        { name: "🖥️ PC 游戏",   mode: "full" },
-  code_hosting:   { name: "🐱 代码托管",    mode: "full" },
-  cloud:          { name: "☁️ 云服务",     mode: "full" },
-  dev_tools:      { name: "🛠️ 开发工具",   mode: "full" },
-  education:      { name: "📚 教育学术",    mode: "full" },
-  non_cn:         { name: "🌍 非中国",     mode: "full" },
+  //  常用服务
+  ai_service:     { name: "🤖 AI 服务",    mode: "full", category: "business" },
+  youtube:        { name: "📹 油管视频",    mode: "full", category: "business" },
+  google:         { name: "🔍 谷歌服务",    mode: "full", category: "business" },
+  microsoft:      { name: "Ⓜ️ 微软服务",   mode: "full", category: "business" },
+  apple:          { name: "🍏 苹果服务",    mode: "full", category: "business" },
+  //  社交通讯
+  telegram:       { name: "📲 电报消息",    mode: "full", category: "business" },
+  twitter:        { name: "🐦 推特/X",     mode: "full", category: "business" },
+  meta_social:    { name: "📘 Meta 系",    mode: "full", category: "business" },
+  discord:        { name: "🎙️ Discord",   mode: "full", category: "business" },
+  social_other:   { name: "💬 其他社交",    mode: "full", category: "business" },
+  //  流媒体
+  netflix:        { name: "🎬 奈飞",       mode: "full", category: "business" },
+  disney:         { name: "🏰 迪士尼+",    mode: "full", category: "business" },
+  //  游戏平台
+  steam:          { name: "🎮 Steam",     mode: "full", category: "business" },
+  game_pc:        { name: "🖥️ PC 游戏",   mode: "full", category: "business" },
+  //  技术服务
+  code_hosting:   { name: "🐱 代码托管",    mode: "full", category: "business" },
+  cloud:          { name: "☁️ 云服务",     mode: "full", category: "business" },
+  dev_tools:      { name: "🛠️ 开发工具",   mode: "full", category: "business" },
+  //  其他
+  education:      { name: "📚 教育学术",    mode: "full", category: "business" },
+  non_cn:         { name: "🌍 非中国",     mode: "full", category: "business" },
 };
 // v2+ 按需扩展：streaming_west, streaming_asia, game_console, storage, payment, crypto, news, shopping
 ```
@@ -391,7 +418,7 @@ sources.yaml 是**单一有序列表**，声明顺序即规则匹配顺序。不
 | 字段 | 必填 | 说明 |
 |------|------|------|
 | `id` | 是 | 全局唯一，同时用作 rule-provider key |
-| `source_kind` | 是 | `geosite` / `geoip` / `custom` / `provided`（本仓库提供的远程缺失替代） |
+| `source_kind` | 是 | `geosite` / `geoip` / `custom` / `provided` |
 | `behavior` | 是 | `domain` / `ipcidr` / `classical` |
 | `format` | 是 | `yaml` / `text` / `mrs`（mihomo 合法值，v1 全部 yaml） |
 | `url` | 是 | 完整 URL |
@@ -485,18 +512,18 @@ sources:
     target_group: google
     no_resolve: true
 
-  # ── 私有网络（远程缺失，使用本仓库提供） ──
+  # ── 私有网络 ──
   - id: private
-    source_kind: provided
+    source_kind: geosite
     behavior: domain
     format: yaml
-    url: "https://cdn.jsdelivr.net/gh/{OWNER}/proxy-config-hub@dist/rules/provided/private.yaml"
+    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/private.yaml"
     target_group: private
   - id: private-ip
-    source_kind: provided
+    source_kind: geoip
     behavior: ipcidr
     format: yaml
-    url: "https://cdn.jsdelivr.net/gh/{OWNER}/proxy-config-hub@dist/rules/provided/private-ip.yaml"
+    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/private.yaml"
     target_group: private
     no_resolve: true
 
@@ -677,6 +704,7 @@ sources:
 ```
 
 **排序说明**：
+
 - 声明顺序 = 规则匹配顺序，所见即所得
 - 新增规则直接插入 YAML 列表的对应位置即可，不需要分配号段
 - 同一 target_group 的多条 source 可以分散在列表各处（如 cn_service 的 geolocation-cn 在中部、cn 在末尾），由声明位置决定匹配先后
@@ -870,7 +898,8 @@ const DNS_CONFIG = {
 function main(config) {
   // ── 输入契约检查（main.js 降级为 DNS-only） ──
   const proxies = config.proxies || [];
-  if (proxies.length === 0) {
+  const namedProxies = proxies.filter(p => typeof p?.name === "string" && p.name.length > 0);
+  if (namedProxies.length === 0) {
     console.log("[override] ERROR: config.proxies 为空，无法生成策略组和分流规则");
     console.log("[override] 降级为 DNS-only 模式，仅注入 DNS 防泄漏，其他字段保留上游原样");
     config.dns = DNS_CONFIG;  // 仅注入 DNS，不动其他字段
@@ -888,8 +917,8 @@ function main(config) {
   }
 
   // ── 动态策略组生成 ──
-  const allProxyNames = proxies.map(p => p.name);
-  const regionMap = classifyProxies(proxies);
+  const allProxyNames = namedProxies.map(p => p.name);
+  const regionMap = classifyProxies(namedProxies);
   const regionGroups = buildRegionGroups(regionMap);
   const regionGroupNames = regionGroups.map(g => g.name);
   const controlGroups = buildControlGroups(allProxyNames);
@@ -913,15 +942,16 @@ function main(config) {
 function main(config) {
   // ── 输入契约检查（routing-only 不碰 DNS，原样返回） ──
   const proxies = config.proxies || [];
-  if (proxies.length === 0) {
+  const namedProxies = proxies.filter(p => typeof p?.name === "string" && p.name.length > 0);
+  if (namedProxies.length === 0) {
     console.log("[override] ERROR: config.proxies 为空，无法生成策略组和分流规则");
     console.log("[override] routing-only 入口不碰 DNS 和运行时字段，原样返回");
     return config;  // 不改写任何字段
   }
 
   // ── 动态策略组生成（同 main.js） ──
-  const allProxyNames = proxies.map(p => p.name);
-  const regionMap = classifyProxies(proxies);
+  const allProxyNames = namedProxies.map(p => p.name);
+  const regionMap = classifyProxies(namedProxies);
   const regionGroups = buildRegionGroups(regionMap);
   const regionGroupNames = regionGroups.map(g => g.name);
   const controlGroups = buildControlGroups(allProxyNames);
@@ -975,10 +1005,6 @@ proxy-config-hub/
 │   │   ├── e-hentai.yaml
 │   │   └── _template.yaml
 │   │
-│   ├── provided/                         # 本仓库提供的替代规则（远程已知缺失的）
-│   │   ├── private.yaml                  # geosite:private 替代
-│   │   └── private-ip.yaml              # geoip:private 替代
-│   │
 │   └── sources.yaml                      # 规则源注册表（声明顺序 = 匹配顺序）
 │
 ├── templates/
@@ -1009,11 +1035,8 @@ dist/
 │       ├── node-filter.js
 │       └── node-sort.js
 └── rules/
-    ├── custom/
-    │   └── e-hentai.yaml
-    └── provided/
-        ├── private.yaml
-        └── private-ip.yaml
+    └── custom/
+        └── e-hentai.yaml
 ```
 
 ### 7.2 用户引用 URL
@@ -1046,14 +1069,14 @@ push to main
         │   ├─ sources.yaml 中 id 全局唯一
         │   ├─ 正向：每个 source 的 target_group 在 GROUP_DEFINITIONS 中已注册
         │   ├─ 反向：GROUP_DEFINITIONS 中由 RULE-SET 驱动的组（除 fallback）至少被一条 source 引用
-        │   ├─ custom/*.yaml 和 provided/*.yaml 的 payload 语法合法
+        │   ├─ custom/*.yaml 的 payload 语法合法
         │   └─ 远程 URL 可达性检查（不可达则报警，不阻断构建）
         ├─ bundle:
         │   ├─ 读取 _lib/*.js 和 sources.yaml
         │   ├─ 按 @bundle-import 标记将工具函数内联到覆写脚本
         │   ├─ 将 sources.yaml 数据序列化为 SOURCES_DATA 常量内联
         │   └─ 功能脚本原样复制
-        ├─ copy: rules/custom/*.yaml + rules/provided/*.yaml → dist/
+        ├─ copy: rules/custom/*.yaml → dist/
         └─ deploy: 推送 dist 分支
 ```
 

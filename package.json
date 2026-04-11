@@ -3,6 +3,12 @@
   "version": "0.0.0",
   "private": true,
   "description": "Unified proxy config repository for Mihomo and experimental Sub-Store compatibility.",
+  "scripts": {
+    "validate": "node tools/validate.js",
+    "check-urls": "node tools/validate.js --check-urls",
+    "build": "node tools/bundle.js",
+    "smoke": "node tools/smoke.js"
+  },
   "engines": {
     "node": ">=20"
   }
