@@ -72,6 +72,7 @@ dns:
     - "*.126.net"
     - "*.msftconnecttest.com"
     - "*.msftncsi.com"
+    - "+.steamcontent.com"
 
 profile:
   store-selected: true

@@ -62,28 +62,46 @@ fallback-filter:
 
 # 不使用 fake-ip 的域名（需要返回真实 IP）
 fake-ip-filter:
+  # 局域网与本机域名
   - "*.lan"
   - "*.local"
   - "localhost"
   # STUN
   - "stun.*.*.*"
   - "stun.*.*"
-  # NTP 时间同步
+  # NTP / 时间同步
   - "time.*.com"
   - "ntp.*.com"
   - "time.nist.gov"
   - "time.asia.apple.com"
   - "*.ntp.org.cn"
   - "*.openwrt.pool.ntp.org"
+  - "*.time.edu.cn"
   - "time1.cloud.tencent.com"
   - "time.ustc.edu.cn"
   - "pool.ntp.org"
-  # 国内音乐平台
-  - "+.music.163.com"
-  - "*.126.net"
   # QQ 快捷登录
   - "localhost.ptlogin2.qq.com"
   # 网络连通性检测
   - "*.msftconnecttest.com"
   - "*.msftncsi.com"
   - "+.market.xiaomi.com"
+  # 音乐服务兼容
+  - "+.music.163.com"
+  - "*.126.net"
+  # Steam CN
+  - "+.steamchina.com"
+  - "+.steamcontent.com"
+  - "+.steamserver.net"
+  - "csgo.wmsj.cn"
+  - "dl.steam.clngaa.com"
+  - "dl.steam.ksyna.com"
+  - "dota2.wmsj.cn"
+  - "st.dl.bscstorage.net"
+  - "st.dl.eccdnx.com"
+  - "st.dl.pinyuncloud.com"
+  - "steampipe.steamcontent.tnkjmec.com"
+  - "steampowered.com.8686c.com"
+  - "steamstatic.com.8686c.com"
+  - "wmsjsteam.com"
+  - "xz.pphimalayanrt.com"
