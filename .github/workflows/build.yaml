@@ -35,3 +35,10 @@ jobs:
           user_name: github-actions[bot]
           user_email: github-actions[bot]@users.noreply.github.com
           commit_message: "build: 更新 dist 产物"
+
+      - name: Purge jsdelivr CDN cache
+        run: |
+          for file in $(find dist -type f | sed 's|^dist/||'); do
+            curl -s "https://purge.jsdelivr.net/gh/mianm12/proxy-config-hub@dist/${file}" > /dev/null
+          done
+          echo "CDN cache purged for all dist files"
