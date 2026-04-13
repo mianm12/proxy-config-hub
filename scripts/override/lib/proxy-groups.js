@@ -161,8 +161,6 @@ function buildProxyGroups(proxies, groupDefinitions) {
     groups.push(buildConfiguredGroup(groupId, groupDefinitions[groupId], context));
   }
 
-  groups.push(...regionGroups);
-
   for (const [groupId, definition] of Object.entries(groupDefinitions)) {
     if (RESERVED_GROUP_IDS.includes(groupId) || groupId === FALLBACK_GROUP_ID) {
       continue;
@@ -170,6 +168,8 @@ function buildProxyGroups(proxies, groupDefinitions) {
 
     groups.push(buildConfiguredGroup(groupId, definition, context));
   }
+
+  groups.push(...regionGroups);
 
   groups.push(buildConfiguredGroup(FALLBACK_GROUP_ID, groupDefinitions[FALLBACK_GROUP_ID], context));
   return groups;
