@@ -25,7 +25,8 @@ export default {
       "path": "./ruleset/private-ip.mrs",
       "interval": 86400,
       "format": "mrs",
-      "target-group": "private"
+      "target-group": "private",
+      "no-resolve": true
     },
     "category-ai-chat-!cn": {
       "type": "http",
@@ -133,7 +134,8 @@ export default {
       "path": "./ruleset/telegram-ip.mrs",
       "interval": 86400,
       "format": "mrs",
-      "target-group": "telegram"
+      "target-group": "telegram",
+      "no-resolve": true
     },
     "twitter": {
       "type": "http",
@@ -151,7 +153,8 @@ export default {
       "path": "./ruleset/twitter-ip.mrs",
       "interval": 86400,
       "format": "mrs",
-      "target-group": "twitter"
+      "target-group": "twitter",
+      "no-resolve": true
     },
     "facebook": {
       "type": "http",
@@ -187,7 +190,8 @@ export default {
       "path": "./ruleset/facebook-ip.mrs",
       "interval": 86400,
       "format": "mrs",
-      "target-group": "meta_social"
+      "target-group": "meta_social",
+      "no-resolve": true
     },
     "discord": {
       "type": "http",
@@ -277,7 +281,8 @@ export default {
       "path": "./ruleset/netflix-ip.mrs",
       "interval": 86400,
       "format": "mrs",
-      "target-group": "netflix"
+      "target-group": "netflix",
+      "no-resolve": true
     },
     "disney": {
       "type": "http",
@@ -556,7 +561,8 @@ export default {
       "path": "./ruleset/google-ip.mrs",
       "interval": 86400,
       "format": "mrs",
-      "target-group": "google"
+      "target-group": "google",
+      "no-resolve": true
     },
     "apple": {
       "type": "http",
@@ -754,7 +760,8 @@ export default {
       "path": "./ruleset/cloudflare-ip.mrs",
       "interval": 86400,
       "format": "mrs",
-      "target-group": "cloud_service"
+      "target-group": "cloud_service",
+      "no-resolve": true
     },
     "microsoft": {
       "type": "http",
@@ -826,7 +833,8 @@ export default {
       "path": "./ruleset/cn-ip.mrs",
       "interval": 86400,
       "format": "mrs",
-      "target-group": "cn_service"
+      "target-group": "cn_service",
+      "no-resolve": true
     }
   }
 };

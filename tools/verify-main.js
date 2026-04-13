@@ -10,6 +10,45 @@ import {
   stringifyExampleConfig,
 } from "./lib/bundle-runtime.js";
 
+const IP_RULE_PROVIDER_IDS = [
+  "private-ip",
+  "telegram-ip",
+  "twitter-ip",
+  "facebook-ip",
+  "netflix-ip",
+  "google-ip",
+  "cloudflare-ip",
+  "cn-ip",
+];
+
+const EXPECTED_DEFAULT_NAMESERVERS = [
+  "180.76.76.76",
+  "182.254.118.118",
+  "119.29.29.29",
+  "223.5.5.5",
+];
+
+const EXPECTED_NAMESERVERS = [
+  "180.76.76.76",
+  "119.29.29.29",
+  "180.184.1.1",
+  "223.5.5.5",
+  "https://223.6.6.6/dns-query#h3=true",
+  "https://dns.alidns.com/dns-query",
+  "https://doh.pub/dns-query",
+];
+
+const EXPECTED_FALLBACK_NAMESERVERS = [
+  "https://000000.dns.nextdns.io/dns-query#h3=true",
+  "https://public.dns.iij.jp/dns-query",
+  "https://101.101.101.101/dns-query",
+  "https://208.67.220.220/dns-query",
+  "tls://8.8.4.4",
+  "tls://1.0.0.1:853",
+  "https://cloudflare-dns.com/dns-query",
+  "https://dns.google/dns-query",
+];
+
 function assertGeneratedFiles() {
   const requiredFiles = [
     path.join(REPO_ROOT, "scripts", "config", "rules", "groupDefinitions.js"),
@@ -43,6 +82,9 @@ function testBundlePositivePath() {
   const { main, bundleCode } = loadBundleRuntime();
   assert.equal(typeof main, "function", "bundle should expose main()");
   const result = main({ proxies: loadTemplateProxies() });
+  const defaultNameservers = Array.from(result.dns["default-nameserver"]);
+  const nameservers = Array.from(result.dns.nameserver);
+  const fallbackNameservers = Array.from(result.dns.fallback);
 
   assert.equal(result["mixed-port"], 7897, "runtime base config should be applied");
   assert.equal(result.profile["store-selected"], true, "runtime profile config should be applied");
@@ -51,6 +93,26 @@ function testBundlePositivePath() {
   assert.ok(Array.isArray(result["proxy-groups"]) && result["proxy-groups"].length > 0, "proxy groups should be generated");
   assert.ok(result["rule-providers"]?.youtube, "rule providers should be generated");
   assert.ok(!("target-group" in result["rule-providers"].youtube), "rule-provider metadata should be stripped");
+  assert.deepEqual(defaultNameservers, EXPECTED_DEFAULT_NAMESERVERS, "default nameservers should use stable domestic bootstrap resolvers");
+  assert.deepEqual(nameservers, EXPECTED_NAMESERVERS, "nameserver should only contain domestic resolvers");
+  assert.deepEqual(fallbackNameservers, EXPECTED_FALLBACK_NAMESERVERS, "fallback should only contain foreign resolvers");
+  assert.equal(result.dns["fallback-filter"]["geoip-code"], "CN", "fallback filter should explicitly target CN");
+  assert.ok(!defaultNameservers.includes("180.184.2.2"), "default nameserver should exclude unstable bootstrap resolver");
+  assert.ok(!nameservers.includes("8.8.8.8"), "nameserver should exclude foreign plain DNS");
+  assert.ok(!nameservers.includes("https://cloudflare-dns.com/dns-query"), "nameserver should exclude foreign DoH");
+  assert.ok(!fallbackNameservers.includes("https://dns.alidns.com/dns-query"), "fallback should exclude domestic DoH");
+  assert.ok(!fallbackNameservers.includes("https://doh.pub/dns-query"), "fallback should exclude domestic DoH");
+
+  for (const providerId of IP_RULE_PROVIDER_IDS) {
+    assert.ok(result["rule-providers"]?.[providerId], `missing generated rule provider: ${providerId}`);
+    assert.ok(!("target-group" in result["rule-providers"][providerId]), `rule provider should strip target-group metadata: ${providerId}`);
+    assert.ok(!("no-resolve" in result["rule-providers"][providerId]), `rule provider should strip no-resolve metadata: ${providerId}`);
+    assert.ok(
+      result.rules.some((rule) => rule.startsWith(`RULE-SET,${providerId},`) && rule.endsWith(",no-resolve")),
+      `ipcidr rule should be emitted with no-resolve: ${providerId}`,
+    );
+  }
+
   assert.equal(result.rules.at(-1), "MATCH,🐟 漏网之鱼", "fallback rule should be appended");
   assert.ok(!bundleCode.includes("definitions/rules/registry"), "bundle must not reference canonical YAML paths");
   assert.ok(!bundleCode.includes("definitions/runtime"), "bundle must not reference runtime YAML paths");

@@ -26,6 +26,7 @@ ruleProviders:
     interval: 86400
     format: mrs
     target-group: private
+    no-resolve: true
 
   # 专用业务规则
   ## AI 服务
@@ -128,6 +129,7 @@ ruleProviders:
     interval: 86400
     format: mrs
     target-group: telegram
+    no-resolve: true
   ## 推特/X
   twitter:
     type: http
@@ -145,6 +147,7 @@ ruleProviders:
     interval: 86400
     format: mrs
     target-group: twitter
+    no-resolve: true
   ## Meta 系
   facebook:
     type: http
@@ -178,6 +181,7 @@ ruleProviders:
     interval: 86400
     format: mrs
     target-group: meta_social
+    no-resolve: true
   ## Discord
   discord:
     type: http
@@ -261,6 +265,7 @@ ruleProviders:
     interval: 86400
     format: mrs
     target-group: netflix
+    no-resolve: true
   ## 迪士尼+
   disney:
     type: http
@@ -520,6 +525,7 @@ ruleProviders:
     interval: 86400
     format: mrs
     target-group: google
+    no-resolve: true
   ## 苹果服务
   apple:
     type: http
@@ -703,6 +709,7 @@ ruleProviders:
     interval: 86400
     format: mrs
     target-group: cloud_service
+    no-resolve: true
   ## 微软服务
   microsoft:
     type: http
@@ -774,3 +781,4 @@ ruleProviders:
     interval: 86400
     format: mrs
     target-group: cn_service
+    no-resolve: true
