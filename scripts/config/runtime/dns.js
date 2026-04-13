@@ -2,6 +2,8 @@ export default {
   "enable": true,
   "listen": "127.0.0.1:5335",
   "use-system-hosts": false,
+  "ipv6": false,
+  "respect-rules": true,
   "enhanced-mode": "fake-ip",
   "fake-ip-range": "198.18.0.1/16",
   "default-nameserver": [
@@ -11,16 +13,24 @@ export default {
     "223.5.5.5"
   ],
   "nameserver": [
-    "180.76.76.76",
-    "119.29.29.29",
-    "180.184.1.1",
-    "223.5.5.5",
-    "https://223.6.6.6/dns-query#h3=true",
+    "https://223.6.6.6/dns-query",
     "https://dns.alidns.com/dns-query",
     "https://doh.pub/dns-query"
   ],
+  "proxy-server-nameserver": [
+    "180.76.76.76",
+    "182.254.118.118",
+    "119.29.29.29",
+    "223.5.5.5"
+  ],
+  "direct-nameserver": [
+    "https://223.6.6.6/dns-query",
+    "https://dns.alidns.com/dns-query",
+    "https://doh.pub/dns-query"
+  ],
+  "direct-nameserver-follow-policy": true,
   "fallback": [
-    "https://000000.dns.nextdns.io/dns-query#h3=true",
+    "https://000000.dns.nextdns.io/dns-query",
     "https://public.dns.iij.jp/dns-query",
     "https://101.101.101.101/dns-query",
     "https://208.67.220.220/dns-query",

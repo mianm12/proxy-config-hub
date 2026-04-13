@@ -29,17 +29,13 @@ const EXPECTED_DEFAULT_NAMESERVERS = [
 ];
 
 const EXPECTED_NAMESERVERS = [
-  "180.76.76.76",
-  "119.29.29.29",
-  "180.184.1.1",
-  "223.5.5.5",
-  "https://223.6.6.6/dns-query#h3=true",
+  "https://223.6.6.6/dns-query",
   "https://dns.alidns.com/dns-query",
   "https://doh.pub/dns-query",
 ];
 
 const EXPECTED_FALLBACK_NAMESERVERS = [
-  "https://000000.dns.nextdns.io/dns-query#h3=true",
+  "https://000000.dns.nextdns.io/dns-query",
   "https://public.dns.iij.jp/dns-query",
   "https://101.101.101.101/dns-query",
   "https://208.67.220.220/dns-query",
@@ -88,21 +84,29 @@ function testBundlePositivePath() {
   const defaultNameservers = Array.from(result.dns["default-nameserver"]);
   const nameservers = Array.from(result.dns.nameserver);
   const fallbackNameservers = Array.from(result.dns.fallback);
+  const proxyServerNameservers = Array.from(result.dns["proxy-server-nameserver"]);
+  const directNameservers = Array.from(result.dns["direct-nameserver"]);
 
   assert.equal(result["mixed-port"], 7897, "runtime base config should be applied");
   assert.equal(result.profile["store-selected"], true, "runtime profile config should be applied");
   assert.equal(result["geodata-mode"], true, "runtime geodata config should be applied");
   assert.equal(result.dns.enable, true, "dns preset should be applied");
+  assert.equal(result.dns.ipv6, false, "dns preset should disable ipv6 for leak resistance");
+  assert.equal(result.dns["respect-rules"], true, "dns preset should force dns connections to follow rules");
   assert.ok(Array.isArray(result["proxy-groups"]) && result["proxy-groups"].length > 0, "proxy groups should be generated");
   assert.ok(result["rule-providers"]?.youtube, "rule providers should be generated");
   assert.ok(!("target-group" in result["rule-providers"].youtube), "rule-provider metadata should be stripped");
   assert.deepEqual(defaultNameservers, EXPECTED_DEFAULT_NAMESERVERS, "default nameservers should use stable domestic bootstrap resolvers");
-  assert.deepEqual(nameservers, EXPECTED_NAMESERVERS, "nameserver should only contain domestic resolvers");
+  assert.deepEqual(nameservers, EXPECTED_NAMESERVERS, "nameserver should only contain encrypted domestic resolvers");
   assert.deepEqual(fallbackNameservers, EXPECTED_FALLBACK_NAMESERVERS, "fallback should only contain foreign resolvers");
+  assert.deepEqual(proxyServerNameservers, EXPECTED_DEFAULT_NAMESERVERS, "proxy server nameserver should reuse bootstrap resolvers");
+  assert.deepEqual(directNameservers, EXPECTED_NAMESERVERS, "direct nameserver should use encrypted domestic resolvers");
+  assert.equal(result.dns["direct-nameserver-follow-policy"], true, "direct nameserver should follow policy");
   assert.equal(result.dns["fallback-filter"]["geoip-code"], "CN", "fallback filter should explicitly target CN");
   assert.ok(!defaultNameservers.includes("180.184.2.2"), "default nameserver should exclude unstable bootstrap resolver");
   assert.ok(!nameservers.includes("8.8.8.8"), "nameserver should exclude foreign plain DNS");
   assert.ok(!nameservers.includes("https://cloudflare-dns.com/dns-query"), "nameserver should exclude foreign DoH");
+  assert.ok(!nameservers.includes("180.76.76.76"), "nameserver should exclude plain DNS bootstrap resolvers");
   assert.ok(!fallbackNameservers.includes("https://dns.alidns.com/dns-query"), "fallback should exclude domestic DoH");
   assert.ok(!fallbackNameservers.includes("https://doh.pub/dns-query"), "fallback should exclude domestic DoH");
 

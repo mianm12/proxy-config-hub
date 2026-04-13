@@ -1,5 +1,9 @@
-# TUN 模式配置（默认关闭）
-enable: false
+# TUN 模式配置
+enable: true
 stack: system
 auto-route: true
 auto-detect-interface: true
+dns-hijack:
+  - any:53
+  - tcp://any:53
+strict-route: true

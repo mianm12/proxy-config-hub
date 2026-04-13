@@ -2,6 +2,8 @@
 enable: true
 listen: "127.0.0.1:5335"
 use-system-hosts: false
+ipv6: false
+respect-rules: true
 enhanced-mode: fake-ip
 fake-ip-range: 198.18.0.1/16
 
@@ -12,19 +14,29 @@ default-nameserver:
   - 119.29.29.29
   - 223.5.5.5
 
-# 国内 DNS（仅用于解析国内域名）
+# 国内 DNS（仅用于解析国内域名，优先使用加密 DNS）
 nameserver:
-  - 180.76.76.76
-  - 119.29.29.29
-  - 180.184.1.1
-  - 223.5.5.5
-  - https://223.6.6.6/dns-query#h3=true
+  - https://223.6.6.6/dns-query
   - https://dns.alidns.com/dns-query
   - https://doh.pub/dns-query
 
+# 代理节点域名解析使用引导 DNS，避免循环依赖
+proxy-server-nameserver:
+  - 180.76.76.76
+  - 182.254.118.118
+  - 119.29.29.29
+  - 223.5.5.5
+
+# 直连流量使用国内加密 DNS，且继续遵循策略
+direct-nameserver:
+  - https://223.6.6.6/dns-query
+  - https://dns.alidns.com/dns-query
+  - https://doh.pub/dns-query
+direct-nameserver-follow-policy: true
+
 # 国外 DNS（仅用于解析被污染的国外域名）
 fallback:
-  - https://000000.dns.nextdns.io/dns-query#h3=true
+  - https://000000.dns.nextdns.io/dns-query
   - https://public.dns.iij.jp/dns-query
   - https://101.101.101.101/dns-query
   - https://208.67.220.220/dns-query
