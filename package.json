@@ -14,7 +14,7 @@
     "verify": "npm run build && npm run verify:main && npm run verify:migration"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=24"
   },
   "devDependencies": {
     "esbuild": "^0.28.0",
