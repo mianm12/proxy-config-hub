@@ -3,7 +3,7 @@ export default {
     "category-ads-all": {
       "type": "http",
       "behavior": "domain",
-      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geosite/category-ads-all.mrs",
+      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/category-ads-all.mrs",
       "path": "./ruleset/category-ads-all.mrs",
       "interval": 86400,
       "format": "mrs",
@@ -12,7 +12,7 @@ export default {
     "private": {
       "type": "http",
       "behavior": "domain",
-      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geosite/private.mrs",
+      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/private.mrs",
       "path": "./ruleset/private.mrs",
       "interval": 86400,
       "format": "mrs",
@@ -21,7 +21,7 @@ export default {
     "private-ip": {
       "type": "http",
       "behavior": "ipcidr",
-      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geoip/private.mrs",
+      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/private.mrs",
       "path": "./ruleset/private-ip.mrs",
       "interval": 86400,
       "format": "mrs",
@@ -30,7 +30,7 @@ export default {
     "category-ai-chat-!cn": {
       "type": "http",
       "behavior": "domain",
-      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geosite/category-ai-chat-!cn.mrs",
+      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/category-ai-chat-!cn.mrs",
       "path": "./ruleset/category-ai-chat-!cn.mrs",
       "interval": 86400,
       "format": "mrs",
@@ -39,7 +39,7 @@ export default {
     "openai": {
       "type": "http",
       "behavior": "domain",
-      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geosite/openai.mrs",
+      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/openai.mrs",
       "path": "./ruleset/openai.mrs",
       "interval": 86400,
       "format": "mrs",
@@ -48,7 +48,7 @@ export default {
     "anthropic": {
       "type": "http",
       "behavior": "domain",
-      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geosite/anthropic.mrs",
+      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/anthropic.mrs",
       "path": "./ruleset/anthropic.mrs",
       "interval": 86400,
       "format": "mrs",
@@ -57,7 +57,7 @@ export default {
     "youtube": {
       "type": "http",
       "behavior": "domain",
-      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geosite/youtube.mrs",
+      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/youtube.mrs",
       "path": "./ruleset/youtube.mrs",
       "interval": 86400,
       "format": "mrs",
@@ -66,7 +66,7 @@ export default {
     "category-scholar-!cn": {
       "type": "http",
       "behavior": "domain",
-      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geosite/category-scholar-!cn.mrs",
+      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/category-scholar-!cn.mrs",
       "path": "./ruleset/category-scholar-!cn.mrs",
       "interval": 86400,
       "format": "mrs",
@@ -75,7 +75,7 @@ export default {
     "coursera": {
       "type": "http",
       "behavior": "domain",
-      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geosite/coursera.mrs",
+      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/coursera.mrs",
       "path": "./ruleset/coursera.mrs",
       "interval": 86400,
       "format": "mrs",
@@ -84,7 +84,7 @@ export default {
     "udemy": {
       "type": "http",
       "behavior": "domain",
-      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geosite/udemy.mrs",
+      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/udemy.mrs",
       "path": "./ruleset/udemy.mrs",
       "interval": 86400,
       "format": "mrs",
@@ -93,7 +93,7 @@ export default {
     "edx": {
       "type": "http",
       "behavior": "domain",
-      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geosite/edx.mrs",
+      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/edx.mrs",
       "path": "./ruleset/edx.mrs",
       "interval": 86400,
       "format": "mrs",
@@ -102,7 +102,7 @@ export default {
     "khanacademy": {
       "type": "http",
       "behavior": "domain",
-      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geosite/khanacademy.mrs",
+      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/khanacademy.mrs",
       "path": "./ruleset/khanacademy.mrs",
       "interval": 86400,
       "format": "mrs",
@@ -111,7 +111,7 @@ export default {
     "wikimedia": {
       "type": "http",
       "behavior": "domain",
-      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geosite/wikimedia.mrs",
+      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/wikimedia.mrs",
       "path": "./ruleset/wikimedia.mrs",
       "interval": 86400,
       "format": "mrs",
@@ -120,7 +120,7 @@ export default {
     "telegram": {
       "type": "http",
       "behavior": "domain",
-      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geosite/telegram.mrs",
+      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/telegram.mrs",
       "path": "./ruleset/telegram.mrs",
       "interval": 86400,
       "format": "mrs",
@@ -129,7 +129,7 @@ export default {
     "telegram-ip": {
       "type": "http",
       "behavior": "ipcidr",
-      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geoip/telegram.mrs",
+      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/telegram.mrs",
       "path": "./ruleset/telegram-ip.mrs",
       "interval": 86400,
       "format": "mrs",
@@ -138,7 +138,7 @@ export default {
     "twitter": {
       "type": "http",
       "behavior": "domain",
-      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geosite/twitter.mrs",
+      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/twitter.mrs",
       "path": "./ruleset/twitter.mrs",
       "interval": 86400,
       "format": "mrs",
@@ -147,7 +147,7 @@ export default {
     "twitter-ip": {
       "type": "http",
       "behavior": "ipcidr",
-      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geoip/twitter.mrs",
+      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/twitter.mrs",
       "path": "./ruleset/twitter-ip.mrs",
       "interval": 86400,
       "format": "mrs",
@@ -156,7 +156,7 @@ export default {
     "facebook": {
       "type": "http",
       "behavior": "domain",
-      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geosite/facebook.mrs",
+      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/facebook.mrs",
       "path": "./ruleset/facebook.mrs",
       "interval": 86400,
       "format": "mrs",
@@ -165,7 +165,7 @@ export default {
     "instagram": {
       "type": "http",
       "behavior": "domain",
-      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geosite/instagram.mrs",
+      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/instagram.mrs",
       "path": "./ruleset/instagram.mrs",
       "interval": 86400,
       "format": "mrs",
@@ -174,7 +174,7 @@ export default {
     "whatsapp": {
       "type": "http",
       "behavior": "domain",
-      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geosite/whatsapp.mrs",
+      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/whatsapp.mrs",
       "path": "./ruleset/whatsapp.mrs",
       "interval": 86400,
       "format": "mrs",
@@ -183,7 +183,7 @@ export default {
     "facebook-ip": {
       "type": "http",
       "behavior": "ipcidr",
-      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geoip/facebook.mrs",
+      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/facebook.mrs",
       "path": "./ruleset/facebook-ip.mrs",
       "interval": 86400,
       "format": "mrs",
@@ -192,7 +192,7 @@ export default {
     "discord": {
       "type": "http",
       "behavior": "domain",
-      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geosite/discord.mrs",
+      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/discord.mrs",
       "path": "./ruleset/discord.mrs",
       "interval": 86400,
       "format": "mrs",
@@ -201,7 +201,7 @@ export default {
     "tiktok": {
       "type": "http",
       "behavior": "domain",
-      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geosite/tiktok.mrs",
+      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/tiktok.mrs",
       "path": "./ruleset/tiktok.mrs",
       "interval": 86400,
       "format": "mrs",
@@ -210,7 +210,7 @@ export default {
     "line": {
       "type": "http",
       "behavior": "domain",
-      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geosite/line.mrs",
+      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/line.mrs",
       "path": "./ruleset/line.mrs",
       "interval": 86400,
       "format": "mrs",
@@ -219,7 +219,7 @@ export default {
     "reddit": {
       "type": "http",
       "behavior": "domain",
-      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geosite/reddit.mrs",
+      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/reddit.mrs",
       "path": "./ruleset/reddit.mrs",
       "interval": 86400,
       "format": "mrs",
@@ -228,7 +228,7 @@ export default {
     "linkedin": {
       "type": "http",
       "behavior": "domain",
-      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geosite/linkedin.mrs",
+      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/linkedin.mrs",
       "path": "./ruleset/linkedin.mrs",
       "interval": 86400,
       "format": "mrs",
@@ -237,7 +237,7 @@ export default {
     "snap": {
       "type": "http",
       "behavior": "domain",
-      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geosite/snap.mrs",
+      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/snap.mrs",
       "path": "./ruleset/snap.mrs",
       "interval": 86400,
       "format": "mrs",
@@ -246,7 +246,7 @@ export default {
     "pinterest": {
       "type": "http",
       "behavior": "domain",
-      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geosite/pinterest.mrs",
+      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/pinterest.mrs",
       "path": "./ruleset/pinterest.mrs",
       "interval": 86400,
       "format": "mrs",
@@ -255,7 +255,7 @@ export default {
     "tumblr": {
       "type": "http",
       "behavior": "domain",
-      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geosite/tumblr.mrs",
+      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/tumblr.mrs",
       "path": "./ruleset/tumblr.mrs",
       "interval": 86400,
       "format": "mrs",
@@ -264,7 +264,7 @@ export default {
     "netflix": {
       "type": "http",
       "behavior": "domain",
-      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geosite/netflix.mrs",
+      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/netflix.mrs",
       "path": "./ruleset/netflix.mrs",
       "interval": 86400,
       "format": "mrs",
@@ -273,7 +273,7 @@ export default {
     "netflix-ip": {
       "type": "http",
       "behavior": "ipcidr",
-      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geoip/netflix.mrs",
+      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/netflix.mrs",
       "path": "./ruleset/netflix-ip.mrs",
       "interval": 86400,
       "format": "mrs",
@@ -282,7 +282,7 @@ export default {
     "disney": {
       "type": "http",
       "behavior": "domain",
-      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geosite/disney.mrs",
+      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/disney.mrs",
       "path": "./ruleset/disney.mrs",
       "interval": 86400,
       "format": "mrs",
@@ -291,7 +291,7 @@ export default {
     "apple-tvplus": {
       "type": "http",
       "behavior": "domain",
-      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geosite/apple-tvplus.mrs",
+      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/apple-tvplus.mrs",
       "path": "./ruleset/apple-tvplus.mrs",
       "interval": 86400,
       "format": "mrs",
@@ -300,7 +300,7 @@ export default {
     "hbo": {
       "type": "http",
       "behavior": "domain",
-      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geosite/hbo.mrs",
+      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/hbo.mrs",
       "path": "./ruleset/hbo.mrs",
       "interval": 86400,
       "format": "mrs",
@@ -309,7 +309,7 @@ export default {
     "hulu": {
       "type": "http",
       "behavior": "domain",
-      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geosite/hulu.mrs",
+      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/hulu.mrs",
       "path": "./ruleset/hulu.mrs",
       "interval": 86400,
       "format": "mrs",
@@ -318,7 +318,7 @@ export default {
     "primevideo": {
       "type": "http",
       "behavior": "domain",
-      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geosite/primevideo.mrs",
+      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/primevideo.mrs",
       "path": "./ruleset/primevideo.mrs",
       "interval": 86400,
       "format": "mrs",
@@ -327,7 +327,7 @@ export default {
     "spotify": {
       "type": "http",
       "behavior": "domain",
-      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geosite/spotify.mrs",
+      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/spotify.mrs",
       "path": "./ruleset/spotify.mrs",
       "interval": 86400,
       "format": "mrs",
@@ -336,7 +336,7 @@ export default {
     "twitch": {
       "type": "http",
       "behavior": "domain",
-      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geosite/twitch.mrs",
+      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/twitch.mrs",
       "path": "./ruleset/twitch.mrs",
       "interval": 86400,
       "format": "mrs",
@@ -345,7 +345,7 @@ export default {
     "dazn": {
       "type": "http",
       "behavior": "domain",
-      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geosite/dazn.mrs",
+      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/dazn.mrs",
       "path": "./ruleset/dazn.mrs",
       "interval": 86400,
       "format": "mrs",
@@ -354,7 +354,7 @@ export default {
     "bahamut": {
       "type": "http",
       "behavior": "domain",
-      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geosite/bahamut.mrs",
+      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/bahamut.mrs",
       "path": "./ruleset/bahamut.mrs",
       "interval": 86400,
       "format": "mrs",
@@ -363,7 +363,7 @@ export default {
     "biliintl": {
       "type": "http",
       "behavior": "domain",
-      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geosite/biliintl.mrs",
+      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/biliintl.mrs",
       "path": "./ruleset/biliintl.mrs",
       "interval": 86400,
       "format": "mrs",
@@ -372,7 +372,7 @@ export default {
     "niconico": {
       "type": "http",
       "behavior": "domain",
-      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geosite/niconico.mrs",
+      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/niconico.mrs",
       "path": "./ruleset/niconico.mrs",
       "interval": 86400,
       "format": "mrs",
@@ -381,7 +381,7 @@ export default {
     "abema": {
       "type": "http",
       "behavior": "domain",
-      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geosite/abema.mrs",
+      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/abema.mrs",
       "path": "./ruleset/abema.mrs",
       "interval": 86400,
       "format": "mrs",
@@ -390,7 +390,7 @@ export default {
     "viu": {
       "type": "http",
       "behavior": "domain",
-      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geosite/viu.mrs",
+      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/viu.mrs",
       "path": "./ruleset/viu.mrs",
       "interval": 86400,
       "format": "mrs",
@@ -399,7 +399,7 @@ export default {
     "kktv": {
       "type": "http",
       "behavior": "domain",
-      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geosite/kktv.mrs",
+      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/kktv.mrs",
       "path": "./ruleset/kktv.mrs",
       "interval": 86400,
       "format": "mrs",
@@ -408,7 +408,7 @@ export default {
     "steam": {
       "type": "http",
       "behavior": "domain",
-      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geosite/steam.mrs",
+      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/steam.mrs",
       "path": "./ruleset/steam.mrs",
       "interval": 86400,
       "format": "mrs",
@@ -417,7 +417,7 @@ export default {
     "epicgames": {
       "type": "http",
       "behavior": "domain",
-      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geosite/epicgames.mrs",
+      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/epicgames.mrs",
       "path": "./ruleset/epicgames.mrs",
       "interval": 86400,
       "format": "mrs",
@@ -426,7 +426,7 @@ export default {
     "ea": {
       "type": "http",
       "behavior": "domain",
-      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geosite/ea.mrs",
+      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/ea.mrs",
       "path": "./ruleset/ea.mrs",
       "interval": 86400,
       "format": "mrs",
@@ -435,7 +435,7 @@ export default {
     "ubisoft": {
       "type": "http",
       "behavior": "domain",
-      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geosite/ubisoft.mrs",
+      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/ubisoft.mrs",
       "path": "./ruleset/ubisoft.mrs",
       "interval": 86400,
       "format": "mrs",
@@ -444,7 +444,7 @@ export default {
     "blizzard": {
       "type": "http",
       "behavior": "domain",
-      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geosite/blizzard.mrs",
+      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/blizzard.mrs",
       "path": "./ruleset/blizzard.mrs",
       "interval": 86400,
       "format": "mrs",
@@ -453,7 +453,7 @@ export default {
     "gog": {
       "type": "http",
       "behavior": "domain",
-      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geosite/gog.mrs",
+      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/gog.mrs",
       "path": "./ruleset/gog.mrs",
       "interval": 86400,
       "format": "mrs",
@@ -462,7 +462,7 @@ export default {
     "riot": {
       "type": "http",
       "behavior": "domain",
-      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geosite/riot.mrs",
+      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/riot.mrs",
       "path": "./ruleset/riot.mrs",
       "interval": 86400,
       "format": "mrs",
@@ -471,7 +471,7 @@ export default {
     "playstation": {
       "type": "http",
       "behavior": "domain",
-      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geosite/playstation.mrs",
+      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/playstation.mrs",
       "path": "./ruleset/playstation.mrs",
       "interval": 86400,
       "format": "mrs",
@@ -480,7 +480,7 @@ export default {
     "xbox": {
       "type": "http",
       "behavior": "domain",
-      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geosite/xbox.mrs",
+      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/xbox.mrs",
       "path": "./ruleset/xbox.mrs",
       "interval": 86400,
       "format": "mrs",
@@ -489,7 +489,7 @@ export default {
     "nintendo": {
       "type": "http",
       "behavior": "domain",
-      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geosite/nintendo.mrs",
+      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/nintendo.mrs",
       "path": "./ruleset/nintendo.mrs",
       "interval": 86400,
       "format": "mrs",
@@ -498,7 +498,7 @@ export default {
     "bbc": {
       "type": "http",
       "behavior": "domain",
-      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geosite/bbc.mrs",
+      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/bbc.mrs",
       "path": "./ruleset/bbc.mrs",
       "interval": 86400,
       "format": "mrs",
@@ -507,7 +507,7 @@ export default {
     "cnn": {
       "type": "http",
       "behavior": "domain",
-      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geosite/cnn.mrs",
+      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/cnn.mrs",
       "path": "./ruleset/cnn.mrs",
       "interval": 86400,
       "format": "mrs",
@@ -516,7 +516,7 @@ export default {
     "nytimes": {
       "type": "http",
       "behavior": "domain",
-      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geosite/nytimes.mrs",
+      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/nytimes.mrs",
       "path": "./ruleset/nytimes.mrs",
       "interval": 86400,
       "format": "mrs",
@@ -525,7 +525,7 @@ export default {
     "wsj": {
       "type": "http",
       "behavior": "domain",
-      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geosite/wsj.mrs",
+      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/wsj.mrs",
       "path": "./ruleset/wsj.mrs",
       "interval": 86400,
       "format": "mrs",
@@ -534,7 +534,7 @@ export default {
     "bloomberg": {
       "type": "http",
       "behavior": "domain",
-      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geosite/bloomberg.mrs",
+      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/bloomberg.mrs",
       "path": "./ruleset/bloomberg.mrs",
       "interval": 86400,
       "format": "mrs",
@@ -543,7 +543,7 @@ export default {
     "amazon": {
       "type": "http",
       "behavior": "domain",
-      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geosite/amazon.mrs",
+      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/amazon.mrs",
       "path": "./ruleset/amazon.mrs",
       "interval": 86400,
       "format": "mrs",
@@ -552,7 +552,7 @@ export default {
     "ebay": {
       "type": "http",
       "behavior": "domain",
-      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geosite/ebay.mrs",
+      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/ebay.mrs",
       "path": "./ruleset/ebay.mrs",
       "interval": 86400,
       "format": "mrs",
@@ -561,7 +561,7 @@ export default {
     "google": {
       "type": "http",
       "behavior": "domain",
-      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geosite/google.mrs",
+      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/google.mrs",
       "path": "./ruleset/google.mrs",
       "interval": 86400,
       "format": "mrs",
@@ -570,7 +570,7 @@ export default {
     "google-ip": {
       "type": "http",
       "behavior": "ipcidr",
-      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geoip/google.mrs",
+      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/google.mrs",
       "path": "./ruleset/google-ip.mrs",
       "interval": 86400,
       "format": "mrs",
@@ -579,7 +579,7 @@ export default {
     "microsoft": {
       "type": "http",
       "behavior": "domain",
-      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geosite/microsoft.mrs",
+      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/microsoft.mrs",
       "path": "./ruleset/microsoft.mrs",
       "interval": 86400,
       "format": "mrs",
@@ -588,7 +588,7 @@ export default {
     "onedrive": {
       "type": "http",
       "behavior": "domain",
-      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geosite/onedrive.mrs",
+      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/onedrive.mrs",
       "path": "./ruleset/onedrive.mrs",
       "interval": 86400,
       "format": "mrs",
@@ -597,7 +597,7 @@ export default {
     "apple": {
       "type": "http",
       "behavior": "domain",
-      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geosite/apple.mrs",
+      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/apple.mrs",
       "path": "./ruleset/apple.mrs",
       "interval": 86400,
       "format": "mrs",
@@ -606,7 +606,7 @@ export default {
     "icloud": {
       "type": "http",
       "behavior": "domain",
-      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geosite/icloud.mrs",
+      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/icloud.mrs",
       "path": "./ruleset/icloud.mrs",
       "interval": 86400,
       "format": "mrs",
@@ -615,7 +615,7 @@ export default {
     "github": {
       "type": "http",
       "behavior": "domain",
-      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geosite/github.mrs",
+      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/github.mrs",
       "path": "./ruleset/github.mrs",
       "interval": 86400,
       "format": "mrs",
@@ -624,7 +624,7 @@ export default {
     "gitlab": {
       "type": "http",
       "behavior": "domain",
-      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geosite/gitlab.mrs",
+      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/gitlab.mrs",
       "path": "./ruleset/gitlab.mrs",
       "interval": 86400,
       "format": "mrs",
@@ -633,7 +633,7 @@ export default {
     "atlassian": {
       "type": "http",
       "behavior": "domain",
-      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geosite/atlassian.mrs",
+      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/atlassian.mrs",
       "path": "./ruleset/atlassian.mrs",
       "interval": 86400,
       "format": "mrs",
@@ -642,7 +642,7 @@ export default {
     "docker": {
       "type": "http",
       "behavior": "domain",
-      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geosite/docker.mrs",
+      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/docker.mrs",
       "path": "./ruleset/docker.mrs",
       "interval": 86400,
       "format": "mrs",
@@ -651,7 +651,7 @@ export default {
     "npmjs": {
       "type": "http",
       "behavior": "domain",
-      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geosite/npmjs.mrs",
+      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/npmjs.mrs",
       "path": "./ruleset/npmjs.mrs",
       "interval": 86400,
       "format": "mrs",
@@ -660,7 +660,7 @@ export default {
     "jetbrains": {
       "type": "http",
       "behavior": "domain",
-      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geosite/jetbrains.mrs",
+      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/jetbrains.mrs",
       "path": "./ruleset/jetbrains.mrs",
       "interval": 86400,
       "format": "mrs",
@@ -669,7 +669,7 @@ export default {
     "stackexchange": {
       "type": "http",
       "behavior": "domain",
-      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geosite/stackexchange.mrs",
+      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/stackexchange.mrs",
       "path": "./ruleset/stackexchange.mrs",
       "interval": 86400,
       "format": "mrs",
@@ -678,7 +678,7 @@ export default {
     "dropbox": {
       "type": "http",
       "behavior": "domain",
-      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geosite/dropbox.mrs",
+      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/dropbox.mrs",
       "path": "./ruleset/dropbox.mrs",
       "interval": 86400,
       "format": "mrs",
@@ -687,7 +687,7 @@ export default {
     "notion": {
       "type": "http",
       "behavior": "domain",
-      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geosite/notion.mrs",
+      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/notion.mrs",
       "path": "./ruleset/notion.mrs",
       "interval": 86400,
       "format": "mrs",
@@ -696,7 +696,7 @@ export default {
     "paypal": {
       "type": "http",
       "behavior": "domain",
-      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geosite/paypal.mrs",
+      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/paypal.mrs",
       "path": "./ruleset/paypal.mrs",
       "interval": 86400,
       "format": "mrs",
@@ -705,7 +705,7 @@ export default {
     "stripe": {
       "type": "http",
       "behavior": "domain",
-      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geosite/stripe.mrs",
+      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/stripe.mrs",
       "path": "./ruleset/stripe.mrs",
       "interval": 86400,
       "format": "mrs",
@@ -714,7 +714,7 @@ export default {
     "wise": {
       "type": "http",
       "behavior": "domain",
-      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geosite/wise.mrs",
+      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/wise.mrs",
       "path": "./ruleset/wise.mrs",
       "interval": 86400,
       "format": "mrs",
@@ -723,7 +723,7 @@ export default {
     "binance": {
       "type": "http",
       "behavior": "domain",
-      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geosite/binance.mrs",
+      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/binance.mrs",
       "path": "./ruleset/binance.mrs",
       "interval": 86400,
       "format": "mrs",
@@ -732,7 +732,7 @@ export default {
     "aws": {
       "type": "http",
       "behavior": "domain",
-      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geosite/aws.mrs",
+      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/aws.mrs",
       "path": "./ruleset/aws.mrs",
       "interval": 86400,
       "format": "mrs",
@@ -741,7 +741,7 @@ export default {
     "azure": {
       "type": "http",
       "behavior": "domain",
-      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geosite/azure.mrs",
+      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/azure.mrs",
       "path": "./ruleset/azure.mrs",
       "interval": 86400,
       "format": "mrs",
@@ -750,7 +750,7 @@ export default {
     "cloudflare": {
       "type": "http",
       "behavior": "domain",
-      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geosite/cloudflare.mrs",
+      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/cloudflare.mrs",
       "path": "./ruleset/cloudflare.mrs",
       "interval": 86400,
       "format": "mrs",
@@ -759,7 +759,7 @@ export default {
     "digitalocean": {
       "type": "http",
       "behavior": "domain",
-      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geosite/digitalocean.mrs",
+      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/digitalocean.mrs",
       "path": "./ruleset/digitalocean.mrs",
       "interval": 86400,
       "format": "mrs",
@@ -768,7 +768,7 @@ export default {
     "vercel": {
       "type": "http",
       "behavior": "domain",
-      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geosite/vercel.mrs",
+      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/vercel.mrs",
       "path": "./ruleset/vercel.mrs",
       "interval": 86400,
       "format": "mrs",
@@ -777,7 +777,7 @@ export default {
     "netlify": {
       "type": "http",
       "behavior": "domain",
-      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geosite/netlify.mrs",
+      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/netlify.mrs",
       "path": "./ruleset/netlify.mrs",
       "interval": 86400,
       "format": "mrs",
@@ -786,7 +786,7 @@ export default {
     "cloudflare-ip": {
       "type": "http",
       "behavior": "ipcidr",
-      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geoip/cloudflare.mrs",
+      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/cloudflare.mrs",
       "path": "./ruleset/cloudflare-ip.mrs",
       "interval": 86400,
       "format": "mrs",
@@ -795,7 +795,7 @@ export default {
     "geolocation-cn": {
       "type": "http",
       "behavior": "domain",
-      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geosite/geolocation-cn.mrs",
+      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/geolocation-cn.mrs",
       "path": "./ruleset/geolocation-cn.mrs",
       "interval": 86400,
       "format": "mrs",
@@ -804,7 +804,7 @@ export default {
     "geolocation-!cn": {
       "type": "http",
       "behavior": "domain",
-      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geosite/geolocation-!cn.mrs",
+      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/geolocation-!cn.mrs",
       "path": "./ruleset/geolocation-!cn.mrs",
       "interval": 86400,
       "format": "mrs",
@@ -813,7 +813,7 @@ export default {
     "cn": {
       "type": "http",
       "behavior": "domain",
-      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geosite/cn.mrs",
+      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/cn.mrs",
       "path": "./ruleset/cn.mrs",
       "interval": 86400,
       "format": "mrs",
@@ -822,7 +822,7 @@ export default {
     "cn-ip": {
       "type": "http",
       "behavior": "ipcidr",
-      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geoip/cn.mrs",
+      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/cn.mrs",
       "path": "./ruleset/cn-ip.mrs",
       "interval": 86400,
       "format": "mrs",
