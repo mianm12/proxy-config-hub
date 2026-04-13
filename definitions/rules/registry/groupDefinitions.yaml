@@ -66,8 +66,8 @@ groupDefinitions:
         "@proxy-select",
         "@manual-select",
         "@auto-select",
-        "@region-groups",
         "DIRECT",
+        "@region-groups",
       ]
   fallback:
     name: "🐟 漏网之鱼"
@@ -78,8 +78,8 @@ groupDefinitions:
         "@proxy-select",
         "@manual-select",
         "@auto-select",
-        "@region-groups",
         "DIRECT",
+        "@region-groups",
       ]
 
   # 基础规则组，包含一些常用的规则组
@@ -93,8 +93,8 @@ groupDefinitions:
         "@proxy-select",
         "@manual-select",
         "@auto-select",
-        "@region-groups",
         "DIRECT",
+        "@region-groups",
       ]
   youtube:
     name: "📹 油管视频"
@@ -105,8 +105,8 @@ groupDefinitions:
         "@proxy-select",
         "@manual-select",
         "@auto-select",
-        "@region-groups",
         "DIRECT",
+        "@region-groups",
       ]
   google:
     name: "🔍 谷歌服务"
@@ -117,8 +117,8 @@ groupDefinitions:
         "@proxy-select",
         "@manual-select",
         "@auto-select",
-        "@region-groups",
         "DIRECT",
+        "@region-groups",
       ]
   microsoft:
     name: "Ⓜ️ 微软服务"
@@ -129,8 +129,8 @@ groupDefinitions:
         "@proxy-select",
         "@manual-select",
         "@auto-select",
-        "@region-groups",
         "DIRECT",
+        "@region-groups",
       ]
   apple:
     name: "🍏 苹果服务"
@@ -141,8 +141,8 @@ groupDefinitions:
         "@proxy-select",
         "@manual-select",
         "@auto-select",
-        "@region-groups",
         "DIRECT",
+        "@region-groups",
       ]
   ## 社交通讯
   telegram:
@@ -154,8 +154,8 @@ groupDefinitions:
         "@proxy-select",
         "@manual-select",
         "@auto-select",
-        "@region-groups",
         "DIRECT",
+        "@region-groups",
       ]
   ## 技术服务
   code_hosting:
@@ -167,8 +167,8 @@ groupDefinitions:
         "@proxy-select",
         "@manual-select",
         "@auto-select",
-        "@region-groups",
         "DIRECT",
+        "@region-groups",
       ]
 
   # 扩展规则组
@@ -182,8 +182,8 @@ groupDefinitions:
         "@proxy-select",
         "@manual-select",
         "@auto-select",
-        "@region-groups",
         "DIRECT",
+        "@region-groups",
       ]
   meta_social:
     name: "📘 Meta 系"
@@ -194,8 +194,8 @@ groupDefinitions:
         "@proxy-select",
         "@manual-select",
         "@auto-select",
-        "@region-groups",
         "DIRECT",
+        "@region-groups",
       ]
   discord:
     name: "🎙️ Discord"
@@ -206,8 +206,8 @@ groupDefinitions:
         "@proxy-select",
         "@manual-select",
         "@auto-select",
-        "@region-groups",
         "DIRECT",
+        "@region-groups",
       ]
   social_other:
     name: "💬 其他社交"
@@ -218,8 +218,8 @@ groupDefinitions:
         "@proxy-select",
         "@manual-select",
         "@auto-select",
-        "@region-groups",
         "DIRECT",
+        "@region-groups",
       ]
   ## 流媒体
   netflix:
@@ -231,8 +231,8 @@ groupDefinitions:
         "@proxy-select",
         "@manual-select",
         "@auto-select",
-        "@region-groups",
         "DIRECT",
+        "@region-groups",
       ]
   disney_plus:
     name: "🧞‍♂️ Disney+"
@@ -243,8 +243,8 @@ groupDefinitions:
         "@proxy-select",
         "@manual-select",
         "@auto-select",
-        "@region-groups",
         "DIRECT",
+        "@region-groups",
       ]
   western_streaming:
     name: "📺 欧美流媒体"
@@ -255,8 +255,8 @@ groupDefinitions:
         "@proxy-select",
         "@manual-select",
         "@auto-select",
-        "@region-groups",
         "DIRECT",
+        "@region-groups",
       ]
   asia_streaming:
     name: "🌏 亚洲流媒体"
@@ -267,8 +267,8 @@ groupDefinitions:
         "@proxy-select",
         "@manual-select",
         "@auto-select",
-        "@region-groups",
         "DIRECT",
+        "@region-groups",
       ]
   ## 游戏平台
   steam:
@@ -280,8 +280,8 @@ groupDefinitions:
         "@proxy-select",
         "@manual-select",
         "@auto-select",
-        "@region-groups",
         "DIRECT",
+        "@region-groups",
       ]
   game_pc:
     name: "🖥️ PC 游戏"
@@ -292,8 +292,8 @@ groupDefinitions:
         "@proxy-select",
         "@manual-select",
         "@auto-select",
-        "@region-groups",
         "DIRECT",
+        "@region-groups",
       ]
   game_console:
     name: "🎮 主机游戏"
@@ -304,8 +304,8 @@ groupDefinitions:
         "@proxy-select",
         "@manual-select",
         "@auto-select",
-        "@region-groups",
         "DIRECT",
+        "@region-groups",
       ]
   ## 技术服务
   cloud_service:
@@ -317,8 +317,8 @@ groupDefinitions:
         "@proxy-select",
         "@manual-select",
         "@auto-select",
-        "@region-groups",
         "DIRECT",
+        "@region-groups",
       ]
   developer_tools:
     name: "🛠️ 开发工具"
@@ -329,8 +329,8 @@ groupDefinitions:
         "@proxy-select",
         "@manual-select",
         "@auto-select",
-        "@region-groups",
         "DIRECT",
+        "@region-groups",
       ]
   storage_service:
     name: "📦 网盘存储"
@@ -341,8 +341,8 @@ groupDefinitions:
         "@proxy-select",
         "@manual-select",
         "@auto-select",
-        "@region-groups",
         "DIRECT",
+        "@region-groups",
       ]
   ## 金融服务
   payment:
@@ -354,8 +354,8 @@ groupDefinitions:
         "@proxy-select",
         "@manual-select",
         "@auto-select",
-        "@region-groups",
         "DIRECT",
+        "@region-groups",
       ]
   encryption:
     name: "🔐 加密货币"
@@ -366,8 +366,8 @@ groupDefinitions:
         "@proxy-select",
         "@manual-select",
         "@auto-select",
-        "@region-groups",
         "DIRECT",
+        "@region-groups",
       ]
   ## 其他
   education:
@@ -379,8 +379,8 @@ groupDefinitions:
         "@proxy-select",
         "@manual-select",
         "@auto-select",
-        "@region-groups",
         "DIRECT",
+        "@region-groups",
       ]
   news:
     name: "📰 新闻资讯"
@@ -391,8 +391,8 @@ groupDefinitions:
         "@proxy-select",
         "@manual-select",
         "@auto-select",
-        "@region-groups",
         "DIRECT",
+        "@region-groups",
       ]
   shopping:
     name: "🛒 购物平台"
@@ -403,6 +403,6 @@ groupDefinitions:
         "@proxy-select",
         "@manual-select",
         "@auto-select",
-        "@region-groups",
         "DIRECT",
+        "@region-groups",
       ]

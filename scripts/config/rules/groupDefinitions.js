@@ -71,8 +71,8 @@ export default {
         "@proxy-select",
         "@manual-select",
         "@auto-select",
-        "@region-groups",
-        "DIRECT"
+        "DIRECT",
+        "@region-groups"
       ]
     },
     "fallback": {
@@ -83,8 +83,8 @@ export default {
         "@proxy-select",
         "@manual-select",
         "@auto-select",
-        "@region-groups",
-        "DIRECT"
+        "DIRECT",
+        "@region-groups"
       ]
     },
     "ai_service": {
@@ -95,8 +95,8 @@ export default {
         "@proxy-select",
         "@manual-select",
         "@auto-select",
-        "@region-groups",
-        "DIRECT"
+        "DIRECT",
+        "@region-groups"
       ]
     },
     "youtube": {
@@ -107,8 +107,8 @@ export default {
         "@proxy-select",
         "@manual-select",
         "@auto-select",
-        "@region-groups",
-        "DIRECT"
+        "DIRECT",
+        "@region-groups"
       ]
     },
     "google": {
@@ -119,8 +119,8 @@ export default {
         "@proxy-select",
         "@manual-select",
         "@auto-select",
-        "@region-groups",
-        "DIRECT"
+        "DIRECT",
+        "@region-groups"
       ]
     },
     "microsoft": {
@@ -131,8 +131,8 @@ export default {
         "@proxy-select",
         "@manual-select",
         "@auto-select",
-        "@region-groups",
-        "DIRECT"
+        "DIRECT",
+        "@region-groups"
       ]
     },
     "apple": {
@@ -143,8 +143,8 @@ export default {
         "@proxy-select",
         "@manual-select",
         "@auto-select",
-        "@region-groups",
-        "DIRECT"
+        "DIRECT",
+        "@region-groups"
       ]
     },
     "telegram": {
@@ -155,8 +155,8 @@ export default {
         "@proxy-select",
         "@manual-select",
         "@auto-select",
-        "@region-groups",
-        "DIRECT"
+        "DIRECT",
+        "@region-groups"
       ]
     },
     "code_hosting": {
@@ -167,8 +167,8 @@ export default {
         "@proxy-select",
         "@manual-select",
         "@auto-select",
-        "@region-groups",
-        "DIRECT"
+        "DIRECT",
+        "@region-groups"
       ]
     },
     "twitter": {
@@ -179,8 +179,8 @@ export default {
         "@proxy-select",
         "@manual-select",
         "@auto-select",
-        "@region-groups",
-        "DIRECT"
+        "DIRECT",
+        "@region-groups"
       ]
     },
     "meta_social": {
@@ -191,8 +191,8 @@ export default {
         "@proxy-select",
         "@manual-select",
         "@auto-select",
-        "@region-groups",
-        "DIRECT"
+        "DIRECT",
+        "@region-groups"
       ]
     },
     "discord": {
@@ -203,8 +203,8 @@ export default {
         "@proxy-select",
         "@manual-select",
         "@auto-select",
-        "@region-groups",
-        "DIRECT"
+        "DIRECT",
+        "@region-groups"
       ]
     },
     "social_other": {
@@ -215,8 +215,8 @@ export default {
         "@proxy-select",
         "@manual-select",
         "@auto-select",
-        "@region-groups",
-        "DIRECT"
+        "DIRECT",
+        "@region-groups"
       ]
     },
     "netflix": {
@@ -227,8 +227,8 @@ export default {
         "@proxy-select",
         "@manual-select",
         "@auto-select",
-        "@region-groups",
-        "DIRECT"
+        "DIRECT",
+        "@region-groups"
       ]
     },
     "disney_plus": {
@@ -239,8 +239,8 @@ export default {
         "@proxy-select",
         "@manual-select",
         "@auto-select",
-        "@region-groups",
-        "DIRECT"
+        "DIRECT",
+        "@region-groups"
       ]
     },
     "western_streaming": {
@@ -251,8 +251,8 @@ export default {
         "@proxy-select",
         "@manual-select",
         "@auto-select",
-        "@region-groups",
-        "DIRECT"
+        "DIRECT",
+        "@region-groups"
       ]
     },
     "asia_streaming": {
@@ -263,8 +263,8 @@ export default {
         "@proxy-select",
         "@manual-select",
         "@auto-select",
-        "@region-groups",
-        "DIRECT"
+        "DIRECT",
+        "@region-groups"
       ]
     },
     "steam": {
@@ -275,8 +275,8 @@ export default {
         "@proxy-select",
         "@manual-select",
         "@auto-select",
-        "@region-groups",
-        "DIRECT"
+        "DIRECT",
+        "@region-groups"
       ]
     },
     "game_pc": {
@@ -287,8 +287,8 @@ export default {
         "@proxy-select",
         "@manual-select",
         "@auto-select",
-        "@region-groups",
-        "DIRECT"
+        "DIRECT",
+        "@region-groups"
       ]
     },
     "game_console": {
@@ -299,8 +299,8 @@ export default {
         "@proxy-select",
         "@manual-select",
         "@auto-select",
-        "@region-groups",
-        "DIRECT"
+        "DIRECT",
+        "@region-groups"
       ]
     },
     "cloud_service": {
@@ -311,8 +311,8 @@ export default {
         "@proxy-select",
         "@manual-select",
         "@auto-select",
-        "@region-groups",
-        "DIRECT"
+        "DIRECT",
+        "@region-groups"
       ]
     },
     "developer_tools": {
@@ -323,8 +323,8 @@ export default {
         "@proxy-select",
         "@manual-select",
         "@auto-select",
-        "@region-groups",
-        "DIRECT"
+        "DIRECT",
+        "@region-groups"
       ]
     },
     "storage_service": {
@@ -335,8 +335,8 @@ export default {
         "@proxy-select",
         "@manual-select",
         "@auto-select",
-        "@region-groups",
-        "DIRECT"
+        "DIRECT",
+        "@region-groups"
       ]
     },
     "payment": {
@@ -347,8 +347,8 @@ export default {
         "@proxy-select",
         "@manual-select",
         "@auto-select",
-        "@region-groups",
-        "DIRECT"
+        "DIRECT",
+        "@region-groups"
       ]
     },
     "encryption": {
@@ -359,8 +359,8 @@ export default {
         "@proxy-select",
         "@manual-select",
         "@auto-select",
-        "@region-groups",
-        "DIRECT"
+        "DIRECT",
+        "@region-groups"
       ]
     },
     "education": {
@@ -371,8 +371,8 @@ export default {
         "@proxy-select",
         "@manual-select",
         "@auto-select",
-        "@region-groups",
-        "DIRECT"
+        "DIRECT",
+        "@region-groups"
       ]
     },
     "news": {
@@ -383,8 +383,8 @@ export default {
         "@proxy-select",
         "@manual-select",
         "@auto-select",
-        "@region-groups",
-        "DIRECT"
+        "DIRECT",
+        "@region-groups"
       ]
     },
     "shopping": {
@@ -395,8 +395,8 @@ export default {
         "@proxy-select",
         "@manual-select",
         "@auto-select",
-        "@region-groups",
-        "DIRECT"
+        "DIRECT",
+        "@region-groups"
       ]
     }
   }
