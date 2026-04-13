@@ -1,0 +1,4 @@
+# 配置文件管理
+profile:
+  store-selected: true
+  store-fake-ip: false

@@ -1,0 +1,7 @@
+# 基础配置
+mixed-port: 7897
+mode: rule
+log-level: info
+unified-delay: true
+tcp-concurrent: true
+find-process-mode: strict

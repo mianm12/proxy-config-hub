@@ -1,5 +1,15 @@
 # proxy-config-hub 设计方案 v1
 
+> 当前仓库实现状态（2026-04-12）
+>
+> - 当前唯一的声明型 YAML 源目录是 `definitions/`，不是 `rules/`
+> - `definitions/rules/registry/` 承载规则注册表 YAML，并生成到 `scripts/config/rules/`
+> - `definitions/runtime/` 承载 runtime preset YAML，并生成到 `scripts/config/runtime/`
+> - `definitions/rules/custom/` 是模板/发布资产子树，不参与 active ruleset 装配
+> - `scripts/config/` 是生成树，不是源数据目录
+> - 当前对外入口是单入口 `scripts/override/main.js`，构建产物是 `dist/scripts/override/main.js`
+> - 本文后续若仍出现 `rules/` 作为长期源目录的描述，均视为历史设计记录；以本状态说明为准
+
 ## 一、项目目标与 v1 范围
 
 为 Sub-Store、Mihomo (Clash.Meta) 建立统一配置仓库。
