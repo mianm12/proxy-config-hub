@@ -62,3 +62,10 @@ if (typeof module !== "undefined" && module && module.exports && __proxyConfigHu
 });
 
 await copyDirectory(CUSTOM_ASSET_SOURCE, CUSTOM_ASSET_TARGET);
+
+// Copy Sub-Store scripts as-is (no bundling needed)
+const SUB_STORE_SOURCE = path.join(REPO_ROOT, "scripts", "sub-store");
+const SUB_STORE_TARGET = path.join(REPO_ROOT, "dist", "scripts", "sub-store");
+if (await pathExists(SUB_STORE_SOURCE)) {
+  await copyDirectory(SUB_STORE_SOURCE, SUB_STORE_TARGET);
+}
