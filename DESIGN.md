@@ -64,17 +64,19 @@ v1 提供三个覆写入口，覆盖不同使用场景：
 | 入口 | 职责 | 适用场景 |
 | ------ | ------ | --------- |
 | **`main.js`** | **Full-profile 覆写**：接管 DNS、端口、sniffer、geodata 等全部运行时字段 + 动态策略组 + 分流规则 | 从只有节点的裸订阅生成完整可用配置（最常用） |
-| **`routing-only.js`** | **仅路由覆写**：只生成 proxy-groups、rule-providers、rules，不碰 DNS / 端口 / sniffer / geodata 等 | 已有完整基础配置，只想补上动态分组和分流规则 |
-| **`dns-leak-fix.js`** | **仅 DNS 覆写**：只注入 DNS 防泄漏配置 | 已有完整配置，只想补 DNS 防泄漏 |
+| **`routing-only.js`**（设计预留） | **仅路由覆写**：只生成 proxy-groups、rule-providers、rules，不碰 DNS / 端口 / sniffer / geodata 等 | 已有完整基础配置，只想补上动态分组和分流规则 |
+| **`dns-leak-fix.js`**（设计预留） | **仅 DNS 覆写**：只注入 DNS 防泄漏配置 | 已有完整配置，只想补 DNS 防泄漏 |
 
 > `main.js` 是 full-profile 入口——它会强制覆写 dns、mixed-port、sniffer、geox-url 等运行时字段。这是有意为之：目标用户从裸订阅出发，需要一个脚本搞定一切。如果你已有自己的基础配置只想加上动态分组和分流，请使用 `routing-only.js`。
 
-三个入口共享 `_lib/` 中的模块，区别仅在于 main 函数的组装方式：
+当前仓库实际发布的是 `main.js`；其余两个轻量入口在本文中保留为设计扩展方向。
+
+三个入口共享 `scripts/override/lib/` 中的模块；其中运行时固定值已从 `definitions/runtime/*.yaml` 声明化，构建后生成 `scripts/config/runtime/*.js`，再由 `runtime-preset.js` 注入：
 
 ```javascript
 // main.js（full-profile）
 function main(config) {
-  applyBaseConfig(config);   // 强制覆写 DNS + 端口 + sniffer + geodata
+  applyRuntimePreset(config); // 强制覆写 runtime YAML 中定义的运行时字段
   applyRouting(config);      // 动态策略组 + 分流规则
   return config;
 }
@@ -110,7 +112,7 @@ function main(config) {
 
 | 入口 | 空节点行为 | 理由 |
 |------|-----------|------|
-| **`main.js`** | 降级为 DNS-only：注入 `DNS_CONFIG`，不动其他字段，不生成策略组/规则 | full-profile 入口，能力范围包含 DNS，降级仍有价值 |
+| **`main.js`** | 降级为 runtime-preset-only：应用完整运行时预设，跳过策略组/规则生成 | full-profile 入口应继续提供完整运行时模板；只有依赖节点的路由部分被跳过 |
 | **`routing-only.js`** | 原样返回：打印诊断信息，不改写任何字段 | 纯路由入口，承诺不碰 DNS；降级不应偷偷引入 DNS 覆写 |
 | **`dns-leak-fix.js`** | 正常执行：无论 proxies 是否存在都注入 DNS | 不依赖 proxies，无需降级 |
 
@@ -118,10 +120,11 @@ function main(config) {
 // main.js 的空节点降级路径
 const proxies = config.proxies || [];
 const namedProxies = proxies.filter(p => typeof p?.name === "string" && p.name.length > 0);
+applyRuntimePreset(config);
+
 if (namedProxies.length === 0) {
   console.log("[override] ERROR: config.proxies 为空，无法生成策略组和分流规则");
-  console.log("[override] 降级为 DNS-only 模式，仅注入 DNS 防泄漏，其他字段保留上游原样");
-  config.dns = DNS_CONFIG;  // 仅注入 DNS，不动其他字段
+  console.log("[override] 已应用 runtime preset，跳过 proxy-groups、rule-providers 和 rules 生成");
   return config;
 }
 
@@ -775,21 +778,35 @@ function buildRuleProviders(groupDefs) {
 
 ### 6.1 架构：按需选入口，对内模块化
 
-用户按需选择一个 URL 即可：`main.js` 一键获得完整配置，`routing-only.js` 只补分组和规则，`dns-leak-fix.js` 只补 DNS。代码内部拆分为独立模块，维护者可以单独修改 DNS 或基础配置而不碰路由逻辑：
+当前仓库公开主入口是 `main.js`；如果后续补齐轻量入口，它们也会复用同一套 runtime source pipeline。运行时固定值现在以 YAML 声明在 `definitions/runtime/` 下，构建后生成 `scripts/config/runtime/`，运行时只保留注入逻辑：
 
 ```
-_lib/
-├── base-config.js        # BASE_CONFIG 常量（端口/sniffer/geodata 等）
-├── dns-preset.js          # DNS_CONFIG 常量（防泄漏配置）
-├── proxy-utils.js         # 地区识别、节点分类
-├── group-definitions.js   # GROUP_DEFINITIONS
-├── rule-builder.js        # buildRuleProviders()
-└── validator.js           # 校验函数
+definitions/runtime/
+├── base.yaml
+├── dns.yaml
+├── geodata.yaml
+├── profile.yaml
+├── sniffer.yaml
+└── tun.yaml
+
+scripts/config/runtime/
+├── base.js
+├── dns.js
+├── geodata.js
+├── profile.js
+├── sniffer.js
+└── tun.js
+
+scripts/override/lib/
+├── runtime-preset.js      # 注入运行时预设
+├── proxy-groups.js        # 地区识别、节点分类、策略组生成
+├── rule-assembly.js       # rule-providers + rules 组装
+└── validate-output.js     # 输出校验
 ```
 
-源码入口通过标准 `require()` 引用 `_lib/` 模块；v1 默认 `_lib/` 各文件互不依赖，作为独立模块维护。构建时由 `tools/bundle.js` 解析入口文件中的静态本地依赖并打包到各覆写脚本（`main.js`、`routing-only.js`、`dns-leak-fix.js`），产出自包含脚本。
+构建时由 `tools/yaml-to-js.js` 先把 YAML 编译为 `scripts/config/` 下的 JS 模块，再由 `build.js` 打包覆写入口，产出自包含脚本。
 
-另外提供两个轻量替代入口：`routing-only.js` **只生成动态策略组和分流规则**，不碰 DNS / 端口 / sniffer / geodata 等运行时字段，适用于已有完整基础配置只想补上分组和规则的场景；`dns-leak-fix.js` **只注入 DNS 防泄漏配置**，不生成策略组和分流规则，适用于已有完整配置只想补 DNS 的场景。
+设计上保留两个轻量替代入口：`routing-only.js` **只生成动态策略组和分流规则**，不碰 DNS / 端口 / sniffer / geodata 等运行时字段，适用于已有完整基础配置只想补上分组和规则的场景；`dns-leak-fix.js` **只注入 DNS 防泄漏配置**，不生成策略组和分流规则，适用于已有完整配置只想补 DNS 的场景。
 
 ### 6.2 字段处理策略（按入口分级）
 
@@ -802,101 +819,60 @@ _lib/
 | **保留上游** | proxy-providers | ✅ | ✅ | ✅ |
 | **缺失时注入** | allow-lan (true), tun (enable: false) | ✅ | — | — |
 
-### 6.3 BASE_CONFIG
+### 6.3 运行时源数据（definitions/runtime）
 
-```javascript
-const BASE_CONFIG = {
-  "mixed-port": 7897,
-  "mode": "rule",
-  "log-level": "info",
-  "unified-delay": true,
-  "tcp-concurrent": true,
-  "find-process-mode": "strict",
-  "profile": { "store-selected": true, "store-fake-ip": false },
-  "sniffer": {
-    "enable": true, "parse-pure-ip": true,
-    "sniff": {
-      "HTTP": { "ports": [80, "8080-8880"], "override-destination": true },
-      "QUIC": { "ports": [443, 8443] },
-      "TLS": { "ports": [443, 8443] }
-    }
-  },
-  "geodata-mode": true,
-  "geo-auto-update": true,
-  "geodata-loader": "standard",
-  "geo-update-interval": 24,
-  "geox-url": {
-    "geoip": "https://testingcf.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@release/geoip.dat",
-    "geosite": "https://testingcf.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@release/geosite.dat",
-    "mmdb": "https://testingcf.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@release/country.mmdb",
-    "asn": "https://github.com/xishang0128/geoip/releases/download/latest/GeoLite2-ASN.mmdb"
-  }
-};
+运行时固定值已经拆成 6 份 YAML 源文件：
+
+```text
+definitions/runtime/
+├── base.yaml      # mixed-port / mode / log-level / tcp-concurrent / find-process-mode
+├── profile.yaml   # profile.store-selected / profile.store-fake-ip
+├── geodata.yaml   # geodata-mode / geo-auto-update / geodata-loader / geox-url
+├── dns.yaml       # 完整 DNS 防泄漏配置
+├── sniffer.yaml   # 协议嗅探配置
+└── tun.yaml       # 缺失时注入的默认 tun 配置
 ```
 
-### 6.4 DNS_CONFIG
+构建后这些 YAML 会被编译成 `scripts/config/runtime/*.js`，由 `applyRuntimePreset()` 统一消费。
 
-```javascript
-const DNS_CONFIG = {
-  "enable": true,
-  "listen": "127.0.0.1:5335",
-  "use-system-hosts": false,
-  "enhanced-mode": "fake-ip",
-  "fake-ip-range": "198.18.0.1/16",
-  "default-nameserver": ["180.76.76.76", "182.254.118.118", "119.29.29.29", "223.5.5.5"],
-  "nameserver": [
-    "180.76.76.76", "119.29.29.29", "180.184.1.1", "223.5.5.5",
-    "https://223.6.6.6/dns-query#h3=true",
-    "https://dns.alidns.com/dns-query",
-    "https://doh.pub/dns-query"
-  ],
-  "fallback": [
-    "https://000000.dns.nextdns.io/dns-query#h3=true",
-    "https://public.dns.iij.jp/dns-query",
-    "https://101.101.101.101/dns-query",
-    "https://208.67.220.220/dns-query",
-    "tls://8.8.4.4", "tls://1.0.0.1:853",
-    "https://cloudflare-dns.com/dns-query",
-    "https://dns.google/dns-query"
-  ],
-  "fallback-filter": {
-    "geoip": true,
-    "geoip-code": "CN",
-    "ipcidr": ["240.0.0.0/4", "0.0.0.0/32", "127.0.0.1/32"],
-    "domain": ["+.google.com", "+.facebook.com", "+.twitter.com", "+.youtube.com",
-               "+.xn--ngstr-lra8j.com", "+.google.cn", "+.googleapis.cn",
-               "+.googleapis.com", "+.gvt1.com"]
-  },
-  "fake-ip-filter": [
-    "*.lan", "stun.*.*.*", "stun.*.*",
-    "time.windows.com", "time.nist.gov", "time.apple.com", "time.asia.apple.com",
-    "*.ntp.org.cn", "*.openwrt.pool.ntp.org",
-    "time1.cloud.tencent.com", "time.ustc.edu.cn",
-    "pool.ntp.org", "ntp.ubuntu.com",
-    "ntp.aliyun.com", "ntp1.aliyun.com", "ntp2.aliyun.com", "ntp3.aliyun.com",
-    "ntp4.aliyun.com", "ntp5.aliyun.com", "ntp6.aliyun.com", "ntp7.aliyun.com",
-    "time1.aliyun.com", "time2.aliyun.com", "time3.aliyun.com", "time4.aliyun.com",
-    "time5.aliyun.com", "time6.aliyun.com", "time7.aliyun.com",
-    "*.time.edu.cn",
-    "time1.apple.com", "time2.apple.com", "time3.apple.com", "time4.apple.com",
-    "time5.apple.com", "time6.apple.com", "time7.apple.com",
-    "time1.google.com", "time2.google.com", "time3.google.com", "time4.google.com",
-    "music.163.com", "*.music.163.com", "*.126.net",
-    "musicapi.taihe.com", "music.taihe.com",
-    "songsearch.kugou.com", "trackercdn.kugou.com", "*.kuwo.cn",
-    "api-jooxtt.sanook.com", "api.joox.com", "joox.com",
-    "y.qq.com", "*.y.qq.com",
-    "streamoc.music.tc.qq.com", "mobileoc.music.tc.qq.com",
-    "isure.stream.qqmusic.qq.com", "dl.stream.qqmusic.qq.com",
-    "aqqmusic.tc.qq.com", "amobile.music.tc.qq.com",
-    "*.xiami.com", "*.music.migu.cn", "music.migu.cn",
-    "*.msftconnecttest.com", "*.msftncsi.com",
-    "localhost.ptlogin2.qq.com",
-    "*.*.*.srv.nintendo.net", "*.*.stun.playstation.net",
-    "xbox.*.*.microsoft.com", "*.ipv6.microsoft.com", "*.*.xboxlive.com",
-    "speedtest.cros.wr.pvp.net"
-  ]
-};
+### 6.4 DNS 预设（definitions/runtime/dns.yaml）
+
+`dns.yaml` 是 DNS 防泄漏的声明式来源。当前结构示意如下：
+
+```yaml
+enable: true
+listen: "127.0.0.1:5335"
+enhanced-mode: fake-ip
+fake-ip-range: 198.18.0.1/16
+
+default-nameserver:
+  - 180.76.76.76
+  - 182.254.118.118
+  - 119.29.29.29
+  - 223.5.5.5
+
+nameserver:
+  - 180.76.76.76
+  - 119.29.29.29
+  - 180.184.1.1
+  - 223.5.5.5
+  - https://223.6.6.6/dns-query#h3=true
+  - https://dns.alidns.com/dns-query
+  - https://doh.pub/dns-query
+
+fallback:
+  - https://000000.dns.nextdns.io/dns-query#h3=true
+  - https://public.dns.iij.jp/dns-query
+  - https://101.101.101.101/dns-query
+  - https://208.67.220.220/dns-query
+  - tls://8.8.4.4
+  - tls://1.0.0.1:853
+  - https://cloudflare-dns.com/dns-query
+  - https://dns.google/dns-query
+
+fallback-filter:
+  geoip: true
+  geoip-code: CN
 ```
 
 ### 6.5 覆写脚本主函数（main.js）
@@ -904,24 +880,16 @@ const DNS_CONFIG = {
 ```javascript
 // main.js — full-profile 入口
 function main(config) {
-  // ── 输入契约检查（main.js 降级为 DNS-only） ──
+  // ── 先应用 runtime preset ──
+  applyRuntimePreset(config);
+
+  // ── 输入契约检查（无节点时仅跳过路由部分） ──
   const proxies = config.proxies || [];
   const namedProxies = proxies.filter(p => typeof p?.name === "string" && p.name.length > 0);
   if (namedProxies.length === 0) {
     console.log("[override] ERROR: config.proxies 为空，无法生成策略组和分流规则");
-    console.log("[override] 降级为 DNS-only 模式，仅注入 DNS 防泄漏，其他字段保留上游原样");
-    config.dns = DNS_CONFIG;  // 仅注入 DNS，不动其他字段
+    console.log("[override] 已应用 runtime preset，跳过 proxy-groups、rule-providers 和 rules 生成");
     return config;
-  }
-
-  // ── 强制覆写基础字段 ──
-  Object.assign(config, BASE_CONFIG);
-  config.dns = DNS_CONFIG;
-
-  // ── 缺失时注入 ──
-  if (config["allow-lan"] === undefined) config["allow-lan"] = true;
-  if (!config.tun) {
-    config.tun = { enable: false, stack: "system", "auto-route": true, "auto-detect-interface": true };
   }
 
   // ── 动态策略组生成 ──
@@ -991,42 +959,35 @@ proxy-config-hub/
 │
 ├── scripts/
 │   ├── override/                         # 覆写脚本（Mihomo 为主）
-│   │   ├── main.js                       # Full-profile 覆写（源码，标准 require 依赖 _lib）
-│   │   ├── routing-only.js               # 仅路由覆写（动态策略组 + 分流规则，不碰 DNS/端口等）
-│   │   └── dns-leak-fix.js               # 仅 DNS 防泄漏（轻量替代）
+│   │   ├── main.js                       # Full-profile 覆写入口
+│   │   └── lib/                          # runtime preset / proxy-groups / rule-assembly / validate-output
 │   │
 │   ├── sub-store/                        # 功能脚本（Sub-Store 专用）
-│   │   ├── node-rename.js
-│   │   ├── node-filter.js
-│   │   └── node-sort.js
+│   │   └── rename.js
 │   │
-│   └── _lib/                             # 共享工具库（源码层通过 require 引用，v1 默认互不依赖）
-│       ├── base-config.js                # BASE_CONFIG 常量
-│       ├── dns-preset.js                 # DNS_CONFIG 常量
-│       ├── proxy-utils.js                # 地区识别、节点分类
-│       ├── group-definitions.js          # GROUP_DEFINITIONS
-│       ├── rule-builder.js               # buildRuleProviders()
-│       └── validator.js                  # 校验函数
+│   └── config/
+│       ├── rules/                        # 从 definitions/rules/registry/ 生成
+│       └── runtime/                      # 从 definitions/runtime/ 生成
 │
-├── rules/
-│   ├── custom/                           # 用户自定义规则（MetaCubeX 没有的）
-│   │   ├── e-hentai.yaml
-│   │   └── _template.yaml
-│   │
-│   └── sources.yaml                      # 规则源注册表（声明顺序 = 匹配顺序）
+├── definitions/
+│   ├── rules/
+│   │   ├── registry/                     # 活跃规则注册表 YAML
+│   │   └── custom/                       # 自定义规则模板/资源
+│   └── runtime/                          # 运行时预设 YAML
 │
 ├── templates/
 │   └── mihomo/
 │       └── config-example.yaml           # 覆写后的预期产物示例
 │
 ├── tools/
-│   ├── bundle.js                         # 将 _lib/ + sources.yaml 内联到覆写脚本
-│   └── validate.js                       # 离线校验（id 唯一、正向/反向引用完整性、yaml 语法）
+│   ├── yaml-to-js.js                     # 将 definitions/ 编译为 scripts/config/
+│   ├── generate-example-config.js        # 生成完整示例配置
+│   ├── verify-main.js                    # 打包/运行时校验
+│   └── verify-yaml-migration.js          # YAML 迁移兼容性校验
 │
 └── .github/
     └── workflows/
-        ├── validate.yml                  # PR 时校验
-        └── build.yml                     # 构建 → 内联 → 推送 dist 分支
+        └── build-dist.yml                # 构建 → 验证 → 推送 dist 分支
 ```
 
 ### 7.1 构建产物（dist 分支）
@@ -1035,16 +996,12 @@ proxy-config-hub/
 dist/
 ├── scripts/
 │   ├── override/
-│   │   ├── main.js                       # 已内联 _lib + sources 数据的自包含脚本
-│   │   ├── routing-only.js               # 已内联，仅路由
-│   │   └── dns-leak-fix.js
+│   │   └── main.js                       # 已内联配置与依赖的自包含脚本
 │   └── sub-store/
-│       ├── node-rename.js
-│       ├── node-filter.js
-│       └── node-sort.js
+│       └── rename.js
 └── rules/
     └── custom/
-        └── e-hentai.yaml
+        └── _template.yaml
 ```
 
 ### 7.2 用户引用 URL
@@ -1053,17 +1010,11 @@ dist/
 # 覆写脚本 — Full-profile（Mihomo Party / Clash Verge / Sub-Store）
 https://cdn.jsdelivr.net/gh/{OWNER}/proxy-config-hub@dist/scripts/override/main.js
 
-# 覆写脚本 — 仅路由（已有基础配置，只需动态分组和分流规则）
-https://cdn.jsdelivr.net/gh/{OWNER}/proxy-config-hub@dist/scripts/override/routing-only.js
-
-# 覆写脚本 — 仅 DNS 防泄漏
-https://cdn.jsdelivr.net/gh/{OWNER}/proxy-config-hub@dist/scripts/override/dns-leak-fix.js
-
 # 功能脚本（Sub-Store 节点操作）
-https://cdn.jsdelivr.net/gh/{OWNER}/proxy-config-hub@dist/scripts/sub-store/node-rename.js
+https://cdn.jsdelivr.net/gh/{OWNER}/proxy-config-hub@dist/scripts/sub-store/rename.js
 
 # 自定义规则集
-https://cdn.jsdelivr.net/gh/{OWNER}/proxy-config-hub@dist/rules/custom/e-hentai.yaml
+https://cdn.jsdelivr.net/gh/{OWNER}/proxy-config-hub@dist/rules/custom/<文件名>
 ```
 
 ---
@@ -1072,19 +1023,15 @@ https://cdn.jsdelivr.net/gh/{OWNER}/proxy-config-hub@dist/rules/custom/e-hentai.
 
 ```
 push to main
-  └─→ .github/workflows/build.yml
+  └─→ .github/workflows/build-dist.yml
         ├─ validate:
-        │   ├─ sources.yaml 中 id 全局唯一
-        │   ├─ 正向：每个 source 的 target_group 在 GROUP_DEFINITIONS 中已注册
-        │   ├─ 反向：GROUP_DEFINITIONS 中由 RULE-SET 驱动的组（除 fallback）至少被一条 source 引用
-        │   ├─ custom/*.yaml 的 payload 语法合法
-        │   └─ 远程 URL 可达性检查（不可达则报警，不阻断构建）
+        │   ├─ npm run build
+        │   ├─ npm run verify
+        │   └─ 生成 scripts/config/runtime/*.js 与 rules/*.js
         ├─ bundle:
-        │   ├─ 读取 _lib/*.js 和 sources.yaml
-        │   ├─ 解析入口文件中的静态本地 require 依赖并打包到覆写脚本
-        │   ├─ 将 sources.yaml 数据序列化为 SOURCES_DATA 常量内联
-        │   └─ 功能脚本原样复制
-        ├─ copy: rules/custom/*.yaml → dist/
+        │   ├─ esbuild 打包 scripts/override/main.js
+        │   ├─ 复制 scripts/sub-store/*.js
+        │   └─ 复制 definitions/rules/custom/* → dist/rules/custom/
         └─ deploy: 推送 dist 分支
 ```
 
@@ -1119,7 +1066,7 @@ payload:
 |------|------|
 | 稳定 ID 层（GROUP_DEFINITIONS + target_group） | 避免策略组名漂移，支持重命名而不影响 sources.yaml |
 | 业务组不直接挂节点 | 新增/删除节点只影响地区组和控制组，业务组零维护 |
-| _lib + bundle + dist 交付链 | 源码可维护（_lib 共享），产物可用（单文件自包含） |
+| definitions/runtime + scripts/config/runtime | 运行时固定值声明化，编辑源数据而不是手改脚本常量 |
 | 三入口分级（main / routing-only / dns-leak-fix） | main.js 是 full-profile 一键搞定；routing-only.js 只管分组和规则不碰运行时模板；dns-leak-fix.js 最轻量只补 DNS。用户按需选一个 URL |
 | 声明顺序 = 规则顺序 | 所见即所得，不需要心算号段或 phase 映射 |
 | mode: full/direct/reject 三值 | v1 最小模型，覆盖所有已知场景；不够用时升级为 allowed_targets |
@@ -1128,9 +1075,9 @@ payload:
 
 ## 十一、建议实施顺序
 
-1. **`_lib/` 核心模块 + `sources.yaml`**：先落地 base-config、dns-preset、proxy-utils、group-definitions 和规则源注册表，这是所有入口的共享基础
+1. **声明式源数据 + 核心模块**：先落地 `definitions/runtime/*.yaml`、`definitions/rules/registry/*.yaml`、`runtime-preset.js`、`proxy-groups.js` 和规则装配器，这是所有入口的共享基础
 2. **`rule-builder.js` + `validator.js`**：规则生成和校验逻辑，可独立单测
-3. **三个覆写入口**：`main.js` → `routing-only.js` → `dns-leak-fix.js`，按复杂度递减实现
-4. **`tools/bundle.js`**：内联构建，产出自包含脚本
-5. **CI/CD**：validate.yml（含正向/反向引用校验）+ build.yml（构建 → dist 分支）
-6. **功能脚本**（Sub-Store 节点操作）：node-rename / node-filter / node-sort，与覆写脚本独立，可并行开发
+3. **`main.js` 覆写入口**：先保证 full-profile 主链路稳定，再视需要拆分轻量入口
+4. **构建链**：`tools/yaml-to-js.js` + `build.js`，先编译声明式源数据，再打包发布脚本
+5. **CI/CD**：`build-dist.yml` 负责构建、验证和发布 dist 分支
+6. **功能脚本**（Sub-Store 节点操作）：当前为 `rename.js`，与覆写脚本独立维护

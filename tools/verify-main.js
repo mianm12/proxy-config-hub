@@ -54,8 +54,11 @@ function assertGeneratedFiles() {
     path.join(REPO_ROOT, "scripts", "config", "rules", "groupDefinitions.js"),
     path.join(REPO_ROOT, "scripts", "config", "rules", "ruleProviders.js"),
     path.join(REPO_ROOT, "scripts", "config", "runtime", "base.js"),
+    path.join(REPO_ROOT, "scripts", "config", "runtime", "dns.js"),
     path.join(REPO_ROOT, "scripts", "config", "runtime", "profile.js"),
     path.join(REPO_ROOT, "scripts", "config", "runtime", "geodata.js"),
+    path.join(REPO_ROOT, "scripts", "config", "runtime", "sniffer.js"),
+    path.join(REPO_ROOT, "scripts", "config", "runtime", "tun.js"),
   ];
 
   for (const filePath of requiredFiles) {

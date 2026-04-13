@@ -32,8 +32,45 @@ async function setupCanonicalWorkspace() {
     path.join(REPO_ROOT, "definitions", "rules", "registry", "ruleProviders.yaml"),
     path.join(workspaceRoot, "definitions", "rules", "registry", "ruleProviders.yaml"),
   );
+  await copyFile(
+    path.join(REPO_ROOT, "definitions", "runtime", "base.yaml"),
+    path.join(workspaceRoot, "definitions", "runtime", "base.yaml"),
+  );
+  await copyFile(
+    path.join(REPO_ROOT, "definitions", "runtime", "dns.yaml"),
+    path.join(workspaceRoot, "definitions", "runtime", "dns.yaml"),
+  );
+  await copyFile(
+    path.join(REPO_ROOT, "definitions", "runtime", "geodata.yaml"),
+    path.join(workspaceRoot, "definitions", "runtime", "geodata.yaml"),
+  );
+  await copyFile(
+    path.join(REPO_ROOT, "definitions", "runtime", "profile.yaml"),
+    path.join(workspaceRoot, "definitions", "runtime", "profile.yaml"),
+  );
+  await copyFile(
+    path.join(REPO_ROOT, "definitions", "runtime", "sniffer.yaml"),
+    path.join(workspaceRoot, "definitions", "runtime", "sniffer.yaml"),
+  );
+  await copyFile(
+    path.join(REPO_ROOT, "definitions", "runtime", "tun.yaml"),
+    path.join(workspaceRoot, "definitions", "runtime", "tun.yaml"),
+  );
 
   return workspaceRoot;
+}
+
+async function assertCanonicalRuntimeOutputs(workspaceRoot) {
+  const runtimeFiles = ["base.js", "dns.js", "geodata.js", "profile.js", "sniffer.js", "tun.js"];
+
+  for (const fileName of runtimeFiles) {
+    const relativePath = path.join("scripts", "config", "runtime", fileName);
+    assert.equal(
+      await readGeneratedFile(workspaceRoot, relativePath),
+      await readGeneratedFile(REPO_ROOT, relativePath),
+      `canonical runtime conversion must match repository output: ${fileName}`,
+    );
+  }
 }
 
 async function setupLegacyWorkspace() {
@@ -90,7 +127,7 @@ async function main() {
   const legacyWorkspace = await setupLegacyWorkspace();
 
   try {
-    await buildYamlModules({ cwd: canonicalWorkspace, requiredNamespaces: ["rules"], log: () => {} });
+    await buildYamlModules({ cwd: canonicalWorkspace, requiredNamespaces: ["rules", "runtime"], log: () => {} });
     await buildYamlModules({ cwd: legacyWorkspace, requiredNamespaces: ["rules"], log: () => {} });
 
     const canonicalGroupDefinitions = await readGeneratedFile(
@@ -129,6 +166,7 @@ async function main() {
       "custom templates must never be converted into scripts/config",
     );
 
+    await assertCanonicalRuntimeOutputs(canonicalWorkspace);
     await assertMixedRootsFail();
     console.log("YAML migration verification passed");
   } finally {
