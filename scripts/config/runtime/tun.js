@@ -1,6 +1,6 @@
 export default {
   "enable": true,
-  "stack": "system",
+  "stack": "mixed",
   "auto-route": true,
   "auto-detect-interface": true,
   "dns-hijack": [

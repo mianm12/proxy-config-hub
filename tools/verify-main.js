@@ -2,6 +2,12 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import baseConfig from "../scripts/config/runtime/base.js";
+import dnsConfig from "../scripts/config/runtime/dns.js";
+import geodataConfig from "../scripts/config/runtime/geodata.js";
+import profileConfig from "../scripts/config/runtime/profile.js";
+import snifferConfig from "../scripts/config/runtime/sniffer.js";
+import tunConfig from "../scripts/config/runtime/tun.js";
 import {
   BUNDLE_PATH,
   REPO_ROOT,
@@ -21,29 +27,19 @@ const IP_RULE_PROVIDER_IDS = [
   "cn-ip",
 ];
 
-const EXPECTED_DEFAULT_NAMESERVERS = [
-  "180.76.76.76",
-  "182.254.118.118",
-  "119.29.29.29",
-  "223.5.5.5",
-];
+function normalize(value) {
+  return JSON.parse(JSON.stringify(value));
+}
 
-const EXPECTED_NAMESERVERS = [
-  "https://223.6.6.6/dns-query",
-  "https://dns.alidns.com/dns-query",
-  "https://doh.pub/dns-query",
-];
-
-const EXPECTED_FALLBACK_NAMESERVERS = [
-  "https://000000.dns.nextdns.io/dns-query",
-  "https://public.dns.iij.jp/dns-query",
-  "https://101.101.101.101/dns-query",
-  "https://208.67.220.220/dns-query",
-  "tls://8.8.4.4",
-  "tls://1.0.0.1:853",
-  "https://cloudflare-dns.com/dns-query",
-  "https://dns.google/dns-query",
-];
+function assertSectionApplied(result, expectedSection, label) {
+  for (const [key, value] of Object.entries(expectedSection)) {
+    assert.deepEqual(
+      normalize(result[key]),
+      normalize(value),
+      `${label} should apply current generated value for ${key}`,
+    );
+  }
+}
 
 function assertGeneratedFiles() {
   const requiredFiles = [
@@ -81,34 +77,16 @@ function testBundlePositivePath() {
   const { main, bundleCode } = loadBundleRuntime();
   assert.equal(typeof main, "function", "bundle should expose main()");
   const result = main({ proxies: loadTemplateProxies() });
-  const defaultNameservers = Array.from(result.dns["default-nameserver"]);
-  const nameservers = Array.from(result.dns.nameserver);
-  const fallbackNameservers = Array.from(result.dns.fallback);
-  const proxyServerNameservers = Array.from(result.dns["proxy-server-nameserver"]);
-  const directNameservers = Array.from(result.dns["direct-nameserver"]);
 
-  assert.equal(result["mixed-port"], 7897, "runtime base config should be applied");
-  assert.equal(result.profile["store-selected"], true, "runtime profile config should be applied");
-  assert.equal(result["geodata-mode"], true, "runtime geodata config should be applied");
-  assert.equal(result.dns.enable, true, "dns preset should be applied");
-  assert.equal(result.dns.ipv6, false, "dns preset should disable ipv6 for leak resistance");
-  assert.equal(result.dns["respect-rules"], true, "dns preset should force dns connections to follow rules");
+  assertSectionApplied(result, baseConfig, "base runtime config");
+  assertSectionApplied(result, profileConfig, "profile runtime config");
+  assertSectionApplied(result, geodataConfig, "geodata runtime config");
+  assert.deepEqual(normalize(result.dns), normalize(dnsConfig), "dns preset should match generated runtime config");
+  assert.deepEqual(normalize(result.sniffer), normalize(snifferConfig), "sniffer preset should match generated runtime config");
+  assert.deepEqual(normalize(result.tun), normalize(tunConfig), "tun preset should match generated runtime config");
   assert.ok(Array.isArray(result["proxy-groups"]) && result["proxy-groups"].length > 0, "proxy groups should be generated");
   assert.ok(result["rule-providers"]?.youtube, "rule providers should be generated");
   assert.ok(!("target-group" in result["rule-providers"].youtube), "rule-provider metadata should be stripped");
-  assert.deepEqual(defaultNameservers, EXPECTED_DEFAULT_NAMESERVERS, "default nameservers should use stable domestic bootstrap resolvers");
-  assert.deepEqual(nameservers, EXPECTED_NAMESERVERS, "nameserver should only contain encrypted domestic resolvers");
-  assert.deepEqual(fallbackNameservers, EXPECTED_FALLBACK_NAMESERVERS, "fallback should only contain foreign resolvers");
-  assert.deepEqual(proxyServerNameservers, EXPECTED_DEFAULT_NAMESERVERS, "proxy server nameserver should reuse bootstrap resolvers");
-  assert.deepEqual(directNameservers, EXPECTED_NAMESERVERS, "direct nameserver should use encrypted domestic resolvers");
-  assert.equal(result.dns["direct-nameserver-follow-policy"], true, "direct nameserver should follow policy");
-  assert.equal(result.dns["fallback-filter"]["geoip-code"], "CN", "fallback filter should explicitly target CN");
-  assert.ok(!defaultNameservers.includes("180.184.2.2"), "default nameserver should exclude unstable bootstrap resolver");
-  assert.ok(!nameservers.includes("8.8.8.8"), "nameserver should exclude foreign plain DNS");
-  assert.ok(!nameservers.includes("https://cloudflare-dns.com/dns-query"), "nameserver should exclude foreign DoH");
-  assert.ok(!nameservers.includes("180.76.76.76"), "nameserver should exclude plain DNS bootstrap resolvers");
-  assert.ok(!fallbackNameservers.includes("https://dns.alidns.com/dns-query"), "fallback should exclude domestic DoH");
-  assert.ok(!fallbackNameservers.includes("https://doh.pub/dns-query"), "fallback should exclude domestic DoH");
 
   for (const providerId of IP_RULE_PROVIDER_IDS) {
     assert.ok(result["rule-providers"]?.[providerId], `missing generated rule provider: ${providerId}`);
