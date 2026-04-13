@@ -540,24 +540,6 @@ export default {
       "format": "mrs",
       "target-group": "news"
     },
-    "amazon": {
-      "type": "http",
-      "behavior": "domain",
-      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/amazon.mrs",
-      "path": "./ruleset/amazon.mrs",
-      "interval": 86400,
-      "format": "mrs",
-      "target-group": "shopping"
-    },
-    "ebay": {
-      "type": "http",
-      "behavior": "domain",
-      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/ebay.mrs",
-      "path": "./ruleset/ebay.mrs",
-      "interval": 86400,
-      "format": "mrs",
-      "target-group": "shopping"
-    },
     "google": {
       "type": "http",
       "behavior": "domain",
@@ -576,24 +558,6 @@ export default {
       "format": "mrs",
       "target-group": "google"
     },
-    "microsoft": {
-      "type": "http",
-      "behavior": "domain",
-      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/microsoft.mrs",
-      "path": "./ruleset/microsoft.mrs",
-      "interval": 86400,
-      "format": "mrs",
-      "target-group": "microsoft"
-    },
-    "onedrive": {
-      "type": "http",
-      "behavior": "domain",
-      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/onedrive.mrs",
-      "path": "./ruleset/onedrive.mrs",
-      "interval": 86400,
-      "format": "mrs",
-      "target-group": "microsoft"
-    },
     "apple": {
       "type": "http",
       "behavior": "domain",
@@ -611,33 +575,6 @@ export default {
       "interval": 86400,
       "format": "mrs",
       "target-group": "apple"
-    },
-    "github": {
-      "type": "http",
-      "behavior": "domain",
-      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/github.mrs",
-      "path": "./ruleset/github.mrs",
-      "interval": 86400,
-      "format": "mrs",
-      "target-group": "code_hosting"
-    },
-    "gitlab": {
-      "type": "http",
-      "behavior": "domain",
-      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/gitlab.mrs",
-      "path": "./ruleset/gitlab.mrs",
-      "interval": 86400,
-      "format": "mrs",
-      "target-group": "code_hosting"
-    },
-    "atlassian": {
-      "type": "http",
-      "behavior": "domain",
-      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/atlassian.mrs",
-      "path": "./ruleset/atlassian.mrs",
-      "interval": 86400,
-      "format": "mrs",
-      "target-group": "code_hosting"
     },
     "docker": {
       "type": "http",
@@ -674,6 +611,33 @@ export default {
       "interval": 86400,
       "format": "mrs",
       "target-group": "developer_tools"
+    },
+    "github": {
+      "type": "http",
+      "behavior": "domain",
+      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/github.mrs",
+      "path": "./ruleset/github.mrs",
+      "interval": 86400,
+      "format": "mrs",
+      "target-group": "code_hosting"
+    },
+    "gitlab": {
+      "type": "http",
+      "behavior": "domain",
+      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/gitlab.mrs",
+      "path": "./ruleset/gitlab.mrs",
+      "interval": 86400,
+      "format": "mrs",
+      "target-group": "code_hosting"
+    },
+    "atlassian": {
+      "type": "http",
+      "behavior": "domain",
+      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/atlassian.mrs",
+      "path": "./ruleset/atlassian.mrs",
+      "interval": 86400,
+      "format": "mrs",
+      "target-group": "code_hosting"
     },
     "dropbox": {
       "type": "http",
@@ -791,6 +755,42 @@ export default {
       "interval": 86400,
       "format": "mrs",
       "target-group": "cloud_service"
+    },
+    "microsoft": {
+      "type": "http",
+      "behavior": "domain",
+      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/microsoft.mrs",
+      "path": "./ruleset/microsoft.mrs",
+      "interval": 86400,
+      "format": "mrs",
+      "target-group": "microsoft"
+    },
+    "onedrive": {
+      "type": "http",
+      "behavior": "domain",
+      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/onedrive.mrs",
+      "path": "./ruleset/onedrive.mrs",
+      "interval": 86400,
+      "format": "mrs",
+      "target-group": "microsoft"
+    },
+    "amazon": {
+      "type": "http",
+      "behavior": "domain",
+      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/amazon.mrs",
+      "path": "./ruleset/amazon.mrs",
+      "interval": 86400,
+      "format": "mrs",
+      "target-group": "shopping"
+    },
+    "ebay": {
+      "type": "http",
+      "behavior": "domain",
+      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/ebay.mrs",
+      "path": "./ruleset/ebay.mrs",
+      "interval": 86400,
+      "format": "mrs",
+      "target-group": "shopping"
     },
     "geolocation-cn": {
       "type": "http",

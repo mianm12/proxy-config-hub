@@ -500,25 +500,9 @@ ruleProviders:
     interval: 86400
     format: mrs
     target-group: news
-  ## 海淘购物
-  amazon:
-    type: http
-    behavior: domain
-    url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/amazon.mrs
-    path: ./ruleset/amazon.mrs
-    interval: 86400
-    format: mrs
-    target-group: shopping
-  ebay:
-    type: http
-    behavior: domain
-    url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/ebay.mrs
-    path: ./ruleset/ebay.mrs
-    interval: 86400
-    format: mrs
-    target-group: shopping
-
   # 基础设施/平台类规则
+  # 广义厂商规则（如 microsoft / amazon）需要放到其下更具体的服务规则之后，
+  # 否则会完整吞掉 azure / github / npmjs / aws 之类的专用分组。
   ## 谷歌服务
   google:
     type: http
@@ -536,23 +520,6 @@ ruleProviders:
     interval: 86400
     format: mrs
     target-group: google
-  ## 微软服务
-  microsoft:
-    type: http
-    behavior: domain
-    url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/microsoft.mrs
-    path: ./ruleset/microsoft.mrs
-    interval: 86400
-    format: mrs
-    target-group: microsoft
-  onedrive:
-    type: http
-    behavior: domain
-    url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/onedrive.mrs
-    path: ./ruleset/onedrive.mrs
-    interval: 86400
-    format: mrs
-    target-group: microsoft
   ## 苹果服务
   apple:
     type: http
@@ -570,31 +537,6 @@ ruleProviders:
     interval: 86400
     format: mrs
     target-group: apple
-  ## 代码托管
-  github:
-    type: http
-    behavior: domain
-    url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/github.mrs
-    path: ./ruleset/github.mrs
-    interval: 86400
-    format: mrs
-    target-group: code_hosting
-  gitlab:
-    type: http
-    behavior: domain
-    url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/gitlab.mrs
-    path: ./ruleset/gitlab.mrs
-    interval: 86400
-    format: mrs
-    target-group: code_hosting
-  atlassian:
-    type: http
-    behavior: domain
-    url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/atlassian.mrs
-    path: ./ruleset/atlassian.mrs
-    interval: 86400
-    format: mrs
-    target-group: code_hosting
   ## 开发工具
   docker:
     type: http
@@ -628,6 +570,31 @@ ruleProviders:
     interval: 86400
     format: mrs
     target-group: developer_tools
+  ## 代码托管
+  github:
+    type: http
+    behavior: domain
+    url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/github.mrs
+    path: ./ruleset/github.mrs
+    interval: 86400
+    format: mrs
+    target-group: code_hosting
+  gitlab:
+    type: http
+    behavior: domain
+    url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/gitlab.mrs
+    path: ./ruleset/gitlab.mrs
+    interval: 86400
+    format: mrs
+    target-group: code_hosting
+  atlassian:
+    type: http
+    behavior: domain
+    url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/atlassian.mrs
+    path: ./ruleset/atlassian.mrs
+    interval: 86400
+    format: mrs
+    target-group: code_hosting
   ## 网盘存储
   dropbox:
     type: http
@@ -736,6 +703,40 @@ ruleProviders:
     interval: 86400
     format: mrs
     target-group: cloud_service
+  ## 微软服务
+  microsoft:
+    type: http
+    behavior: domain
+    url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/microsoft.mrs
+    path: ./ruleset/microsoft.mrs
+    interval: 86400
+    format: mrs
+    target-group: microsoft
+  onedrive:
+    type: http
+    behavior: domain
+    url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/onedrive.mrs
+    path: ./ruleset/onedrive.mrs
+    interval: 86400
+    format: mrs
+    target-group: microsoft
+  ## 海淘购物
+  amazon:
+    type: http
+    behavior: domain
+    url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/amazon.mrs
+    path: ./ruleset/amazon.mrs
+    interval: 86400
+    format: mrs
+    target-group: shopping
+  ebay:
+    type: http
+    behavior: domain
+    url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/ebay.mrs
+    path: ./ruleset/ebay.mrs
+    interval: 86400
+    format: mrs
+    target-group: shopping
 
   # 地理兜底规则（必须放在所有专用规则和平台规则之后）
   ## 国内服务

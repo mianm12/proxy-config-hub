@@ -6,6 +6,7 @@
   "description": "Unified proxy config repository for Mihomo and experimental Sub-Store compatibility.",
   "scripts": {
     "dev": "node scripts/override/main.js",
+    "audit:rule-overlap": "node tools/check-rule-overlap.js",
     "rules:build": "node tools/yaml-to-js.js",
     "build": "npm run rules:build && node build.js",
     "example:config": "npm run build && node tools/generate-example-config.js",
