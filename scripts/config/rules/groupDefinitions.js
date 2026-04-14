@@ -75,6 +75,18 @@ export default {
         "@region-groups"
       ]
     },
+    "ssh_22": {
+      "name": "SSH(22端口)",
+      "type": "select",
+      "category": "core",
+      "proxies": [
+        "DIRECT",
+        "@proxy-select",
+        "@manual-select",
+        "@auto-select",
+        "@region-groups"
+      ]
+    },
     "fallback": {
       "name": "🐟 漏网之鱼",
       "type": "select",

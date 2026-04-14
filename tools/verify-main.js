@@ -6,8 +6,12 @@ import baseConfig from "../scripts/config/runtime/base.js";
 import dnsConfig from "../scripts/config/runtime/dns.js";
 import geodataConfig from "../scripts/config/runtime/geodata.js";
 import profileConfig from "../scripts/config/runtime/profile.js";
+import groupDefinitionsConfig from "../scripts/config/rules/groupDefinitions.js";
+import inlineRulesConfig from "../scripts/config/rules/inlineRules.js";
+import ruleProvidersConfig from "../scripts/config/rules/ruleProviders.js";
 import snifferConfig from "../scripts/config/runtime/sniffer.js";
 import tunConfig from "../scripts/config/runtime/tun.js";
+import { assembleRuleSet } from "../scripts/override/lib/rule-assembly.js";
 import {
   BUNDLE_PATH,
   REPO_ROOT,
@@ -44,6 +48,7 @@ function assertSectionApplied(result, expectedSection, label) {
 function assertGeneratedFiles() {
   const requiredFiles = [
     path.join(REPO_ROOT, "scripts", "config", "rules", "groupDefinitions.js"),
+    path.join(REPO_ROOT, "scripts", "config", "rules", "inlineRules.js"),
     path.join(REPO_ROOT, "scripts", "config", "rules", "ruleProviders.js"),
     path.join(REPO_ROOT, "scripts", "config", "runtime", "base.js"),
     path.join(REPO_ROOT, "scripts", "config", "runtime", "dns.js"),
@@ -88,6 +93,13 @@ function testBundlePositivePath() {
   assert.ok(result["rule-providers"]?.youtube, "rule providers should be generated");
   assert.ok(!("target-group" in result["rule-providers"].youtube), "rule-provider metadata should be stripped");
 
+  const expectedPrependRules = inlineRulesConfig.prependRules ?? [];
+  assert.deepEqual(
+    normalize(result.rules.slice(0, expectedPrependRules.length)),
+    normalize(expectedPrependRules),
+    "rules should start with inlineRules.prependRules in declared order",
+  );
+
   for (const providerId of IP_RULE_PROVIDER_IDS) {
     assert.ok(result["rule-providers"]?.[providerId], `missing generated rule provider: ${providerId}`);
     assert.ok(!("target-group" in result["rule-providers"][providerId]), `rule provider should strip target-group metadata: ${providerId}`);
@@ -127,6 +139,32 @@ function testNoProxyFallback() {
   assert.ok(logs.some((line) => line.includes("跳过 proxy-groups、rule-providers 和 rules 生成")), "fallback path should emit diagnostics");
 }
 
+function testInvalidInlineRuleTargetRejected() {
+  assert.throws(
+    () =>
+      assembleRuleSet(groupDefinitionsConfig.groupDefinitions, ruleProvidersConfig.ruleProviders, {
+        prependRules: ["DST-PORT,22,__nonexistent_group__"],
+      }),
+    /Prepend rule references unknown target/,
+    "prepend rule target should be validated against configured groups",
+  );
+}
+
+function testInlineRuleWithNoResolveTargetAccepted() {
+  // 从现有策略组中任取一个组名，避免将具体组名硬编码到测试里
+  const anyGroupName = Object.values(groupDefinitionsConfig.groupDefinitions)
+    .map((definition) => definition?.name)
+    .find((name) => typeof name === "string" && name.length > 0);
+  assert.ok(anyGroupName, "groupDefinitions 至少应包含一个具名策略组");
+
+  const prependRule = `IP-CIDR,1.1.1.1/32,${anyGroupName},no-resolve`;
+  const { rules } = assembleRuleSet(groupDefinitionsConfig.groupDefinitions, ruleProvidersConfig.ruleProviders, {
+    prependRules: [prependRule],
+  });
+
+  assert.equal(rules[0], prependRule, "带 no-resolve 尾缀的合法 prepend 规则应被保留在首位");
+}
+
 function testExampleConfigSerialization() {
   const { main } = loadBundleRuntime();
   const result = main({ proxies: loadTemplateProxies() });
@@ -143,6 +181,8 @@ function main() {
   testBundlePositivePath();
   testRuntimeInjectionSemantics();
   testNoProxyFallback();
+  testInvalidInlineRuleTargetRejected();
+  testInlineRuleWithNoResolveTargetAccepted();
   testExampleConfigSerialization();
   console.log("Main bundle verification passed");
 }

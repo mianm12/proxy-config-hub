@@ -29,6 +29,10 @@ async function setupCanonicalWorkspace() {
     path.join(workspaceRoot, "definitions", "rules", "registry", "groupDefinitions.yaml"),
   );
   await copyFile(
+    path.join(REPO_ROOT, "definitions", "rules", "registry", "inlineRules.yaml"),
+    path.join(workspaceRoot, "definitions", "rules", "registry", "inlineRules.yaml"),
+  );
+  await copyFile(
     path.join(REPO_ROOT, "definitions", "rules", "registry", "ruleProviders.yaml"),
     path.join(workspaceRoot, "definitions", "rules", "registry", "ruleProviders.yaml"),
   );
@@ -69,6 +73,19 @@ async function assertCanonicalRuntimeOutputs(workspaceRoot) {
       await readGeneratedFile(workspaceRoot, relativePath),
       await readGeneratedFile(REPO_ROOT, relativePath),
       `canonical runtime conversion must match repository output: ${fileName}`,
+    );
+  }
+}
+
+async function assertCanonicalRulesOutputs(workspaceRoot) {
+  const ruleFiles = ["groupDefinitions.js", "inlineRules.js", "ruleProviders.js"];
+
+  for (const fileName of ruleFiles) {
+    const relativePath = path.join("scripts", "config", "rules", fileName);
+    assert.equal(
+      await readGeneratedFile(workspaceRoot, relativePath),
+      await readGeneratedFile(REPO_ROOT, relativePath),
+      `canonical rules conversion must match repository output: ${fileName}`,
     );
   }
 }
@@ -166,6 +183,7 @@ async function main() {
       "custom templates must never be converted into scripts/config",
     );
 
+    await assertCanonicalRulesOutputs(canonicalWorkspace);
     await assertCanonicalRuntimeOutputs(canonicalWorkspace);
     await assertMixedRootsFail();
     console.log("YAML migration verification passed");

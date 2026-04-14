@@ -70,7 +70,7 @@ npm run verify  # 运行验证
 ```text
 definitions/
   rules/
-    registry/   声明式规则注册表 YAML（编译为 JS）
+    registry/   声明式规则注册表 YAML（策略组、前置规则、规则集，编译为 JS）
     custom/     自定义规则模板/资源（复制到 dist，不参与活跃规则装配）
   runtime/      运行时预设 YAML（编译为 JS）
 
@@ -108,6 +108,7 @@ templates/
 
 - `definitions/` 是唯一的声明式 YAML 源目录
 - `scripts/config/` 是生成产物，不应手动编辑
+- `definitions/rules/registry/` 是活跃规则装配入口，包含 `groupDefinitions.yaml`、`inlineRules.yaml`、`ruleProviders.yaml`
 - `definitions/rules/custom/` 是模板/发布资产子目录，不属于活跃规则注册表
 - 构建工具会拒绝 `rules/` 与 `definitions/` 并存的混合源树
 

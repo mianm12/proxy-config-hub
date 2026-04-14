@@ -1,5 +1,6 @@
 import ruleProvidersConfig from "../config/rules/ruleProviders.js";
 import groupDefinitionsConfig from "../config/rules/groupDefinitions.js";
+import inlineRulesConfig from "../config/rules/inlineRules.js";
 import { buildProxyGroups, getNamedProxies } from "./lib/proxy-groups.js";
 import { assembleRuleSet } from "./lib/rule-assembly.js";
 import { applyRuntimePreset } from "./lib/runtime-preset.js";
@@ -23,7 +24,7 @@ function main(config = {}) {
 
   workingConfig["proxy-groups"] = buildProxyGroups(namedProxies, groupDefinitions);
 
-  const { providers, rules } = assembleRuleSet(groupDefinitions, ruleProviders);
+  const { providers, rules } = assembleRuleSet(groupDefinitions, ruleProviders, inlineRulesConfig);
   workingConfig["rule-providers"] = providers;
   workingConfig.rules = rules;
 
