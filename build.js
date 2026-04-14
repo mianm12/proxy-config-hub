@@ -1,6 +1,5 @@
 import * as esbuild from "esbuild";
-import { copyDirectory } from "./tools/lib/fs-helpers.js";
-import { pathExists } from "./tools/lib/fs-helpers.js";
+import { copyDirectory, pathExists } from "./tools/lib/fs-helpers.js";
 import { COPY_ASSETS } from "./tools/lib/paths.js";
 
 /**

@@ -7,16 +7,11 @@ import { promises as fsp } from "node:fs";
 import { buildYamlModules } from "./yaml-to-js.js";
 import { copyFile } from "./lib/fs-helpers.js";
 import {
+  REPO_ROOT,
   DEFINITIONS_DIR,
   SCRIPTS_CONFIG_DIR,
   CANONICAL_NAMESPACES,
 } from "./lib/paths.js";
-
-/**
- * 项目根目录，基于当前模块位置向上一级推导。
- * @type {string}
- */
-const REPO_ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
 
 /**
  * 创建临时工作区目录。
