@@ -5,11 +5,10 @@ import { fileURLToPath } from "node:url";
 
 import yaml from "js-yaml";
 
-const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const RULE_PROVIDERS_PATH = path.join(REPO_ROOT, "definitions", "rules", "registry", "ruleProviders.yaml");
+import { RULE_PROVIDERS_YAML_PATH } from "./lib/paths.js";
 
 function loadRuleProviders() {
-  const content = fs.readFileSync(RULE_PROVIDERS_PATH, "utf8");
+  const content = fs.readFileSync(RULE_PROVIDERS_YAML_PATH, "utf8");
   const document = yaml.load(content);
   const entries = Object.entries(document?.ruleProviders ?? {});
   return entries.map(([id, definition], index) => ({
@@ -140,48 +139,6 @@ function parseIpv4(address) {
   }, 0n);
 }
 
-function parseIpv6(address) {
-  let normalized = address;
-
-  if (normalized.includes(".")) {
-    normalized = expandEmbeddedIpv4(normalized);
-  }
-
-  const segments = normalized.split("::");
-
-  if (segments.length > 2) {
-    throw new Error(`Invalid IPv6 address: ${address}`);
-  }
-
-  const left = segments[0] ? segments[0].split(":").filter(Boolean) : [];
-  const right = segments[1] ? segments[1].split(":").filter(Boolean) : [];
-
-  if (segments.length === 1 && left.length !== 8) {
-    throw new Error(`Invalid IPv6 address: ${address}`);
-  }
-
-  if (left.length + right.length > 8) {
-    throw new Error(`Invalid IPv6 address: ${address}`);
-  }
-
-  const middle = Array(8 - left.length - right.length).fill("0");
-  const parts = [...left, ...middle, ...right];
-
-  if (parts.length !== 8) {
-    throw new Error(`Invalid IPv6 address: ${address}`);
-  }
-
-  return parts.reduce((result, part) => {
-    const value = Number.parseInt(part || "0", 16);
-
-    if (!Number.isInteger(value) || value < 0 || value > 0xffff) {
-      throw new Error(`Invalid IPv6 address: ${address}`);
-    }
-
-    return (result << 16n) + BigInt(value);
-  }, 0n);
-}
-
 function expandEmbeddedIpv4(address) {
   const lastColonIndex = address.lastIndexOf(":");
 
@@ -196,6 +153,71 @@ function expandEmbeddedIpv4(address) {
   const low = Number(ipv4 & 0xffffn).toString(16);
 
   return `${head}:${high}:${low}`;
+}
+
+/**
+ * 将 IPv6 地址的 :: 缩写展开为完整的 8 段格式。
+ * @param {string} address - IPv6 地址字符串。
+ * @returns {string[]} 8 个十六进制段的数组。
+ */
+function expandIpv6Segments(address) {
+  const segments = address.split("::");
+
+  if (segments.length > 2) {
+    throw new Error(`IPv6 地址格式无效（多个 ::）: ${address}`);
+  }
+
+  const left = segments[0] ? segments[0].split(":").filter(Boolean) : [];
+  const right = segments[1] ? segments[1].split(":").filter(Boolean) : [];
+
+  if (segments.length === 1 && left.length !== 8) {
+    throw new Error(`IPv6 地址格式无效（段数不为 8）: ${address}`);
+  }
+
+  if (left.length + right.length > 8) {
+    throw new Error(`IPv6 地址格式无效（总段数超过 8）: ${address}`);
+  }
+
+  const middle = Array(8 - left.length - right.length).fill("0");
+  return [...left, ...middle, ...right];
+}
+
+/**
+ * 将 8 个十六进制段转换为 128 位 BigInt。
+ * @param {string[]} parts - 8 个十六进制段。
+ * @param {string} address - 原始地址（用于错误信息）。
+ * @returns {bigint} 128 位整数表示。
+ */
+function ipv6SegmentsToBigInt(parts, address) {
+  if (parts.length !== 8) {
+    throw new Error(`IPv6 地址格式无效（展开后段数不为 8）: ${address}`);
+  }
+
+  return parts.reduce((result, part) => {
+    const value = Number.parseInt(part || "0", 16);
+
+    if (!Number.isInteger(value) || value < 0 || value > 0xffff) {
+      throw new Error(`IPv6 地址段值无效: ${address}`);
+    }
+
+    return (result << 16n) + BigInt(value);
+  }, 0n);
+}
+
+/**
+ * 解析 IPv6 地址为 128 位 BigInt，支持 :: 缩写和嵌入式 IPv4。
+ * @param {string} address - IPv6 地址字符串。
+ * @returns {bigint} 128 位整数表示。
+ */
+function parseIpv6(address) {
+  let normalized = address;
+
+  if (normalized.includes(".")) {
+    normalized = expandEmbeddedIpv4(normalized);
+  }
+
+  const parts = expandIpv6Segments(normalized);
+  return ipv6SegmentsToBigInt(parts, address);
 }
 
 function entryCovers(leftEntry, rightEntry) {
@@ -378,7 +400,7 @@ const isDirectRun = process.argv[1] && path.resolve(process.argv[1]) === fileURL
 if (isDirectRun) {
   const summaryOnly = process.argv.includes("--summary");
   main({ summaryOnly }).catch((error) => {
-    console.error(error);
+    console.error("规则重叠检查失败:", error.message || error);
     process.exit(1);
   });
 }
