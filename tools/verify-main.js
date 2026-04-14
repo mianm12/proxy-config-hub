@@ -12,12 +12,12 @@ import snifferConfig from "../scripts/config/runtime/sniffer.js";
 import tunConfig from "../scripts/config/runtime/tun.js";
 import { assembleRuleSet } from "../scripts/override/lib/rule-assembly.js";
 import {
-  REPO_ROOT,
   loadBundleRuntime,
   loadTemplateProxies,
   stringifyExampleConfig,
 } from "./lib/bundle-runtime.js";
 import {
+  REPO_ROOT,
   DEFINITIONS_DIR,
   SCRIPTS_CONFIG_DIR,
   CANONICAL_NAMESPACES,

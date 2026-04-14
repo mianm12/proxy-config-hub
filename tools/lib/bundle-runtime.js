@@ -125,9 +125,6 @@ function writeExampleConfig(outputTarget, config) {
 }
 
 export {
-  BUNDLE_PATH,
-  DEFAULT_EXAMPLE_OUTPUT_PATH,
-  REPO_ROOT,
   generateExampleConfig,
   loadBundleRuntime,
   loadTemplateConfig,

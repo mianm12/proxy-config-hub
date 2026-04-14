@@ -22,9 +22,6 @@ const DEFINITIONS_DIR = resolve("definitions");
 /** scripts/config/ 生成产物根目录 */
 const SCRIPTS_CONFIG_DIR = resolve("scripts", "config");
 
-/** dist/ 输出根目录 */
-const DIST_DIR = resolve("dist");
-
 /** 打包产物路径 */
 const BUNDLE_PATH = resolve("dist", "scripts", "override", "main.js");
 
@@ -103,7 +100,6 @@ export {
   resolve,
   DEFINITIONS_DIR,
   SCRIPTS_CONFIG_DIR,
-  DIST_DIR,
   BUNDLE_PATH,
   TEMPLATE_PATH,
   DEFAULT_EXAMPLE_OUTPUT_PATH,

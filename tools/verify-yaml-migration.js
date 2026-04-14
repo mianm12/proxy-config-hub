@@ -9,7 +9,6 @@ import { copyFile } from "./lib/fs-helpers.js";
 import {
   REPO_ROOT,
   DEFINITIONS_DIR,
-  SCRIPTS_CONFIG_DIR,
   CANONICAL_NAMESPACES,
 } from "./lib/paths.js";
 
