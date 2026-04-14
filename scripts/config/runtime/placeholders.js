@@ -1,0 +1,13 @@
+export default {
+  "reserved": [
+    "proxy_select",
+    "manual_select",
+    "auto_select"
+  ],
+  "fallback": "fallback",
+  "mappings": {
+    "@proxy-select": "proxy_select",
+    "@manual-select": "manual_select",
+    "@auto-select": "auto_select"
+  }
+};
