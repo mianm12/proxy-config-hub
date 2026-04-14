@@ -23,7 +23,7 @@ function applyRuntimeSection(config, section) {
  *
  * base/profile/geodata: 无条件覆盖（这些是基础配置，必须与预设保持一致）。
  * sniffer/dns: 无条件覆盖（嗅探和 DNS 配置需要预设保证正确性，用户不应部分覆盖）。
- * allow-lan: 仅在未设置时默认启用（允许用户显式禁用局域网访问）。
+ * allow-lan: 仅在未设置时默认禁用（个人使用场景下无需暴露给局域网，需要时可显式开启）。
  * tun: 仅在未设置时应用预设（TUN 配置涉及系统网络栈，已有配置应被保留以避免冲突）。
  *
  * @param {Record<string, unknown>} config - 目标配置对象。
@@ -37,7 +37,7 @@ function applyRuntimePreset(config) {
   config.dns = cloneData(dnsConfig);
 
   if (config["allow-lan"] === undefined) {
-    config["allow-lan"] = true;
+    config["allow-lan"] = false;
   }
 
   if (!config.tun) {

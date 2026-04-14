@@ -802,7 +802,7 @@ scripts/override/lib/
 | **强制覆写** | mixed-port, mode, log-level, unified-delay, tcp-concurrent, find-process-mode, profile, sniffer, geodata-mode, geo-auto-update, geodata-loader, geo-update-interval, geox-url | ✅ | — | — |
 | **保留上游** | proxies | ✅ | ✅ | ✅ |
 | **保留上游** | proxy-providers | ✅ | ✅ | ✅ |
-| **缺失时注入** | allow-lan (true), tun (enable: false) | ✅ | — | — |
+| **缺失时注入** | allow-lan (false), tun (enable: false) | ✅ | — | — |
 
 ### 6.3 运行时源数据（definitions/runtime）
 

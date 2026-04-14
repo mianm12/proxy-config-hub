@@ -125,6 +125,7 @@ function writeExampleConfig(outputTarget, config) {
 }
 
 export {
+  DEFAULT_EXAMPLE_OUTPUT_PATH,
   generateExampleConfig,
   loadBundleRuntime,
   loadTemplateConfig,
