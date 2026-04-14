@@ -122,4 +122,4 @@ function assembleRuleSet(groupDefinitions, ruleProviders, inlineRules) {
   return { providers, rules };
 }
 
-export { assembleRuleSet };
+export { assembleRuleSet, extractRuleTarget };
