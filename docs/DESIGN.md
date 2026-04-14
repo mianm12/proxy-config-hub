@@ -211,37 +211,21 @@ e-hentai:
 
 识别策略：优先匹配 emoji 国旗（最可靠），其次中文全称，最后英文。短 token（如 HK、US）加边界约束避免误匹配。
 
-```javascript
-const REGION_PATTERNS = [
-  { id: "HK", name: "香港", icon: "🇭🇰", pattern: /🇭🇰|香港|(?<![A-Z])HK(?![A-Z])|Hong\s*Kong/i },
-  { id: "TW", name: "台湾", icon: "🇹🇼", pattern: /🇹🇼|🇨🇳.*台湾|台湾|(?<![A-Z])TW(?![A-Z])|Taiwan/i },
-  { id: "JP", name: "日本", icon: "🇯🇵", pattern: /🇯🇵|日本|(?<![A-Z])JP(?![A-Z])|Japan/i },
-  { id: "SG", name: "新加坡", icon: "🇸🇬", pattern: /🇸🇬|新加坡|(?<![A-Z])SG(?![A-Z])|Singapore/i },
-  { id: "US", name: "美国", icon: "🇺🇸", pattern: /🇺🇸|美国|(?<![A-Z])US(?![A-Z])|United\s*States/i },
-  { id: "KR", name: "韩国", icon: "🇰🇷", pattern: /🇰🇷|韩国|(?<![A-Z])KR(?![A-Z])|Korea/i },
-  { id: "GB", name: "英国", icon: "🇬🇧", pattern: /🇬🇧|英国|(?<![A-Z])GB(?![A-Z])|(?<![A-Z])UK(?![A-Z])|United\s*Kingdom/i },
-  { id: "DE", name: "德国", icon: "🇩🇪", pattern: /🇩🇪|德国|(?<![A-Z])DE(?![A-Z])|Germany/i },
-  { id: "FR", name: "法国", icon: "🇫🇷", pattern: /🇫🇷|法国|(?<![A-Z])FR(?![A-Z])|France/i },
-  { id: "CA", name: "加拿大", icon: "🇨🇦", pattern: /🇨🇦|加拿大|(?<![A-Z])CA(?![A-Z])|Canada/i },
-  { id: "AU", name: "澳大利亚", icon: "🇦🇺", pattern: /🇦🇺|澳大利亚|(?<![A-Z])AU(?![A-Z])|Australia/i },
-  { id: "RU", name: "俄罗斯", icon: "🇷🇺", pattern: /🇷🇺|俄罗斯|(?<![A-Z])RU(?![A-Z])|Russia/i },
-  { id: "IN", name: "印度", icon: "🇮🇳", pattern: /🇮🇳|印度(?!尼)|(?<![A-Z])IN(?![A-Z])|India/i },
-  { id: "MO", name: "澳门", icon: "🇲🇴", pattern: /🇲🇴|澳门|Macau|Macao/i },
-  { id: "NZ", name: "新西兰", icon: "🇳🇿", pattern: /🇳🇿|新西兰|New\s*Zealand/i },
-  { id: "IT", name: "意大利", icon: "🇮🇹", pattern: /🇮🇹|意大利|Italy/i },
-  { id: "NL", name: "荷兰", icon: "🇳🇱", pattern: /🇳🇱|荷兰|Netherlands/i },
-  { id: "PL", name: "波兰", icon: "🇵🇱", pattern: /🇵🇱|波兰|Poland/i },
-  { id: "CH", name: "瑞士", icon: "🇨🇭", pattern: /🇨🇭|瑞士|Switzerland/i },
-  { id: "VN", name: "越南", icon: "🇻🇳", pattern: /🇻🇳|越南|Vietnam/i },
-  { id: "TH", name: "泰国", icon: "🇹🇭", pattern: /🇹🇭|泰国|Thailand/i },
-  { id: "PH", name: "菲律宾", icon: "🇵🇭", pattern: /🇵🇭|菲律宾|Philippines/i },
-  { id: "MY", name: "马来西亚", icon: "🇲🇾", pattern: /🇲🇾|马来|Malaysia/i },
-  { id: "ID", name: "印尼", icon: "🇮🇩", pattern: /🇮🇩|印尼|印度尼西亚|Indonesia/i },
-  { id: "TR", name: "土耳其", icon: "🇹🇷", pattern: /🇹🇷|土耳其|Turkey|Türkiye/i },
-  { id: "AR", name: "阿根廷", icon: "🇦🇷", pattern: /🇦🇷|阿根廷|Argentina/i },
-  { id: "BR", name: "巴西", icon: "🇧🇷", pattern: /🇧🇷|巴西|Brazil/i },
-  // ... 按需扩展
-];
+地区注册表以声明式 YAML 维护在 `definitions/runtime/regions.yaml`，构建时编译为 `scripts/config/runtime/regions.js`，运行时由 `proxy-groups.js` 的 `compileRegionPatterns()` 将字符串正则编译为 `RegExp` 对象。新增地区只需在 YAML 中添加一条记录，无需修改 JS 代码。
+
+```yaml
+# definitions/runtime/regions.yaml（示例）
+- id: HK
+  name: 香港
+  icon: "🇭🇰"
+  pattern: 🇭🇰|香港|(?<![A-Z])HK(?![A-Z])|Hong\s*Kong
+  flags: i
+- id: TW
+  name: 台湾
+  icon: "🇹🇼"
+  pattern: 🇹🇼|🇨🇳.*台湾|台湾|(?<![A-Z])TW(?![A-Z])|Taiwan
+  flags: i
+# ... 完整列表见 definitions/runtime/regions.yaml
 ```
 
 **已知局限（v1）**：
@@ -798,10 +782,11 @@ scripts/config/runtime/
 └── tun.js
 
 scripts/override/lib/
+├── utils.js               # 共享工具（cloneData）
 ├── runtime-preset.js      # 注入运行时预设
-├── proxy-groups.js        # 地区识别、节点分类、策略组生成
-├── rule-assembly.js       # rule-providers + rules 组装
-└── validate-output.js     # 输出校验
+├── proxy-groups.js        # 地区识别、节点分类、策略组生成（区域/占位符从 YAML 加载）
+├── rule-assembly.js       # rule-providers + rules 组装（导出 extractRuleTarget）
+└── validate-output.js     # 输出校验（引用 extractRuleTarget）
 ```
 
 构建时由 `tools/yaml-to-js.js` 先把 YAML 编译为 `scripts/config/` 下的 JS 模块，再由 `build.js` 打包覆写入口，产出自包含脚本。
@@ -973,17 +958,22 @@ proxy-config-hub/
 │   ├── rules/
 │   │   ├── registry/                     # 活跃规则注册表 YAML
 │   │   └── custom/                       # 自定义规则模板/资源
-│   └── runtime/                          # 运行时预设 YAML
+│   └── runtime/                          # 运行时预设 YAML + regions.yaml + placeholders.yaml
 │
 ├── templates/
 │   └── mihomo/
 │       └── config-example.yaml           # 覆写后的预期产物示例
 │
 ├── tools/
+│   ├── lib/
+│   │   ├── fs-helpers.js                 # 共享文件系统工具
+│   │   ├── paths.js                      # 路径常量、命名空间配置、资产映射表
+│   │   └── bundle-runtime.js             # Bundle 加载/执行/模板处理
 │   ├── yaml-to-js.js                     # 将 definitions/ 编译为 scripts/config/
 │   ├── generate-example-config.js        # 生成完整示例配置
-│   ├── verify-main.js                    # 打包/运行时校验
-│   └── verify-yaml-migration.js          # YAML 迁移兼容性校验
+│   ├── check-rule-overlap.js             # 规则重叠检测
+│   ├── verify-main.js                    # 打包/运行时校验（动态发现产物）
+│   └── verify-yaml-migration.js          # YAML 迁移兼容性校验（动态扫描文件列表）
 │
 └── .github/
     └── workflows/
