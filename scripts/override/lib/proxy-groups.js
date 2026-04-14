@@ -1,51 +1,45 @@
-const REGION_PATTERNS = [
-  { id: "HK", name: "香港", icon: "🇭🇰", pattern: /🇭🇰|香港|(?<![A-Z])HK(?![A-Z])|Hong\s*Kong/i },
-  { id: "TW", name: "台湾", icon: "🇹🇼", pattern: /🇹🇼|🇨🇳.*台湾|台湾|(?<![A-Z])TW(?![A-Z])|Taiwan/i },
-  { id: "JP", name: "日本", icon: "🇯🇵", pattern: /🇯🇵|日本|(?<![A-Z])JP(?![A-Z])|Japan/i },
-  { id: "SG", name: "新加坡", icon: "🇸🇬", pattern: /🇸🇬|新加坡|(?<![A-Z])SG(?![A-Z])|Singapore/i },
-  { id: "US", name: "美国", icon: "🇺🇸", pattern: /🇺🇸|美国|(?<![A-Z])US(?![A-Z])|United\s*States/i },
-  { id: "KR", name: "韩国", icon: "🇰🇷", pattern: /🇰🇷|韩国|(?<![A-Z])KR(?![A-Z])|Korea/i },
-  { id: "GB", name: "英国", icon: "🇬🇧", pattern: /🇬🇧|英国|(?<![A-Z])GB(?![A-Z])|(?<![A-Z])UK(?![A-Z])|United\s*Kingdom/i },
-  { id: "DE", name: "德国", icon: "🇩🇪", pattern: /🇩🇪|德国|(?<![A-Z])DE(?![A-Z])|Germany/i },
-  { id: "FR", name: "法国", icon: "🇫🇷", pattern: /🇫🇷|法国|(?<![A-Z])FR(?![A-Z])|France/i },
-  { id: "CA", name: "加拿大", icon: "🇨🇦", pattern: /🇨🇦|加拿大|(?<![A-Z])CA(?![A-Z])|Canada/i },
-  { id: "AU", name: "澳大利亚", icon: "🇦🇺", pattern: /🇦🇺|澳大利亚|(?<![A-Z])AU(?![A-Z])|Australia/i },
-  { id: "RU", name: "俄罗斯", icon: "🇷🇺", pattern: /🇷🇺|俄罗斯|(?<![A-Z])RU(?![A-Z])|Russia/i },
-  { id: "IN", name: "印度", icon: "🇮🇳", pattern: /🇮🇳|印度(?!尼)|(?<![A-Z])IN(?![A-Z])|India/i },
-  { id: "MO", name: "澳门", icon: "🇲🇴", pattern: /🇲🇴|澳门|Macau|Macao/i },
-  { id: "NZ", name: "新西兰", icon: "🇳🇿", pattern: /🇳🇿|新西兰|New\s*Zealand/i },
-  { id: "IT", name: "意大利", icon: "🇮🇹", pattern: /🇮🇹|意大利|Italy/i },
-  { id: "NL", name: "荷兰", icon: "🇳🇱", pattern: /🇳🇱|荷兰|Netherlands/i },
-  { id: "PL", name: "波兰", icon: "🇵🇱", pattern: /🇵🇱|波兰|Poland/i },
-  { id: "CH", name: "瑞士", icon: "🇨🇭", pattern: /🇨🇭|瑞士|Switzerland/i },
-  { id: "VN", name: "越南", icon: "🇻🇳", pattern: /🇻🇳|越南|Vietnam/i },
-  { id: "TH", name: "泰国", icon: "🇹🇭", pattern: /🇹🇭|泰国|Thailand/i },
-  { id: "PH", name: "菲律宾", icon: "🇵🇭", pattern: /🇵🇭|菲律宾|Philippines/i },
-  { id: "MY", name: "马来西亚", icon: "🇲🇾", pattern: /🇲🇾|马来|Malaysia/i },
-  { id: "ID", name: "印尼", icon: "🇮🇩", pattern: /🇮🇩|印尼|印度尼西亚|Indonesia/i },
-  { id: "TR", name: "土耳其", icon: "🇹🇷", pattern: /🇹🇷|土耳其|Turkey|Türkiye/i },
-  { id: "AR", name: "阿根廷", icon: "🇦🇷", pattern: /🇦🇷|阿根廷|Argentina/i },
-  { id: "BR", name: "巴西", icon: "🇧🇷", pattern: /🇧🇷|巴西|Brazil/i },
-];
+import regionsConfig from "../../config/runtime/regions.js";
+import placeholdersConfig from "../../config/runtime/placeholders.js";
+import { cloneData } from "./utils.js";
 
-const RESERVED_GROUP_IDS = ["proxy_select", "manual_select", "auto_select"];
-const FALLBACK_GROUP_ID = "fallback";
-const PLACEHOLDER_GROUP_IDS = {
-  "@proxy-select": "proxy_select",
-  "@manual-select": "manual_select",
-  "@auto-select": "auto_select",
-};
-
-function cloneData(value) {
-  return JSON.parse(JSON.stringify(value));
+/**
+ * 将 YAML 加载的区域配置编译为包含 RegExp 对象的运行时格式。
+ * 在模块加载时执行一次，后续匹配直接使用编译后的正则。
+ * @param {Array<{id: string, name: string, icon: string, pattern: string, flags?: string}>} rawRegions
+ * @returns {Array<{id: string, name: string, icon: string, pattern: RegExp}>}
+ */
+function compileRegionPatterns(rawRegions) {
+  return rawRegions.map((region) => ({
+    id: region.id,
+    name: region.name,
+    icon: region.icon,
+    pattern: new RegExp(region.pattern, region.flags || ""),
+  }));
 }
 
+const REGION_PATTERNS = compileRegionPatterns(regionsConfig);
+const RESERVED_GROUP_IDS = placeholdersConfig.reserved;
+const FALLBACK_GROUP_ID = placeholdersConfig.fallback;
+const PLACEHOLDER_GROUP_IDS = placeholdersConfig.mappings;
+
+/**
+ * 过滤出具有有效名称的代理节点。
+ * @param {Array<{name?: string}>} proxies - 原始代理节点列表。
+ * @returns {Array<{name: string}>} 具有非空名称的节点列表。
+ */
 function getNamedProxies(proxies) {
   return proxies.filter(
     (proxy) => proxy && typeof proxy.name === "string" && proxy.name.trim().length > 0,
   );
 }
 
+/**
+ * 根据区域正则模式匹配代理节点名称，返回匹配到的区域 ID。
+ * 采用 first-match-wins 策略: 按 REGION_PATTERNS 数组顺序依次匹配，
+ * 返回第一个命中的区域 ID；全部未命中则返回 "OTHER"。
+ * @param {string} proxyName - 代理节点名称。
+ * @returns {string} 区域 ID。
+ */
 function detectRegionId(proxyName) {
   for (const region of REGION_PATTERNS) {
     if (region.pattern.test(proxyName)) {
@@ -56,6 +50,11 @@ function detectRegionId(proxyName) {
   return "OTHER";
 }
 
+/**
+ * 将代理节点按区域分类。
+ * @param {Array<{name: string}>} proxies - 已过滤的代理节点列表。
+ * @returns {Record<string, Array<{name: string}>>} 区域 ID 到节点数组的映射。
+ */
 function classifyProxies(proxies) {
   const regionMap = { OTHER: [] };
 
@@ -72,6 +71,11 @@ function classifyProxies(proxies) {
   return regionMap;
 }
 
+/**
+ * 基于分类结果构建区域代理组列表。
+ * @param {Array<{name: string}>} proxies - 已过滤的代理节点列表。
+ * @returns {Array<{name: string, type: string, proxies: string[]}>} 区域组列表。
+ */
 function buildRegionGroups(proxies) {
   const regionMap = classifyProxies(proxies);
   const regionGroups = [];
@@ -92,6 +96,16 @@ function buildRegionGroups(proxies) {
   return regionGroups;
 }
 
+/**
+ * 展开 @-前缀的占位符目标为实际节点/组名列表。
+ * 支持三类占位符:
+ *   - @all-nodes: 展开为所有代理节点名称
+ *   - @region-groups: 展开为所有已构建的区域组名称
+ *   - @proxy-select/@manual-select/@auto-select: 展开为对应保留组的 name
+ * @param {string} target - 占位符或普通目标名称。
+ * @param {{allProxyNames: string[], regionGroupNames: string[], groupDefinitions: Record<string, {name: string}>}} context
+ * @returns {string[]} 展开后的名称列表。
+ */
 function expandGroupTarget(target, context) {
   if (target === "@all-nodes") {
     return [...context.allProxyNames];
@@ -106,19 +120,26 @@ function expandGroupTarget(target, context) {
     const referencedDefinition = context.groupDefinitions[referencedId];
 
     if (!referencedDefinition) {
-      throw new Error(`Unknown placeholder target: ${target}`);
+      throw new Error(`占位符引用了未定义的策略组: ${target} -> ${referencedId}`);
     }
 
     return [referencedDefinition.name];
   }
 
   if (target.startsWith("@")) {
-    throw new Error(`Unsupported placeholder target: ${target}`);
+    throw new Error(`不支持的占位符: ${target}`);
   }
 
   return [target];
 }
 
+/**
+ * 根据策略组定义构建单个代理组。
+ * @param {string} groupId - 策略组 ID。
+ * @param {{name: string, type: string, proxies?: string[], category?: string}} definition - 策略组定义。
+ * @param {Object} context - 展开占位符所需的上下文。
+ * @returns {{name: string, type: string, proxies: string[]}} 构建后的代理组。
+ */
 function buildConfiguredGroup(groupId, definition, context) {
   const proxies = [];
   for (const target of definition.proxies || []) {
@@ -135,17 +156,23 @@ function buildConfiguredGroup(groupId, definition, context) {
   }
 
   if (!group.name) {
-    throw new Error(`Missing group name for ${groupId}`);
+    throw new Error(`策略组 ${groupId} 缺少 name 字段`);
   }
 
   if (!group.type) {
-    throw new Error(`Missing group type for ${groupId}`);
+    throw new Error(`策略组 ${groupId} 缺少 type 字段`);
   }
 
   group.proxies = proxies;
   return group;
 }
 
+/**
+ * 构建完整的代理组列表: 保留组 -> 自定义组 -> 区域组 -> fallback 组。
+ * @param {Array<{name: string}>} proxies - 已过滤的代理节点列表。
+ * @param {Record<string, Object>} groupDefinitions - 策略组定义。
+ * @returns {Array<{name: string, type: string, proxies: string[]}>} 完整的代理组列表。
+ */
 function buildProxyGroups(proxies, groupDefinitions) {
   const namedProxies = getNamedProxies(proxies);
   const allProxyNames = namedProxies.map((proxy) => proxy.name);
