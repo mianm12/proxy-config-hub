@@ -17,6 +17,11 @@ import {
   loadTemplateProxies,
   stringifyExampleConfig,
 } from "./lib/bundle-runtime.js";
+import {
+  DEFINITIONS_DIR,
+  SCRIPTS_CONFIG_DIR,
+  CANONICAL_NAMESPACES,
+} from "./lib/paths.js";
 
 /**
  * 将值转换为稳定的 JSON 结构，便于断言时规避原型与引用差异。
@@ -136,27 +141,32 @@ function buildExpectedRuleSnapshot(groupDefinitions, ruleProviders, prependRules
 
 /**
  * 校验 scripts/config 生成产物是否完整存在，且不会错误包含 custom 模板产物。
+ * 通过扫描 definitions/ 源目录动态推导期望产物列表，新增 YAML 定义文件后无需修改此函数。
  * @returns {void}
  */
 function assertGeneratedFiles() {
-  const requiredFiles = [
-    path.join(REPO_ROOT, "scripts", "config", "rules", "groupDefinitions.js"),
-    path.join(REPO_ROOT, "scripts", "config", "rules", "inlineRules.js"),
-    path.join(REPO_ROOT, "scripts", "config", "rules", "ruleProviders.js"),
-    path.join(REPO_ROOT, "scripts", "config", "runtime", "base.js"),
-    path.join(REPO_ROOT, "scripts", "config", "runtime", "dns.js"),
-    path.join(REPO_ROOT, "scripts", "config", "runtime", "profile.js"),
-    path.join(REPO_ROOT, "scripts", "config", "runtime", "geodata.js"),
-    path.join(REPO_ROOT, "scripts", "config", "runtime", "sniffer.js"),
-    path.join(REPO_ROOT, "scripts", "config", "runtime", "tun.js"),
-  ];
+  for (const namespace of CANONICAL_NAMESPACES) {
+    const sourceDir = path.join(DEFINITIONS_DIR, namespace.sourceSubdir);
+    const outputDir = path.join(SCRIPTS_CONFIG_DIR, namespace.outputSubdir);
 
-  for (const filePath of requiredFiles) {
-    assert.ok(fs.existsSync(filePath), `缺少生成产物文件: ${path.relative(REPO_ROOT, filePath)}`);
+    if (!fs.existsSync(sourceDir)) {
+      throw new Error(`缺少源定义目录: ${path.relative(REPO_ROOT, sourceDir)}`);
+    }
+
+    const yamlFiles = fs.readdirSync(sourceDir).filter((name) => /\.(ya?ml)$/i.test(name));
+
+    for (const yamlFile of yamlFiles) {
+      const expectedJs = yamlFile.replace(/\.(ya?ml)$/i, ".js");
+      const expectedPath = path.join(outputDir, expectedJs);
+      assert.ok(
+        fs.existsSync(expectedPath),
+        `缺少生成产物文件: ${path.relative(REPO_ROOT, expectedPath)}`,
+      );
+    }
   }
 
   assert.ok(
-    !fs.existsSync(path.join(REPO_ROOT, "scripts", "config", "rules", "custom", "_template.js")),
+    !fs.existsSync(path.join(SCRIPTS_CONFIG_DIR, "rules", "custom", "_template.js")),
     "custom 模板不得被转换到 scripts/config",
   );
 }
