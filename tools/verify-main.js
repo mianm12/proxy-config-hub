@@ -839,6 +839,103 @@ function testBuildProxyGroupsExtrasOptional() {
 }
 
 /**
+ * 校验 @chain-groups 占位符展开为 chain_group 组名列表。
+ * 当 extras.chainGroups 非空时，使用了 @chain-groups 的策略组应包含链式代理组名。
+ * 当 extras.chainGroups 为空时，@chain-groups 展开为空，不影响 proxies 列表。
+ * @returns {void}
+ */
+function testChainGroupsPlaceholderExpansion() {
+  const namedProxies = [
+    { name: "Sample-🇭🇰-Hong Kong-01" },
+    { name: "Sample-🇯🇵-Japan-01" },
+  ];
+  const chainGroupFixture = {
+    name: "🚪 落地",
+    type: "select",
+    proxies: ["自建-SG-Relay-01"],
+  };
+
+  // 有 chainGroups 时，含 @chain-groups 的组应包含链式代理组名
+  const groupsWithChain = buildProxyGroups(
+    namedProxies,
+    groupDefinitionsConfig.groupDefinitions,
+    { chainGroups: [chainGroupFixture], transitGroups: [] },
+  );
+
+  // 找到含 @region-groups 的组（即应同时含 @chain-groups 的组）
+  // 使用 non_cn 作为代表检查
+  const nonCnDef = groupDefinitionsConfig.groupDefinitions.non_cn;
+  const nonCnGroup = groupsWithChain.find((g) => g.name === nonCnDef.name);
+  assert.ok(nonCnGroup, "non_cn 组应存在");
+  assert.ok(
+    nonCnGroup.proxies.includes("🚪 落地"),
+    "含 @chain-groups 的组应包含链式代理组名",
+  );
+
+  // chainGroups 为空时，组中不应出现链式代理组名
+  const groupsWithoutChain = buildProxyGroups(
+    namedProxies,
+    groupDefinitionsConfig.groupDefinitions,
+    { chainGroups: [], transitGroups: [] },
+  );
+  const nonCnGroupNoChain = groupsWithoutChain.find((g) => g.name === nonCnDef.name);
+  assert.ok(nonCnGroupNoChain, "non_cn 组应存在");
+  assert.ok(
+    !nonCnGroupNoChain.proxies.includes("🚪 落地"),
+    "chainGroups 为空时不应出现链式代理组名",
+  );
+}
+
+/**
+ * 校验 remainingProxies 传入 buildProxyGroups 后，落地节点不出现在
+ * @all-nodes 和 @region-groups 展开的组中。
+ * @returns {void}
+ */
+function testRemainingProxiesExcludesLanding() {
+  const allProxies = [
+    { name: "Sample-🇭🇰-Hong Kong-01" },
+    { name: "Sample-🇯🇵-Japan-01" },
+    { name: "自建-SG-Relay-01" },
+    { name: "Relay-US-02" },
+  ];
+  const chainDefinitions = [
+    {
+      id: "chain",
+      name: "🚪 落地",
+      landing_pattern: "自建|Relay|落地",
+      flags: "i",
+      entry: "transit",
+      type: "select",
+    },
+  ];
+
+  const { chainGroups, remainingProxies } = buildChainGroups(allProxies, chainDefinitions);
+
+  const groups = buildProxyGroups(
+    remainingProxies,
+    groupDefinitionsConfig.groupDefinitions,
+    { chainGroups, transitGroups: [] },
+  );
+
+  // 手动选择组使用 @all-nodes，不应包含落地节点
+  const manualDef = groupDefinitionsConfig.groupDefinitions.manual_select;
+  const manualGroup = groups.find((g) => g.name === manualDef.name);
+  assert.ok(manualGroup, "manual_select 组应存在");
+  assert.ok(
+    !manualGroup.proxies.includes("自建-SG-Relay-01"),
+    "@all-nodes 展开后不应包含落地节点",
+  );
+  assert.ok(
+    !manualGroup.proxies.includes("Relay-US-02"),
+    "@all-nodes 展开后不应包含落地节点",
+  );
+  assert.ok(
+    manualGroup.proxies.includes("Sample-🇭🇰-Hong Kong-01"),
+    "@all-nodes 应包含非落地节点",
+  );
+}
+
+/**
  * 端到端（source 层）：手工组合 pipeline 函数，验证非空 chains 配置下
  * chain_group / transit_group / dialer-proxy 均按预期产生。
  * @returns {void}
@@ -878,7 +975,7 @@ function testChainPipelineIntegration() {
   );
 
   config["proxy-groups"] = buildProxyGroups(
-    namedProxies,
+    remainingProxies,
     groupDefinitionsConfig.groupDefinitions,
     { chainGroups, transitGroups },
   );
@@ -1070,6 +1167,8 @@ function main() {
   testValidateChainsSchemaEmptyArraysAccepted();
   testBuildProxyGroupsInsertsChainAndTransit();
   testBuildProxyGroupsExtrasOptional();
+  testChainGroupsPlaceholderExpansion();
+  testRemainingProxiesExcludesLanding();
   testChainPipelineIntegration();
   testValidateOutputRejectsDanglingDialerProxy();
   testValidateOutputRejectsTransitContainingLanding();
