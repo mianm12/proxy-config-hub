@@ -11,7 +11,7 @@ import ruleProvidersConfig from "../scripts/config/rules/ruleProviders.js";
 import snifferConfig from "../scripts/config/runtime/sniffer.js";
 import tunConfig from "../scripts/config/runtime/tun.js";
 import { assembleRuleSet } from "../scripts/override/lib/rule-assembly.js";
-import { buildChainGroups } from "../scripts/override/lib/proxy-chains.js";
+import { buildChainGroups, buildTransitGroups } from "../scripts/override/lib/proxy-chains.js";
 import {
   loadBundleRuntime,
   loadTemplateProxies,
@@ -428,6 +428,74 @@ function testBuildChainGroupsInvalidRegex() {
 }
 
 /**
+ * 校验 transit_pattern 为空时成员等于全部 remainingProxies。
+ * @returns {void}
+ */
+function testBuildTransitGroupsEmptyPattern() {
+  const remaining = [{ name: "Sample-🇭🇰-Hong Kong-01" }, { name: "Sample-🇯🇵-Japan-01" }];
+  const defs = [
+    { id: "transit", name: "🔀 中转", transit_pattern: "", flags: "i", type: "select" },
+  ];
+  const { groups, idToName } = buildTransitGroups(remaining, defs);
+  assert.equal(groups.length, 1);
+  assert.equal(groups[0].name, "🔀 中转");
+  assert.equal(groups[0].type, "select");
+  assert.deepEqual(
+    groups[0].proxies,
+    ["Sample-🇭🇰-Hong Kong-01", "Sample-🇯🇵-Japan-01"],
+    "空 transit_pattern 应包含全部 remainingProxies",
+  );
+  assert.equal(idToName.get("transit"), "🔀 中转", "idToName 应映射 id 到 name");
+}
+
+/**
+ * 校验 transit_pattern 非空时按正则过滤 remainingProxies。
+ * @returns {void}
+ */
+function testBuildTransitGroupsFiltered() {
+  const remaining = [{ name: "Sample-🇭🇰-Hong Kong-01" }, { name: "Sample-🇯🇵-Japan-01" }];
+  const defs = [
+    { id: "hk", name: "🇭🇰 中转-港", transit_pattern: "Hong\\s*Kong", flags: "i", type: "select" },
+  ];
+  const { groups } = buildTransitGroups(remaining, defs);
+  assert.equal(groups.length, 1);
+  assert.deepEqual(groups[0].proxies, ["Sample-🇭🇰-Hong Kong-01"]);
+}
+
+/**
+ * 校验成员为空的 transit_group 会被跳过（不进入 idToName，不进入 groups）。
+ * @returns {void}
+ */
+function testBuildTransitGroupsEmptyMembersSkipped() {
+  const remaining = [{ name: "Sample-🇭🇰-Hong Kong-01" }];
+  const defs = [
+    { id: "jp", name: "🇯🇵 中转-日", transit_pattern: "Japan", flags: "i", type: "select" },
+  ];
+  const { groups, idToName } = buildTransitGroups(remaining, defs);
+  assert.equal(groups.length, 0, "成员为空的 transit_group 应被跳过");
+  assert.equal(idToName.has("jp"), false, "被跳过的 transit 不进入 idToName");
+}
+
+/**
+ * 校验 transit_group id 重复抛错。
+ * @returns {void}
+ */
+function testBuildTransitGroupsDuplicateId() {
+  assert.throws(
+    () =>
+      buildTransitGroups(
+        [{ name: "A" }],
+        [
+          { id: "t", name: "X", transit_pattern: "", flags: "", type: "select" },
+          { id: "t", name: "Y", transit_pattern: "", flags: "", type: "select" },
+        ],
+      ),
+    (error) => error instanceof Error && error.message.includes("transit_group"),
+    "transit_group id 重复应抛错",
+  );
+}
+
+/**
  * 校验示例配置序列化结果仍包含关键产物分段。
  * @returns {void}
  */
@@ -451,6 +519,10 @@ function main() {
   testBuildChainGroupsNoMatch();
   testBuildChainGroupsDuplicateId();
   testBuildChainGroupsInvalidRegex();
+  testBuildTransitGroupsEmptyPattern();
+  testBuildTransitGroupsFiltered();
+  testBuildTransitGroupsEmptyMembersSkipped();
+  testBuildTransitGroupsDuplicateId();
   assertGeneratedFiles();
   assertCustomAssetCopy();
   testBundlePositivePath();

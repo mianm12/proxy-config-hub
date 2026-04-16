@@ -99,4 +99,89 @@ function buildChainGroups(namedProxies, chainDefinitions) {
   return { chainGroups, remainingProxies };
 }
 
-export { buildChainGroups };
+/**
+ * 校验 transit_group 的 id 唯一性。
+ * @param {Array<{id:string}>} transitDefinitions
+ * @returns {void}
+ */
+function assertUniqueTransitIds(transitDefinitions) {
+  const seen = new Set();
+  for (const definition of transitDefinitions) {
+    if (typeof definition.id !== "string" || definition.id.length === 0) {
+      throw new Error("transit_group 条目缺少非空的 id");
+    }
+    if (seen.has(definition.id)) {
+      throw new Error(`transit_group.id 重复: ${definition.id}`);
+    }
+    seen.add(definition.id);
+  }
+}
+
+/**
+ * 将 transit_pattern 编译为 RegExp；空字符串表示不过滤（返回 null）。
+ * @param {string} pattern
+ * @param {string} flags
+ * @param {string} transitId
+ * @returns {RegExp|null}
+ */
+function compileTransitPattern(pattern, flags, transitId) {
+  if (typeof pattern !== "string" || pattern.length === 0) {
+    return null;
+  }
+  try {
+    return new RegExp(pattern, flags || "");
+  } catch (error) {
+    throw new Error(
+      `transit_group ${transitId} 的 transit_pattern 非法正则: ${error.message}`,
+    );
+  }
+}
+
+/**
+ * 基于剔除 landing 后的剩余节点构建 transit_groups。
+ * 空 transit_pattern → 成员为 remainingProxies 全部；非空时做正则过滤。
+ * 成员为空的 transit_group 会被跳过（WARN）并不出现在 idToName 中。
+ *
+ * @param {Array<{name:string}>} remainingProxies
+ * @param {Array<{id:string, name:string, transit_pattern:string, flags?:string, type:string}>} transitDefinitions
+ * @returns {{groups: Array<{name:string, type:string, proxies:string[]}>, idToName: Map<string,string>}}
+ */
+function buildTransitGroups(remainingProxies, transitDefinitions) {
+  if (!Array.isArray(transitDefinitions) || transitDefinitions.length === 0) {
+    return { groups: [], idToName: new Map() };
+  }
+
+  assertUniqueTransitIds(transitDefinitions);
+
+  const groups = [];
+  const idToName = new Map();
+
+  for (const definition of transitDefinitions) {
+    const compiledPattern = compileTransitPattern(
+      definition.transit_pattern,
+      definition.flags,
+      definition.id,
+    );
+    const members = compiledPattern
+      ? remainingProxies.filter((proxy) => compiledPattern.test(proxy.name))
+      : [...remainingProxies];
+
+    if (members.length === 0) {
+      console.log(
+        `[override] WARN: transit_group ${definition.id} 过滤后无可用节点，已跳过该组`,
+      );
+      continue;
+    }
+
+    groups.push({
+      name: definition.name,
+      type: definition.type,
+      proxies: members.map((proxy) => proxy.name),
+    });
+    idToName.set(definition.id, definition.name);
+  }
+
+  return { groups, idToName };
+}
+
+export { buildChainGroups, buildTransitGroups };
