@@ -98,12 +98,13 @@ function buildRegionGroups(proxies) {
 
 /**
  * 展开 @-前缀的占位符目标为实际节点/组名列表。
- * 支持三类占位符:
+ * 支持四类占位符:
  *   - @all-nodes: 展开为所有代理节点名称
  *   - @region-groups: 展开为所有已构建的区域组名称
+ *   - @chain-groups: 展开为所有已构建的链式代理落地组名称
  *   - @proxy-select/@manual-select/@auto-select: 展开为对应保留组的 name
  * @param {string} target - 占位符或普通目标名称。
- * @param {{allProxyNames: string[], regionGroupNames: string[], groupDefinitions: Record<string, {name: string}>}} context
+ * @param {{allProxyNames: string[], regionGroupNames: string[], chainGroupNames: string[], groupDefinitions: Record<string, {name: string}>}} context
  * @returns {string[]} 展开后的名称列表。
  */
 function expandGroupTarget(target, context) {
@@ -113,6 +114,10 @@ function expandGroupTarget(target, context) {
 
   if (target === "@region-groups") {
     return [...context.regionGroupNames];
+  }
+
+  if (target === "@chain-groups") {
+    return [...context.chainGroupNames];
   }
 
   if (PLACEHOLDER_GROUP_IDS[target]) {
@@ -184,9 +189,11 @@ function buildProxyGroups(proxies, groupDefinitions, extras = {}) {
   const namedProxies = getNamedProxies(proxies);
   const allProxyNames = namedProxies.map((proxy) => proxy.name);
   const regionGroups = buildRegionGroups(namedProxies);
+  const chainGroupNames = chainGroups.map((group) => group.name);
   const context = {
     allProxyNames,
     regionGroupNames: regionGroups.map((group) => group.name),
+    chainGroupNames,
     groupDefinitions,
   };
 
