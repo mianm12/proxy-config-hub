@@ -56,7 +56,7 @@ function main(config = {}) {
   workingConfig["rule-providers"] = providers;
   workingConfig.rules = rules;
 
-  validateOutput(workingConfig, groupDefinitions);
+  validateOutput(workingConfig, groupDefinitions, { chainDefinitions, transitDefinitions });
   return workingConfig;
 }
 

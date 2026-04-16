@@ -865,6 +865,95 @@ function testValidateOutputRejectsDanglingDialerProxy() {
 }
 
 /**
+ * 校验 §7.2：transit_group 的成员若命中任意 chain_group.landing_pattern，validateOutput 应抛错。
+ * 用于在未来重构破坏 "landing 节点必须已从 remainingProxies 剔除" 不变量时立即失败。
+ * @returns {void}
+ */
+function testValidateOutputRejectsTransitContainingLanding() {
+  const chainDefinitions = [
+    {
+      id: "chain",
+      name: "🚪 落地",
+      landing_pattern: "自建",
+      flags: "i",
+      entry: "transit",
+      type: "select",
+    },
+  ];
+  const transitDefinitions = [
+    { id: "transit", name: "🔀 中转", transit_pattern: "", flags: "i", type: "select" },
+  ];
+
+  const config = {
+    proxies: [{ name: "自建-01" }, { name: "Sample-HK-01" }],
+    "proxy-groups": [
+      // transit_group 错误地包含了 landing 节点 "自建-01"
+      { name: "🔀 中转", type: "select", proxies: ["自建-01", "Sample-HK-01"] },
+      { name: "🚪 落地", type: "select", proxies: ["自建-01"] },
+    ],
+    rules: [`MATCH,${groupDefinitionsConfig.groupDefinitions.fallback.name}`],
+  };
+  for (const [id, def] of Object.entries(groupDefinitionsConfig.groupDefinitions)) {
+    config["proxy-groups"].push({ name: def.name, type: "select", proxies: ["Sample-HK-01"] });
+  }
+
+  assert.throws(
+    () =>
+      validateOutput(config, groupDefinitionsConfig.groupDefinitions, {
+        chainDefinitions,
+        transitDefinitions,
+      }),
+    (error) =>
+      error instanceof Error &&
+      error.message.includes("transit_group") &&
+      error.message.includes("landing"),
+    "transit_group 含 landing 节点应抛错，错误信息应提示 transit_group 与 landing",
+  );
+}
+
+/**
+ * 校验 §7.3：chain_group.proxies 为空时 validateOutput 应抛错。
+ * @returns {void}
+ */
+function testValidateOutputRejectsEmptyChainGroup() {
+  const chainDefinitions = [
+    {
+      id: "chain",
+      name: "🚪 落地",
+      landing_pattern: "自建",
+      flags: "i",
+      entry: "transit",
+      type: "select",
+    },
+  ];
+  const transitDefinitions = [
+    { id: "transit", name: "🔀 中转", transit_pattern: "", flags: "i", type: "select" },
+  ];
+
+  const config = {
+    proxies: [{ name: "Sample-HK-01" }],
+    "proxy-groups": [
+      { name: "🚪 落地", type: "select", proxies: [] }, // 空 chain_group
+      { name: "🔀 中转", type: "select", proxies: ["Sample-HK-01"] },
+    ],
+    rules: [`MATCH,${groupDefinitionsConfig.groupDefinitions.fallback.name}`],
+  };
+  for (const [id, def] of Object.entries(groupDefinitionsConfig.groupDefinitions)) {
+    config["proxy-groups"].push({ name: def.name, type: "select", proxies: ["Sample-HK-01"] });
+  }
+
+  assert.throws(
+    () =>
+      validateOutput(config, groupDefinitionsConfig.groupDefinitions, {
+        chainDefinitions,
+        transitDefinitions,
+      }),
+    (error) => error instanceof Error && error.message.includes("chain_group"),
+    "空 chain_group 应抛错，错误信息应提示 chain_group",
+  );
+}
+
+/**
  * 校验示例配置序列化结果仍包含关键产物分段。
  * @returns {void}
  */
@@ -902,6 +991,8 @@ function main() {
   testBuildProxyGroupsExtrasOptional();
   testChainPipelineIntegration();
   testValidateOutputRejectsDanglingDialerProxy();
+  testValidateOutputRejectsTransitContainingLanding();
+  testValidateOutputRejectsEmptyChainGroup();
   assertGeneratedFiles();
   assertCustomAssetCopy();
   testBundlePositivePath();
