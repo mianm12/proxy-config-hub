@@ -14,26 +14,27 @@ Language: Chinese (Simplified) is used in commit messages, comments, docs, and c
 npm ci                    # Install dependencies (Node.js >= 24 required)
 npm run rules:build       # Compile definitions/ YAML → scripts/config/ JS modules
 npm run build             # rules:build + esbuild bundle + copy assets to dist/
-npm run verify            # Build then run verify:main + verify:migration
+npm run verify            # Build then run verify:main
 npm run example:config    # Build then generate dist/example-full-config.yaml
 npm run audit:rule-overlap # Check domain/IP overlap across rule providers (fetches remote)
 ```
 
-No test framework — verification is done via `tools/verify-main.js` (bundle sanity check) and `tools/verify-yaml-migration.js` (migration compatibility).
+No test framework — verification is done via `tools/verify-main.js` (bundle sanity check).
 
 ## Architecture
 
 ### Build pipeline
 
-1. **`tools/yaml-to-js.js`** compiles YAML from two namespaces under `definitions/` into JS modules under `scripts/config/`:
-   - `definitions/rules/registry/*.yaml` → `scripts/config/rules/*.js` (rule providers, group definitions, inline rules)
-   - `definitions/runtime/*.yaml` → `scripts/config/runtime/*.js` (DNS, sniffer, tun, geodata, profile, base, regions, placeholders)
+1. **`tools/yaml-to-js.js`** compiles YAML from three namespaces under `definitions/` into JS modules under `scripts/config/`:
+   - `definitions/mihomo-preset/*.yaml` → `scripts/config/mihomo-preset/*.js` (base, dns, sniffer, tun, profile, geodata)
+   - `definitions/proxy-groups/*.yaml` → `scripts/config/proxy-groups/*.js` (groupDefinitions, regions, placeholders, chains)
+   - `definitions/rules/*.yaml` → `scripts/config/rules/*.js` (inlineRules, ruleProviders)
 2. **`build.js`** bundles `scripts/override/main.js` via esbuild into `dist/scripts/override/main.js` (IIFE, exposes `globalThis.main`), then copies assets listed in `tools/lib/paths.js:COPY_ASSETS` to `dist/`.
 
 ### Shared tool modules
 
-- **`tools/lib/fs-helpers.js`** — shared filesystem utilities: `pathExists`, `listEntries`, `copyDirectory`, `copyFile`. Used by build.js, yaml-to-js.js, verify-yaml-migration.js.
-- **`tools/lib/paths.js`** — centralized path constants, namespace configs, and asset copy mappings. All tools import paths from here instead of computing them locally. To add a new asset to copy during build, add an entry to `COPY_ASSETS`. Namespace configs (`CANONICAL_NAMESPACES`, `LEGACY_NAMESPACES`) and layout validation sets are also defined here.
+- **`tools/lib/fs-helpers.js`** — shared filesystem utilities: `pathExists`, `listEntries`, `copyDirectory`, `copyFile`. Used by build.js and yaml-to-js.js.
+- **`tools/lib/paths.js`** — centralized path constants, namespace configs, and asset copy mappings. All tools import paths from here instead of computing them locally. To add a new asset to copy during build, add an entry to `COPY_ASSETS`. Namespace configs (`CANONICAL_NAMESPACES`) and layout validation sets are also defined here.
 - **`tools/lib/bundle-runtime.js`** — loads and executes the bundled override script in a VM context; provides template config loading, example config generation, and YAML serialization.
 
 ### Override script (`scripts/override/main.js`)
@@ -47,7 +48,7 @@ Entry point: `function main(config)` — receives a Mihomo config object with `p
 
 Shared modules live in `scripts/override/lib/`:
 - **`utils.js`** — shared utilities (`cloneData`)
-- **`proxy-groups.js`** — region detection, proxy classification, group building. Region patterns and placeholder mappings are loaded from compiled YAML products (`scripts/config/runtime/regions.js`, `scripts/config/runtime/placeholders.js`), not hardcoded.
+- **`proxy-groups.js`** — region detection, proxy classification, group building. Region patterns and placeholder mappings are loaded from compiled YAML products (`scripts/config/proxy-groups/regions.js`, `scripts/config/proxy-groups/placeholders.js`), not hardcoded.
 - **`rule-assembly.js`** — rule set assembly, exports `assembleRuleSet` and `extractRuleTarget`
 - **`runtime-preset.js`** — runtime preset application
 - **`validate-output.js`** — output validation
@@ -55,12 +56,14 @@ Shared modules live in `scripts/override/lib/`:
 ### Data model
 
 - **`definitions/`** is the single source of truth for all declarative config. Never hand-edit `scripts/config/` — it is generated.
-- `definitions/rules/registry/` is the active ruleset assembly entrypoint for group definitions, inline rules, and rule providers.
-- `definitions/rules/custom/` contains template/asset files copied verbatim to dist — they are NOT part of the active ruleset assembly.
-- `definitions/runtime/regions.yaml` defines region matching patterns (id, name, icon, regex pattern, flags). To add a new region, add an entry here — no JS code change needed.
-- `definitions/runtime/placeholders.yaml` defines reserved group IDs, fallback group ID, and `@`-prefix placeholder mappings. To add a new placeholder, add an entry here — no JS code change needed.
-- The build rejects coexistence of `definitions/` and a legacy `rules/` directory.
-- Verification scripts (`verify-main.js`, `verify-yaml-migration.js`) dynamically scan `definitions/` to discover expected outputs — adding new YAML files requires no changes to verification code.
+- `definitions/rules/` is the active rule-set assembly entrypoint (inlineRules + ruleProviders).
+- `definitions/proxy-groups/` holds proxy-group / chain construction data (groupDefinitions, regions, placeholders, chains).
+- `definitions/mihomo-preset/` holds Mihomo top-level key presets (base, dns, sniffer, tun, profile, geodata).
+- `definitions/assets/custom/` contains template/asset files copied verbatim to `dist/assets/custom/` — they are NOT part of the active assembly.
+- `definitions/proxy-groups/regions.yaml` defines region matching patterns (id, name, icon, regex pattern, flags). To add a new region, add an entry here — no JS code change needed.
+- `definitions/proxy-groups/placeholders.yaml` defines reserved group IDs, fallback group ID, and `@`-prefix placeholder mappings. To add a new placeholder, add an entry here — no JS code change needed.
+- The build rejects unknown top-level entries under `definitions/`.
+- `tools/verify-main.js` dynamically scans `definitions/` to discover expected outputs — adding new YAML files requires no changes to verification code.
 
 ### CI/CD
 

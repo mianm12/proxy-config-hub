@@ -1,7 +1,7 @@
 import ruleProvidersConfig from "../config/rules/ruleProviders.js";
-import groupDefinitionsConfig from "../config/rules/groupDefinitions.js";
+import groupDefinitionsConfig from "../config/proxy-groups/groupDefinitions.js";
 import inlineRulesConfig from "../config/rules/inlineRules.js";
-import chainsConfig from "../config/runtime/chains.js";
+import chainsConfig from "../config/proxy-groups/chains.js";
 import { buildProxyGroups, getNamedProxies } from "./lib/proxy-groups.js";
 import { assembleRuleSet } from "./lib/rule-assembly.js";
 import { applyRuntimePreset } from "./lib/runtime-preset.js";

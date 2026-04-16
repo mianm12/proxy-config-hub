@@ -6,13 +6,9 @@ import yaml from "js-yaml";
 import { pathExists, listEntries } from "./lib/fs-helpers.js";
 import {
   CANONICAL_NAMESPACES,
-  LEGACY_NAMESPACES,
   CANONICAL_ROOT_NAME,
-  LEGACY_ROOT_NAME,
   GENERATED_ROOT_NAME,
   CANONICAL_TOP_LEVEL_NAMES,
-  CANONICAL_RULES_NAMES,
-  LEGACY_ALLOWED_ENTRIES,
 } from "./lib/paths.js";
 
 /**
@@ -59,93 +55,35 @@ async function validateCanonicalLayout(rootDir) {
       throw new Error(`definitions/ 下存在不支持的条目: ${entry.name}`);
     }
   }
-
-  const rulesDir = path.join(rootDir, "rules");
-  const rulesEntries = await listEntries(rulesDir);
-
-  for (const entry of rulesEntries) {
-    if (!CANONICAL_RULES_NAMES.has(entry.name)) {
-      throw new Error(`definitions/rules/ 下存在不支持的条目: ${entry.name}`);
-    }
-  }
-}
-
-/**
- * 校验 legacy（rules/）布局的目录结构是否合法。
- * @param {string} rootDir - rules/ 根目录的绝对路径。
- * @returns {Promise<void>}
- */
-async function validateLegacyLayout(rootDir) {
-  const rootEntries = await listEntries(rootDir);
-
-  for (const entry of rootEntries) {
-    if (!LEGACY_ALLOWED_ENTRIES.has(entry.name)) {
-      throw new Error(`旧版 rules/ 下存在不支持的条目: ${entry.name}`);
-    }
-  }
 }
 
 /**
  * 探测并返回当前工作目录下的源定义树信息。
- * canonical（definitions/）和 legacy（rules/）不得同时存在。
  * @param {string} cwd - 项目根目录。
- * @returns {Promise<{kind: string, rootDir: string, namespaces: object[], warning?: string}>}
+ * @returns {Promise<{kind: string, rootDir: string, namespaces: object[]}>}
  */
 async function resolveSourceTree(cwd) {
   const canonicalRoot = path.join(cwd, CANONICAL_ROOT_NAME);
-  const legacyRoot = path.join(cwd, LEGACY_ROOT_NAME);
-  const canonicalExists = await pathExists(canonicalRoot);
-  const legacyExists = await pathExists(legacyRoot);
 
-  if (canonicalExists && legacyExists) {
-    throw new Error("definitions/ and rules/ cannot coexist during build");
+  if (!(await pathExists(canonicalRoot))) {
+    throw new Error("未找到 definitions/ 源定义树");
   }
 
-  if (canonicalExists) {
-    await validateCanonicalLayout(canonicalRoot);
-    return {
-      kind: "canonical",
-      rootDir: canonicalRoot,
-      namespaces: CANONICAL_NAMESPACES,
-    };
-  }
-
-  if (legacyExists) {
-    await validateLegacyLayout(legacyRoot);
-    return {
-      kind: "legacy",
-      rootDir: legacyRoot,
-      namespaces: LEGACY_NAMESPACES,
-      warning:
-        "旧版 rules/ 源定义树已废弃，请尽快将 YAML 文件迁移到 definitions/。",
-    };
-  }
-
-  throw new Error("未找到 definitions/ 或 rules/ 源定义树");
+  await validateCanonicalLayout(canonicalRoot);
+  return {
+    kind: "canonical",
+    rootDir: canonicalRoot,
+    namespaces: CANONICAL_NAMESPACES,
+  };
 }
 
 /**
  * 收集指定命名空间下的所有 YAML 文件。
  * @param {string} rootDir - 源定义根目录。
- * @param {{type: string, sourceFiles?: string[], sourceSubdir?: string}} namespace - 命名空间配置。
+ * @param {{sourceSubdir: string}} namespace - 命名空间配置。
  * @returns {Promise<{files: string[], inputRoot: string}>}
  */
 async function collectNamespaceFiles(rootDir, namespace) {
-  if (namespace.type === "files") {
-    const files = [];
-
-    for (const relativePath of namespace.sourceFiles) {
-      const fullPath = path.join(rootDir, relativePath);
-      if (!(await pathExists(fullPath))) {
-        throw new Error(`缺少必需的 YAML 文件: ${fullPath}`);
-      }
-
-      files.push(fullPath);
-    }
-
-    return { files, inputRoot: rootDir };
-  }
-
   const namespaceRoot = path.join(rootDir, namespace.sourceSubdir);
 
   if (!(await pathExists(namespaceRoot))) {
@@ -192,15 +130,12 @@ async function buildYamlModules({
 } = {}) {
   const activeTree = await resolveSourceTree(cwd);
   const required = new Set(
-    requiredNamespaces ?? (activeTree.kind === "canonical" ? ["rules", "runtime"] : ["rules"]),
+    requiredNamespaces ?? ["mihomo-preset", "proxy-groups", "rules"],
   );
 
-  if (activeTree.warning) {
-    log(activeTree.warning);
-  }
-
+  // 清理本次会重建的命名空间产物，以及历史遗留的 runtime/ 目录。
   await Promise.all(
-    ["rules", "runtime"].map((namespaceName) =>
+    ["mihomo-preset", "proxy-groups", "rules", "runtime"].map((namespaceName) =>
       fs.rm(path.join(cwd, GENERATED_ROOT_NAME, namespaceName), {
         recursive: true,
         force: true,

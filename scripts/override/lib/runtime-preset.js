@@ -1,9 +1,9 @@
-import baseConfig from "../../config/runtime/base.js";
-import dnsConfig from "../../config/runtime/dns.js";
-import geodataConfig from "../../config/runtime/geodata.js";
-import profileConfig from "../../config/runtime/profile.js";
-import snifferConfig from "../../config/runtime/sniffer.js";
-import tunConfig from "../../config/runtime/tun.js";
+import baseConfig from "../../config/mihomo-preset/base.js";
+import dnsConfig from "../../config/mihomo-preset/dns.js";
+import geodataConfig from "../../config/mihomo-preset/geodata.js";
+import profileConfig from "../../config/mihomo-preset/profile.js";
+import snifferConfig from "../../config/mihomo-preset/sniffer.js";
+import tunConfig from "../../config/mihomo-preset/tun.js";
 import { cloneData } from "./utils.js";
 
 /**

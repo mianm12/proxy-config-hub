@@ -1,5 +1,5 @@
-import regionsConfig from "../../config/runtime/regions.js";
-import placeholdersConfig from "../../config/runtime/placeholders.js";
+import regionsConfig from "../../config/proxy-groups/regions.js";
+import placeholdersConfig from "../../config/proxy-groups/placeholders.js";
 import { cloneData } from "./utils.js";
 
 /**
