@@ -175,7 +175,7 @@ function buildConfiguredGroup(groupId, definition, context) {
 /**
  * 构建完整的代理组列表。
  * 顺序（自顶向下）：
- *   保留组 → 其他自定义组 → chain_groups → transit_groups → 区域组 → fallback
+ *   保留组 → chain_groups → transit_groups → 其他自定义组 → 区域组 → fallback
  * @param {Array<{name: string}>} proxies - 已过滤的代理节点列表。
  * @param {Record<string, Object>} groupDefinitions - 策略组定义。
  * @param {{chainGroups?: Array<object>, transitGroups?: Array<object>}} [extras]
@@ -204,19 +204,19 @@ function buildProxyGroups(proxies, groupDefinitions, extras = {}) {
     groups.push(buildConfiguredGroup(groupId, groupDefinitions[groupId], context));
   }
 
-  // 2. 其他自定义组（非保留、非 fallback）
+  // 2. chain_groups（落地）
+  groups.push(...chainGroups);
+
+  // 3. transit_groups（中转）
+  groups.push(...transitGroups);
+
+  // 4. 其他自定义组（非保留、非 fallback）
   for (const [groupId, definition] of Object.entries(groupDefinitions)) {
     if (RESERVED_GROUP_IDS.includes(groupId) || groupId === FALLBACK_GROUP_ID) {
       continue;
     }
     groups.push(buildConfiguredGroup(groupId, definition, context));
   }
-
-  // 3. chain_groups（落地）
-  groups.push(...chainGroups);
-
-  // 4. transit_groups（中转）
-  groups.push(...transitGroups);
 
   // 5. 区域组
   groups.push(...regionGroups);

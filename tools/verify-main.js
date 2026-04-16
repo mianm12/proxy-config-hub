@@ -10,6 +10,7 @@ import groupDefinitionsConfig from "../scripts/config/proxy-groups/groupDefiniti
 import inlineRulesConfig from "../scripts/config/rules/inlineRules.js";
 import ruleProvidersConfig from "../scripts/config/rules/ruleProviders.js";
 import regionsConfig from "../scripts/config/proxy-groups/regions.js";
+import placeholdersConfig from "../scripts/config/proxy-groups/placeholders.js";
 import snifferConfig from "../scripts/config/mihomo-preset/sniffer.js";
 import tunConfig from "../scripts/config/mihomo-preset/tun.js";
 import { assembleRuleSet } from "../scripts/override/lib/rule-assembly.js";
@@ -760,7 +761,7 @@ function testValidateChainsSchemaEmptyArraysAccepted() {
 
 /**
  * 校验 buildProxyGroups 的 extras 参数：chain_groups 和 transit_groups
- * 按约定位置（自定义组之后、区域组之前）插入。
+ * 按约定位置（保留组之后、其他自定义组之前）插入。
  * @returns {void}
  */
 function testBuildProxyGroupsInsertsChainAndTransit() {
@@ -810,15 +811,26 @@ function testBuildProxyGroupsInsertsChainAndTransit() {
     assert.ok(transitIndex < regionIndex, "transit_group 应位于区域组之前");
   }
 
-  // 自定义组与保留组都应位于 chain_group 之前
-  const chainGroupIds = Object.keys(groupDefinitionsConfig.groupDefinitions);
-  for (const id of chainGroupIds) {
+  // 保留组应位于 chain_group 之前
+  const reservedIds = placeholdersConfig.reserved;
+  const fallbackId = placeholdersConfig.fallback;
+  for (const id of reservedIds) {
     const def = groupDefinitionsConfig.groupDefinitions[id];
-    if (id === "fallback") continue;
     const idx = names.indexOf(def.name);
     assert.ok(
       idx > -1 && idx < chainIndex,
-      `已配置策略组 ${def.name} 应位于 chain_group 之前`,
+      `保留组 ${def.name} 应位于 chain_group 之前`,
+    );
+  }
+
+  // 其他自定义组（非保留、非 fallback）应位于 transit_group 之后
+  for (const id of Object.keys(groupDefinitionsConfig.groupDefinitions)) {
+    if (reservedIds.includes(id) || id === fallbackId) continue;
+    const def = groupDefinitionsConfig.groupDefinitions[id];
+    const idx = names.indexOf(def.name);
+    assert.ok(
+      idx > -1 && idx > transitIndex,
+      `自定义组 ${def.name} 应位于 transit_group 之后`,
     );
   }
 }
