@@ -9,6 +9,7 @@ import chainsConfig from "../scripts/config/proxy-groups/chains.js";
 import groupDefinitionsConfig from "../scripts/config/proxy-groups/groupDefinitions.js";
 import inlineRulesConfig from "../scripts/config/rules/inlineRules.js";
 import ruleProvidersConfig from "../scripts/config/rules/ruleProviders.js";
+import regionsConfig from "../scripts/config/proxy-groups/regions.js";
 import snifferConfig from "../scripts/config/mihomo-preset/sniffer.js";
 import tunConfig from "../scripts/config/mihomo-preset/tun.js";
 import { assembleRuleSet } from "../scripts/override/lib/rule-assembly.js";
@@ -795,15 +796,18 @@ function testBuildProxyGroupsInsertsChainAndTransit() {
   );
 
   const names = groupsWithExtras.map((g) => g.name);
-  const chainIndex = names.indexOf("🚪 落地");
-  const transitIndex = names.indexOf("🔀 中转");
-  const hkIndex = names.indexOf("🇭🇰 香港");
+  const chainIndex = names.indexOf(chainGroupFixture.name);
+  const transitIndex = names.indexOf(transitGroupFixture.name);
+  // 从 regionsConfig 动态获取首个区域组的期望名称，避免硬编码 regions.yaml 的具体值
+  const firstRegion = regionsConfig[0];
+  const firstRegionGroupName = `${firstRegion.icon} ${firstRegion.name}`;
+  const regionIndex = names.indexOf(firstRegionGroupName);
 
   assert.ok(chainIndex > -1, "应包含 chain_group");
   assert.ok(transitIndex > -1, "应包含 transit_group");
   assert.ok(chainIndex < transitIndex, "chain_group 应位于 transit_group 之前");
-  if (hkIndex > -1) {
-    assert.ok(transitIndex < hkIndex, "transit_group 应位于区域组之前");
+  if (regionIndex > -1) {
+    assert.ok(transitIndex < regionIndex, "transit_group 应位于区域组之前");
   }
 
   // 自定义组与保留组都应位于 chain_group 之前
@@ -868,7 +872,7 @@ function testChainGroupsPlaceholderExpansion() {
   const nonCnGroup = groupsWithChain.find((g) => g.name === nonCnDef.name);
   assert.ok(nonCnGroup, "non_cn 组应存在");
   assert.ok(
-    nonCnGroup.proxies.includes("🚪 落地"),
+    nonCnGroup.proxies.includes(chainGroupFixture.name),
     "含 @chain-groups 的组应包含链式代理组名",
   );
 
@@ -881,7 +885,7 @@ function testChainGroupsPlaceholderExpansion() {
   const nonCnGroupNoChain = groupsWithoutChain.find((g) => g.name === nonCnDef.name);
   assert.ok(nonCnGroupNoChain, "non_cn 组应存在");
   assert.ok(
-    !nonCnGroupNoChain.proxies.includes("🚪 落地"),
+    !nonCnGroupNoChain.proxies.includes(chainGroupFixture.name),
     "chainGroups 为空时不应出现链式代理组名",
   );
 }

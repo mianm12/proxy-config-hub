@@ -35,10 +35,16 @@ jobs:
           user_name: github-actions[bot]
           user_email: github-actions[bot]@users.noreply.github.com
           commit_message: "build: 更新 dist 产物"
+          force_orphan: true
 
       - name: Purge jsdelivr CDN cache
         run: |
+          FAILED=0
           for file in $(find dist -type f | sed 's|^dist/||'); do
-            curl -s "https://purge.jsdelivr.net/gh/mianm12/proxy-config-hub@dist/${file}" > /dev/null
+            if ! curl -sf --max-time 10 --retry 2 \
+              "https://purge.jsdelivr.net/gh/${{ github.repository }}@dist/${file}" > /dev/null; then
+              echo "WARN: 清理失败: $file"
+              ((FAILED++))
+            fi
           done
-          echo "CDN cache purged for all dist files"
+          echo "CDN 缓存清理完成（失败 $FAILED 个）"
