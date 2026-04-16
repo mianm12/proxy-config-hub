@@ -13,6 +13,7 @@ import tunConfig from "../scripts/config/runtime/tun.js";
 import { assembleRuleSet } from "../scripts/override/lib/rule-assembly.js";
 import { applyProxyChains, buildChainGroups, buildTransitGroups } from "../scripts/override/lib/proxy-chains.js";
 import { buildProxyGroups } from "../scripts/override/lib/proxy-groups.js";
+import { applyRuntimePreset } from "../scripts/override/lib/runtime-preset.js";
 import {
   loadBundleRuntime,
   loadTemplateProxies,
@@ -667,6 +668,75 @@ function testBuildProxyGroupsExtrasOptional() {
 }
 
 /**
+ * 端到端（source 层）：手工组合 pipeline 函数，验证非空 chains 配置下
+ * chain_group / transit_group / dialer-proxy 均按预期产生。
+ * @returns {void}
+ */
+function testChainPipelineIntegration() {
+  const config = {
+    proxies: [
+      { name: "Sample-🇭🇰-Hong Kong-01" },
+      { name: "Sample-🇯🇵-Japan-01" },
+      { name: "自建-SG-Relay-01" },
+      { name: "Relay-US-02" },
+    ],
+  };
+  const chainDefinitions = [
+    {
+      id: "chain",
+      name: "🚪 落地",
+      landing_pattern: "自建|Relay|落地",
+      flags: "i",
+      entry: "transit",
+      type: "select",
+    },
+  ];
+  const transitDefinitions = [
+    { id: "transit", name: "🔀 中转", transit_pattern: "", flags: "i", type: "select" },
+  ];
+
+  applyRuntimePreset(config);
+
+  const namedProxies = config.proxies.filter(
+    (p) => typeof p.name === "string" && p.name.trim().length > 0,
+  );
+  const { chainGroups, remainingProxies } = buildChainGroups(namedProxies, chainDefinitions);
+  const { groups: transitGroups, idToName: transitIdToName } = buildTransitGroups(
+    remainingProxies,
+    transitDefinitions,
+  );
+
+  config["proxy-groups"] = buildProxyGroups(
+    namedProxies,
+    groupDefinitionsConfig.groupDefinitions,
+    { chainGroups, transitGroups },
+  );
+
+  applyProxyChains(config, chainDefinitions, transitIdToName);
+
+  // dialer-proxy 注入
+  const byName = new Map(config.proxies.map((p) => [p.name, p]));
+  assert.equal(byName.get("自建-SG-Relay-01")["dialer-proxy"], "🔀 中转");
+  assert.equal(byName.get("Relay-US-02")["dialer-proxy"], "🔀 中转");
+  assert.equal(byName.get("Sample-🇭🇰-Hong Kong-01")["dialer-proxy"], undefined);
+
+  // transit_group 不含 landing 节点
+  const transit = config["proxy-groups"].find((g) => g.name === "🔀 中转");
+  assert.ok(transit, "应存在 transit_group");
+  for (const memberName of transit.proxies) {
+    assert.ok(
+      !["自建-SG-Relay-01", "Relay-US-02"].includes(memberName),
+      "transit_group 不得包含 landing 节点",
+    );
+  }
+
+  // chain_group 仅含 landing 节点
+  const chain = config["proxy-groups"].find((g) => g.name === "🚪 落地");
+  assert.ok(chain, "应存在 chain_group");
+  assert.deepEqual(chain.proxies, ["自建-SG-Relay-01", "Relay-US-02"]);
+}
+
+/**
  * 校验示例配置序列化结果仍包含关键产物分段。
  * @returns {void}
  */
@@ -699,6 +769,7 @@ function main() {
   testApplyProxyChainsSkipsMissingTransit();
   testBuildProxyGroupsInsertsChainAndTransit();
   testBuildProxyGroupsExtrasOptional();
+  testChainPipelineIntegration();
   assertGeneratedFiles();
   assertCustomAssetCopy();
   testBundlePositivePath();
