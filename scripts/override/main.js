@@ -10,12 +10,16 @@ import {
   applyProxyChains,
   buildChainGroups,
   buildTransitGroups,
+  validateChainsSchema,
 } from "./lib/proxy-chains.js";
 
 const { ruleProviders } = ruleProvidersConfig;
 const { groupDefinitions } = groupDefinitionsConfig;
 const transitDefinitions = Array.isArray(chainsConfig.transit_group) ? chainsConfig.transit_group : [];
 const chainDefinitions = Array.isArray(chainsConfig.chain_group) ? chainsConfig.chain_group : [];
+
+// 模块加载期执行 schema 校验：entry 必须引用已定义的 transit_group.id
+validateChainsSchema(chainDefinitions, transitDefinitions);
 
 function main(config = {}) {
   const workingConfig = config && typeof config === "object" ? config : {};

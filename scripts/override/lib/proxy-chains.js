@@ -41,6 +41,42 @@ function assertUniqueChainIds(chainDefinitions) {
 }
 
 /**
+ * 静态 schema 校验：每个 chain.entry 必须等于某个已定义的 transit_group.id。
+ * 本校验独立于运行时成员是否为空，用于区分 "YAML 拼写错误"（schema 错误）
+ * 与 "transit 成员空被跳过"（运行时退化）两种场景。
+ *
+ * @param {Array<{id:string, entry:string}>} chainDefinitions
+ * @param {Array<{id:string}>} transitDefinitions
+ * @returns {void}  合法时无返回值；不合法时抛 Error。
+ */
+function validateChainsSchema(chainDefinitions, transitDefinitions) {
+  if (!Array.isArray(chainDefinitions) || chainDefinitions.length === 0) {
+    return;
+  }
+  if (!Array.isArray(transitDefinitions)) {
+    throw new Error("transit_group 必须是数组");
+  }
+
+  const definedTransitIds = new Set();
+  for (const definition of transitDefinitions) {
+    if (typeof definition?.id === "string" && definition.id.length > 0) {
+      definedTransitIds.add(definition.id);
+    }
+  }
+
+  for (const chain of chainDefinitions) {
+    if (typeof chain?.entry !== "string" || chain.entry.length === 0) {
+      throw new Error(`chain_group ${chain?.id} 缺少非空的 entry 字段`);
+    }
+    if (!definedTransitIds.has(chain.entry)) {
+      throw new Error(
+        `chain_group ${chain.id} 的 entry=${chain.entry} 未在 transit_group 中定义`,
+      );
+    }
+  }
+}
+
+/**
  * 提取 landing 节点并按 chain_group 定义构建组。
  * 节点匹配采用 first-match-wins：按 chain_group 数组顺序，节点归属首个命中的组。
  * 被首个组捕获后，若又命中其他组的 landing_pattern，记录 WARN（仅归属首个）。
@@ -237,4 +273,4 @@ function applyProxyChains(config, chainDefinitions, transitIdToName) {
   }
 }
 
-export { applyProxyChains, buildChainGroups, buildTransitGroups };
+export { applyProxyChains, buildChainGroups, buildTransitGroups, validateChainsSchema };

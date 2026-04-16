@@ -11,7 +11,12 @@ import ruleProvidersConfig from "../scripts/config/rules/ruleProviders.js";
 import snifferConfig from "../scripts/config/runtime/sniffer.js";
 import tunConfig from "../scripts/config/runtime/tun.js";
 import { assembleRuleSet } from "../scripts/override/lib/rule-assembly.js";
-import { applyProxyChains, buildChainGroups, buildTransitGroups } from "../scripts/override/lib/proxy-chains.js";
+import {
+  applyProxyChains,
+  buildChainGroups,
+  buildTransitGroups,
+  validateChainsSchema,
+} from "../scripts/override/lib/proxy-chains.js";
 import { buildProxyGroups } from "../scripts/override/lib/proxy-groups.js";
 import { applyRuntimePreset } from "../scripts/override/lib/runtime-preset.js";
 import { validateOutput } from "../scripts/override/lib/validate-output.js";
@@ -610,6 +615,68 @@ function testApplyProxyChainsSkipsMissingTransit() {
 }
 
 /**
+ * 校验 validateChainsSchema：chain.entry 指向未定义的 transit_group.id 时必须抛错。
+ * 与 applyProxyChains 的运行时 WARN 行为（transit 定义过但成员空）区分开。
+ * @returns {void}
+ */
+function testValidateChainsSchemaRejectsUnknownEntry() {
+  const chainDefinitions = [
+    {
+      id: "chain",
+      name: "🚪 落地",
+      landing_pattern: "自建",
+      flags: "i",
+      entry: "transti", // 故意拼写错误
+      type: "select",
+    },
+  ];
+  const transitDefinitions = [
+    { id: "transit", name: "🔀 中转", transit_pattern: "", flags: "i", type: "select" },
+  ];
+
+  assert.throws(
+    () => validateChainsSchema(chainDefinitions, transitDefinitions),
+    (error) =>
+      error instanceof Error &&
+      error.message.includes("transti") &&
+      error.message.includes("entry"),
+    "entry 指向未定义的 transit.id 应抛错，错误信息含冲突 id 与 entry 关键字",
+  );
+}
+
+/**
+ * 校验 validateChainsSchema：合法配置不抛错。
+ * @returns {void}
+ */
+function testValidateChainsSchemaAcceptsValid() {
+  const chainDefinitions = [
+    {
+      id: "chain",
+      name: "🚪 落地",
+      landing_pattern: "自建",
+      flags: "i",
+      entry: "transit",
+      type: "select",
+    },
+  ];
+  const transitDefinitions = [
+    { id: "transit", name: "🔀 中转", transit_pattern: "", flags: "i", type: "select" },
+  ];
+  validateChainsSchema(chainDefinitions, transitDefinitions);
+  // 无抛错即通过
+}
+
+/**
+ * 校验 validateChainsSchema：chain_group 或 transit_group 为空数组时视为合法（跳过校验）。
+ * @returns {void}
+ */
+function testValidateChainsSchemaEmptyArraysAccepted() {
+  validateChainsSchema([], []);
+  validateChainsSchema([], [{ id: "t", name: "X", transit_pattern: "", flags: "", type: "select" }]);
+  // 无抛错即通过
+}
+
+/**
  * 校验 buildProxyGroups 的 extras 参数：chain_groups 和 transit_groups
  * 按约定位置（自定义组之后、区域组之前）插入。
  * @returns {void}
@@ -828,6 +895,9 @@ function main() {
   testApplyProxyChainsBasic();
   testApplyProxyChainsPreservesExisting();
   testApplyProxyChainsSkipsMissingTransit();
+  testValidateChainsSchemaRejectsUnknownEntry();
+  testValidateChainsSchemaAcceptsValid();
+  testValidateChainsSchemaEmptyArraysAccepted();
   testBuildProxyGroupsInsertsChainAndTransit();
   testBuildProxyGroupsExtrasOptional();
   testChainPipelineIntegration();
