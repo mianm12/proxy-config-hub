@@ -43,7 +43,7 @@ function main(config = {}) {
   // 所有 transit_group 均为空 → 整体跳过链式代理
   const chainsEffective = transitGroups.length > 0 && chainGroups.length > 0;
 
-  workingConfig["proxy-groups"] = buildProxyGroups(namedProxies, groupDefinitions, {
+  workingConfig["proxy-groups"] = buildProxyGroups(remainingProxies, groupDefinitions, {
     chainGroups: chainsEffective ? chainGroups : [],
     transitGroups: chainsEffective ? transitGroups : [],
   });
