@@ -11,7 +11,7 @@ import ruleProvidersConfig from "../scripts/config/rules/ruleProviders.js";
 import snifferConfig from "../scripts/config/runtime/sniffer.js";
 import tunConfig from "../scripts/config/runtime/tun.js";
 import { assembleRuleSet } from "../scripts/override/lib/rule-assembly.js";
-import { buildChainGroups, buildTransitGroups } from "../scripts/override/lib/proxy-chains.js";
+import { applyProxyChains, buildChainGroups, buildTransitGroups } from "../scripts/override/lib/proxy-chains.js";
 import {
   loadBundleRuntime,
   loadTemplateProxies,
@@ -496,6 +496,95 @@ function testBuildTransitGroupsDuplicateId() {
 }
 
 /**
+ * 校验 applyProxyChains 为命中 landing_pattern 的节点注入 dialer-proxy = transit.name。
+ * @returns {void}
+ */
+function testApplyProxyChainsBasic() {
+  const config = {
+    proxies: [
+      { name: "Sample-🇭🇰-Hong Kong-01" },
+      { name: "自建-SG-Relay-01" },
+      { name: "Relay-JP-02" },
+    ],
+  };
+  const chainDefinitions = [
+    {
+      id: "chain",
+      name: "🚪 落地",
+      landing_pattern: "自建|Relay|落地",
+      flags: "i",
+      entry: "transit",
+      type: "select",
+    },
+  ];
+  const transitIdToName = new Map([["transit", "🔀 中转"]]);
+
+  applyProxyChains(config, chainDefinitions, transitIdToName);
+
+  assert.equal(config.proxies[0]["dialer-proxy"], undefined, "非 landing 节点不应被注入");
+  assert.equal(config.proxies[1]["dialer-proxy"], "🔀 中转", "landing 节点应注入 dialer-proxy");
+  assert.equal(config.proxies[2]["dialer-proxy"], "🔀 中转", "landing 节点应注入 dialer-proxy");
+}
+
+/**
+ * 校验节点已存在 dialer-proxy 时保留原值并 WARN，不覆盖。
+ * @returns {void}
+ */
+function testApplyProxyChainsPreservesExisting() {
+  const config = {
+    proxies: [
+      { name: "自建-SG-Relay-01", "dialer-proxy": "既有前置" },
+    ],
+  };
+  const chainDefinitions = [
+    {
+      id: "chain",
+      name: "🚪 落地",
+      landing_pattern: "自建",
+      flags: "i",
+      entry: "transit",
+      type: "select",
+    },
+  ];
+  const transitIdToName = new Map([["transit", "🔀 中转"]]);
+
+  applyProxyChains(config, chainDefinitions, transitIdToName);
+
+  assert.equal(
+    config.proxies[0]["dialer-proxy"],
+    "既有前置",
+    "已有 dialer-proxy 应被保留",
+  );
+}
+
+/**
+ * 校验 chain.entry 对应的 transit 未被构建（不在 idToName 中）时，该 chain 整体跳过。
+ * @returns {void}
+ */
+function testApplyProxyChainsSkipsMissingTransit() {
+  const config = { proxies: [{ name: "自建-01" }] };
+  const chainDefinitions = [
+    {
+      id: "chain",
+      name: "🚪 落地",
+      landing_pattern: "自建",
+      flags: "i",
+      entry: "transit-missing",
+      type: "select",
+    },
+  ];
+  const transitIdToName = new Map();
+
+  applyProxyChains(config, chainDefinitions, transitIdToName);
+
+  assert.equal(
+    config.proxies[0]["dialer-proxy"],
+    undefined,
+    "entry 指向未构建的 transit 时不应注入",
+  );
+}
+
+/**
  * 校验示例配置序列化结果仍包含关键产物分段。
  * @returns {void}
  */
@@ -523,6 +612,9 @@ function main() {
   testBuildTransitGroupsFiltered();
   testBuildTransitGroupsEmptyMembersSkipped();
   testBuildTransitGroupsDuplicateId();
+  testApplyProxyChainsBasic();
+  testApplyProxyChainsPreservesExisting();
+  testApplyProxyChainsSkipsMissingTransit();
   assertGeneratedFiles();
   assertCustomAssetCopy();
   testBundlePositivePath();

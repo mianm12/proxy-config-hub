@@ -184,4 +184,57 @@ function buildTransitGroups(remainingProxies, transitDefinitions) {
   return { groups, idToName };
 }
 
-export { buildChainGroups, buildTransitGroups };
+/**
+ * 为 config.proxies 中命中 landing_pattern 的节点注入 dialer-proxy = transit.name。
+ * 行为：
+ *   - 对每个 chain：若 transitIdToName.get(chain.entry) 未定义，WARN 并跳过该 chain。
+ *   - 否则遍历 config.proxies：
+ *       - 匹配 landing_pattern 且无 dialer-proxy → 注入 proxy["dialer-proxy"] = transit.name
+ *       - 已有 dialer-proxy → 保留原值 + WARN
+ *
+ * @param {{proxies: Array<object>}} config
+ * @param {Array<{id:string, landing_pattern:string, flags?:string, entry:string}>} chainDefinitions
+ * @param {Map<string,string>} transitIdToName - 来自 buildTransitGroups 的 idToName
+ * @returns {void}
+ */
+function applyProxyChains(config, chainDefinitions, transitIdToName) {
+  if (!Array.isArray(chainDefinitions) || chainDefinitions.length === 0) {
+    return;
+  }
+
+  const proxies = Array.isArray(config.proxies) ? config.proxies : [];
+
+  for (const chain of chainDefinitions) {
+    const transitName = transitIdToName.get(chain.entry);
+    if (!transitName) {
+      console.log(
+        `[override] WARN: chain ${chain.id} 的 entry=${chain.entry} 未找到已构建的 transit_group，跳过注入`,
+      );
+      continue;
+    }
+
+    let pattern;
+    try {
+      pattern = new RegExp(chain.landing_pattern, chain.flags || "");
+    } catch (error) {
+      throw new Error(
+        `chain ${chain.id} 的 landing_pattern 非法正则: ${error.message}`,
+      );
+    }
+
+    for (const proxy of proxies) {
+      if (typeof proxy?.name !== "string" || !pattern.test(proxy.name)) {
+        continue;
+      }
+      if (proxy["dialer-proxy"] !== undefined) {
+        console.log(
+          `[override] WARN: 节点 ${proxy.name} 已有 dialer-proxy=${proxy["dialer-proxy"]}，保留原值不覆盖`,
+        );
+        continue;
+      }
+      proxy["dialer-proxy"] = transitName;
+    }
+  }
+}
+
+export { applyProxyChains, buildChainGroups, buildTransitGroups };
