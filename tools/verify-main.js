@@ -11,6 +11,7 @@ import ruleProvidersConfig from "../scripts/config/rules/ruleProviders.js";
 import snifferConfig from "../scripts/config/runtime/sniffer.js";
 import tunConfig from "../scripts/config/runtime/tun.js";
 import { assembleRuleSet } from "../scripts/override/lib/rule-assembly.js";
+import { buildChainGroups } from "../scripts/override/lib/proxy-chains.js";
 import {
   loadBundleRuntime,
   loadTemplateProxies,
@@ -315,6 +316,47 @@ function testInlineRuleWithNoResolveTargetAccepted() {
 }
 
 /**
+ * 校验 buildChainGroups：按 first-match-wins 抽出 landing 节点，
+ * 返回每个 chain_group 定义对应的组与剔除 landing 后的 remainingProxies。
+ * @returns {void}
+ */
+function testBuildChainGroupsBasic() {
+  const namedProxies = [
+    { name: "Sample-🇭🇰-Hong Kong-01" },
+    { name: "Sample-🇸🇬-Singapore-01" },
+    { name: "自建-SG-Relay-01" },
+    { name: "Relay-JP-02" },
+    { name: "落地-US-03" },
+  ];
+  const chainDefinitions = [
+    {
+      id: "chain",
+      name: "🚪 落地",
+      landing_pattern: "自建|Relay|落地",
+      flags: "i",
+      entry: "transit",
+      type: "select",
+    },
+  ];
+
+  const { chainGroups, remainingProxies } = buildChainGroups(namedProxies, chainDefinitions);
+
+  assert.equal(chainGroups.length, 1, "应构建 1 个 chain_group");
+  assert.equal(chainGroups[0].name, "🚪 落地", "chain_group.name 应等于 definition.name");
+  assert.equal(chainGroups[0].type, "select", "chain_group.type 应等于 definition.type");
+  assert.deepEqual(
+    chainGroups[0].proxies,
+    ["自建-SG-Relay-01", "Relay-JP-02", "落地-US-03"],
+    "chain_group.proxies 应保留订阅顺序，仅包含命中 landing_pattern 的节点名",
+  );
+  assert.deepEqual(
+    remainingProxies.map((p) => p.name),
+    ["Sample-🇭🇰-Hong Kong-01", "Sample-🇸🇬-Singapore-01"],
+    "remainingProxies 应剔除 landing 节点，保留其余节点的原顺序",
+  );
+}
+
+/**
  * 校验示例配置序列化结果仍包含关键产物分段。
  * @returns {void}
  */
@@ -333,6 +375,7 @@ function testExampleConfigSerialization() {
  * @returns {void}
  */
 function main() {
+  testBuildChainGroupsBasic();
   assertGeneratedFiles();
   assertCustomAssetCopy();
   testBundlePositivePath();
