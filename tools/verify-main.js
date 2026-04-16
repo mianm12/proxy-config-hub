@@ -893,7 +893,7 @@ function testValidateOutputRejectsTransitContainingLanding() {
     ],
     rules: [`MATCH,${groupDefinitionsConfig.groupDefinitions.fallback.name}`],
   };
-  for (const [id, def] of Object.entries(groupDefinitionsConfig.groupDefinitions)) {
+  for (const def of Object.values(groupDefinitionsConfig.groupDefinitions)) {
     config["proxy-groups"].push({ name: def.name, type: "select", proxies: ["Sample-HK-01"] });
   }
 
@@ -938,7 +938,7 @@ function testValidateOutputRejectsEmptyChainGroup() {
     ],
     rules: [`MATCH,${groupDefinitionsConfig.groupDefinitions.fallback.name}`],
   };
-  for (const [id, def] of Object.entries(groupDefinitionsConfig.groupDefinitions)) {
+  for (const def of Object.values(groupDefinitionsConfig.groupDefinitions)) {
     config["proxy-groups"].push({ name: def.name, type: "select", proxies: ["Sample-HK-01"] });
   }
 
