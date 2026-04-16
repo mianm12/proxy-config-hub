@@ -12,6 +12,7 @@ import snifferConfig from "../scripts/config/runtime/sniffer.js";
 import tunConfig from "../scripts/config/runtime/tun.js";
 import { assembleRuleSet } from "../scripts/override/lib/rule-assembly.js";
 import { applyProxyChains, buildChainGroups, buildTransitGroups } from "../scripts/override/lib/proxy-chains.js";
+import { buildProxyGroups } from "../scripts/override/lib/proxy-groups.js";
 import {
   loadBundleRuntime,
   loadTemplateProxies,
@@ -585,6 +586,87 @@ function testApplyProxyChainsSkipsMissingTransit() {
 }
 
 /**
+ * 校验 buildProxyGroups 的 extras 参数：chain_groups 和 transit_groups
+ * 按约定位置（自定义组之后、区域组之前）插入。
+ * @returns {void}
+ */
+function testBuildProxyGroupsInsertsChainAndTransit() {
+  const namedProxies = [
+    { name: "Sample-🇭🇰-Hong Kong-01" },
+    { name: "Sample-🇯🇵-Japan-01" },
+  ];
+  const chainGroupFixture = {
+    name: "🚪 落地",
+    type: "select",
+    proxies: ["自建-SG-Relay-01"],
+  };
+  const transitGroupFixture = {
+    name: "🔀 中转",
+    type: "select",
+    proxies: ["Sample-🇭🇰-Hong Kong-01", "Sample-🇯🇵-Japan-01"],
+  };
+
+  const groupsWithoutExtras = buildProxyGroups(
+    namedProxies,
+    groupDefinitionsConfig.groupDefinitions,
+  );
+  const groupsWithExtras = buildProxyGroups(
+    namedProxies,
+    groupDefinitionsConfig.groupDefinitions,
+    { chainGroups: [chainGroupFixture], transitGroups: [transitGroupFixture] },
+  );
+
+  assert.equal(
+    groupsWithExtras.length,
+    groupsWithoutExtras.length + 2,
+    "extras 非空时应额外增加 2 个组",
+  );
+
+  const names = groupsWithExtras.map((g) => g.name);
+  const chainIndex = names.indexOf("🚪 落地");
+  const transitIndex = names.indexOf("🔀 中转");
+  const hkIndex = names.indexOf("🇭🇰 香港");
+
+  assert.ok(chainIndex > -1, "应包含 chain_group");
+  assert.ok(transitIndex > -1, "应包含 transit_group");
+  assert.ok(chainIndex < transitIndex, "chain_group 应位于 transit_group 之前");
+  if (hkIndex > -1) {
+    assert.ok(transitIndex < hkIndex, "transit_group 应位于区域组之前");
+  }
+
+  // 自定义组与保留组都应位于 chain_group 之前
+  const chainGroupIds = Object.keys(groupDefinitionsConfig.groupDefinitions);
+  for (const id of chainGroupIds) {
+    const def = groupDefinitionsConfig.groupDefinitions[id];
+    if (id === "fallback") continue;
+    const idx = names.indexOf(def.name);
+    assert.ok(
+      idx > -1 && idx < chainIndex,
+      `已配置策略组 ${def.name} 应位于 chain_group 之前`,
+    );
+  }
+}
+
+/**
+ * 校验未传 extras 或 extras 为空数组时，buildProxyGroups 行为与旧版完全一致。
+ * @returns {void}
+ */
+function testBuildProxyGroupsExtrasOptional() {
+  const namedProxies = [{ name: "Sample-🇭🇰-Hong Kong-01" }];
+  const groupsA = buildProxyGroups(namedProxies, groupDefinitionsConfig.groupDefinitions);
+  const groupsB = buildProxyGroups(
+    namedProxies,
+    groupDefinitionsConfig.groupDefinitions,
+    { chainGroups: [], transitGroups: [] },
+  );
+  assert.deepEqual(
+    normalize(groupsA),
+    normalize(groupsB),
+    "空 extras 应产生与未传参时相同的结果",
+  );
+}
+
+/**
  * 校验示例配置序列化结果仍包含关键产物分段。
  * @returns {void}
  */
@@ -615,6 +697,8 @@ function main() {
   testApplyProxyChainsBasic();
   testApplyProxyChainsPreservesExisting();
   testApplyProxyChainsSkipsMissingTransit();
+  testBuildProxyGroupsInsertsChainAndTransit();
+  testBuildProxyGroupsExtrasOptional();
   assertGeneratedFiles();
   assertCustomAssetCopy();
   testBundlePositivePath();
