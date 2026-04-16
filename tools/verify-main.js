@@ -357,6 +357,77 @@ function testBuildChainGroupsBasic() {
 }
 
 /**
+ * 校验 chainDefinitions 为空数组时，remainingProxies 直接等于入参副本，chainGroups 为空。
+ * @returns {void}
+ */
+function testBuildChainGroupsEmptyDefinitions() {
+  const namedProxies = [{ name: "A" }, { name: "B" }];
+  const { chainGroups, remainingProxies } = buildChainGroups(namedProxies, []);
+  assert.deepEqual(chainGroups, [], "chainGroups 应为空数组");
+  assert.deepEqual(
+    remainingProxies.map((p) => p.name),
+    ["A", "B"],
+    "remainingProxies 应保留全部节点",
+  );
+}
+
+/**
+ * 校验 chain_group 未命中任何节点时会被跳过（不返回空成员组）。
+ * @returns {void}
+ */
+function testBuildChainGroupsNoMatch() {
+  const namedProxies = [{ name: "Sample-HK-01" }, { name: "Sample-JP-02" }];
+  const chainDefinitions = [
+    {
+      id: "chain",
+      name: "🚪 落地",
+      landing_pattern: "自建|Relay|落地",
+      flags: "i",
+      entry: "transit",
+      type: "select",
+    },
+  ];
+  const { chainGroups, remainingProxies } = buildChainGroups(namedProxies, chainDefinitions);
+  assert.equal(chainGroups.length, 0, "未命中 landing_pattern 时应跳过该 chain_group");
+  assert.equal(remainingProxies.length, 2, "remainingProxies 应包含全部入参节点");
+}
+
+/**
+ * 校验 id 重复抛错。
+ * @returns {void}
+ */
+function testBuildChainGroupsDuplicateId() {
+  assert.throws(
+    () =>
+      buildChainGroups(
+        [{ name: "自建-01" }],
+        [
+          { id: "dup", name: "A", landing_pattern: "自建", flags: "i", entry: "transit", type: "select" },
+          { id: "dup", name: "B", landing_pattern: "自建", flags: "i", entry: "transit", type: "select" },
+        ],
+      ),
+    (error) => error instanceof Error && error.message.includes("dup"),
+    "id 重复应抛错且错误信息包含冲突 id",
+  );
+}
+
+/**
+ * 校验 landing_pattern 非法正则时抛错。
+ * @returns {void}
+ */
+function testBuildChainGroupsInvalidRegex() {
+  assert.throws(
+    () =>
+      buildChainGroups(
+        [{ name: "自建-01" }],
+        [{ id: "c", name: "A", landing_pattern: "[", flags: "", entry: "transit", type: "select" }],
+      ),
+    (error) => error instanceof Error && error.message.includes("landing_pattern"),
+    "非法正则应抛错且错误信息提示 landing_pattern",
+  );
+}
+
+/**
  * 校验示例配置序列化结果仍包含关键产物分段。
  * @returns {void}
  */
@@ -376,6 +447,10 @@ function testExampleConfigSerialization() {
  */
 function main() {
   testBuildChainGroupsBasic();
+  testBuildChainGroupsEmptyDefinitions();
+  testBuildChainGroupsNoMatch();
+  testBuildChainGroupsDuplicateId();
+  testBuildChainGroupsInvalidRegex();
   assertGeneratedFiles();
   assertCustomAssetCopy();
   testBundlePositivePath();
