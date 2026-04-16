@@ -11,8 +11,7 @@
     "build": "npm run rules:build && node build.js",
     "example:config": "npm run build && node tools/generate-example-config.js",
     "verify:main": "node tools/verify-main.js",
-    "verify:migration": "node tools/verify-yaml-migration.js",
-    "verify": "npm run build && npm run verify:main && npm run verify:migration"
+    "verify": "npm run build && npm run verify:main"
   },
   "engines": {
     "node": ">=24"

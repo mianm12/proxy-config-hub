@@ -1,15 +1,15 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
-import baseConfig from "../scripts/config/runtime/base.js";
-import dnsConfig from "../scripts/config/runtime/dns.js";
-import geodataConfig from "../scripts/config/runtime/geodata.js";
-import profileConfig from "../scripts/config/runtime/profile.js";
-import groupDefinitionsConfig from "../scripts/config/rules/groupDefinitions.js";
+import baseConfig from "../scripts/config/mihomo-preset/base.js";
+import dnsConfig from "../scripts/config/mihomo-preset/dns.js";
+import geodataConfig from "../scripts/config/mihomo-preset/geodata.js";
+import profileConfig from "../scripts/config/mihomo-preset/profile.js";
+import groupDefinitionsConfig from "../scripts/config/proxy-groups/groupDefinitions.js";
 import inlineRulesConfig from "../scripts/config/rules/inlineRules.js";
 import ruleProvidersConfig from "../scripts/config/rules/ruleProviders.js";
-import snifferConfig from "../scripts/config/runtime/sniffer.js";
-import tunConfig from "../scripts/config/runtime/tun.js";
+import snifferConfig from "../scripts/config/mihomo-preset/sniffer.js";
+import tunConfig from "../scripts/config/mihomo-preset/tun.js";
 import { assembleRuleSet } from "../scripts/override/lib/rule-assembly.js";
 import {
   applyProxyChains,
@@ -175,18 +175,22 @@ function assertGeneratedFiles() {
   }
 
   assert.ok(
-    !fs.existsSync(path.join(SCRIPTS_CONFIG_DIR, "rules", "custom", "_template.js")),
-    "custom 模板不得被转换到 scripts/config",
+    !fs.existsSync(path.join(SCRIPTS_CONFIG_DIR, "assets")),
+    "assets 命名空间不得被编译到 scripts/config",
+  );
+  assert.ok(
+    !fs.existsSync(path.join(SCRIPTS_CONFIG_DIR, "runtime")),
+    "旧 runtime 命名空间已废弃，scripts/config/ 下不应再存在 runtime 目录",
   );
 }
 
 /**
- * 校验 definitions/rules/custom 资源是否被无损复制到 dist。
+ * 校验 definitions/assets/custom 资源是否被无损复制到 dist。
  * @returns {void}
  */
 function assertCustomAssetCopy() {
-  const sourcePath = path.join(REPO_ROOT, "definitions", "rules", "custom", "_template.yaml");
-  const distPath = path.join(REPO_ROOT, "dist", "rules", "custom", "_template.yaml");
+  const sourcePath = path.join(REPO_ROOT, "definitions", "assets", "custom", "_template.yaml");
+  const distPath = path.join(REPO_ROOT, "dist", "assets", "custom", "_template.yaml");
   assert.equal(
     fs.readFileSync(distPath, "utf8"),
     fs.readFileSync(sourcePath, "utf8"),
@@ -251,8 +255,9 @@ function testBundlePositivePath() {
     "provider RULE-SET 规则应严格按 ruleProviders 声明顺序排列，且 MATCH 前不得插入其它规则",
   );
   assert.equal(result.rules.at(-1), fallbackRule, "最后一条规则应为 groupDefinitions.fallback 对应的 MATCH");
-  assert.ok(!bundleCode.includes("definitions/rules/registry"), "bundle 不得引用 definitions/rules/registry 路径");
-  assert.ok(!bundleCode.includes("definitions/runtime"), "bundle 不得引用 definitions/runtime 路径");
+  assert.ok(!bundleCode.includes("definitions/runtime"), "bundle 不得引用旧 definitions/runtime 路径");
+  assert.ok(!bundleCode.includes("definitions/rules/registry"), "bundle 不得引用旧 definitions/rules/registry 路径");
+  assert.ok(!bundleCode.includes("definitions/rules/custom"), "bundle 不得引用旧 definitions/rules/custom 路径");
 }
 
 /**

@@ -3,9 +3,10 @@
 > 当前仓库实现状态（2026-04-12）
 >
 > - 当前唯一的声明型 YAML 源目录是 `definitions/`，不是 `rules/`
-> - `definitions/rules/registry/` 承载规则注册表 YAML，并生成到 `scripts/config/rules/`
-> - `definitions/runtime/` 承载 runtime preset YAML，并生成到 `scripts/config/runtime/`
-> - `definitions/rules/custom/` 是模板/发布资产子树，不参与 active ruleset 装配
+> - `definitions/rules/` 承载规则装配 YAML（inlineRules/ruleProviders），并生成到 `scripts/config/rules/`
+> - `definitions/proxy-groups/` 承载策略组与链式代理构建数据（groupDefinitions/regions/placeholders/chains），并生成到 `scripts/config/proxy-groups/`
+> - `definitions/mihomo-preset/` 承载 Mihomo 顶层键预设 YAML（base/dns/sniffer/tun/profile/geodata），并生成到 `scripts/config/mihomo-preset/`
+> - `definitions/assets/custom/` 是模板/发布资产子树，不参与 active ruleset 装配
 > - `scripts/config/` 是生成树，不是源数据目录
 > - 当前对外入口是单入口 `scripts/override/main.js`，构建产物是 `dist/scripts/override/main.js`
 > - 本文后续若仍出现 `rules/` 作为长期源目录的描述，均视为历史设计记录；以本状态说明为准
@@ -71,7 +72,7 @@ v1 提供三个覆写入口，覆盖不同使用场景：
 
 当前仓库实际发布的是 `main.js`；其余两个轻量入口在本文中保留为设计扩展方向。
 
-三个入口共享 `scripts/override/lib/` 中的模块；其中运行时固定值已从 `definitions/runtime/*.yaml` 声明化，构建后生成 `scripts/config/runtime/*.js`，再由 `runtime-preset.js` 注入：
+三个入口共享 `scripts/override/lib/` 中的模块；其中运行时固定值已从 `definitions/mihomo-preset/*.yaml` 声明化，构建后生成 `scripts/config/mihomo-preset/*.js`，再由 `runtime-preset.js` 注入：
 
 ```javascript
 // main.js（full-profile）
@@ -189,7 +190,7 @@ e-hentai:
   type: http
   behavior: classical
   format: yaml
-  url: "https://cdn.jsdelivr.net/gh/{OWNER}/proxy-config-hub@dist/rules/custom/e-hentai.yaml"
+  url: "https://cdn.jsdelivr.net/gh/{OWNER}/proxy-config-hub@dist/assets/custom/e-hentai.yaml"
   path: ./ruleset/e-hentai.yaml
   interval: 86400
 ```
@@ -211,10 +212,10 @@ e-hentai:
 
 识别策略：优先匹配 emoji 国旗（最可靠），其次中文全称，最后英文。短 token（如 HK、US）加边界约束避免误匹配。
 
-地区注册表以声明式 YAML 维护在 `definitions/runtime/regions.yaml`，构建时编译为 `scripts/config/runtime/regions.js`，运行时由 `proxy-groups.js` 的 `compileRegionPatterns()` 将字符串正则编译为 `RegExp` 对象。新增地区只需在 YAML 中添加一条记录，无需修改 JS 代码。
+地区注册表以声明式 YAML 维护在 `definitions/proxy-groups/regions.yaml`，构建时编译为 `scripts/config/proxy-groups/regions.js`，运行时由 `proxy-groups.js` 的 `compileRegionPatterns()` 将字符串正则编译为 `RegExp` 对象。新增地区只需在 YAML 中添加一条记录，无需修改 JS 代码。
 
 ```yaml
-# definitions/runtime/regions.yaml（示例）
+# definitions/proxy-groups/regions.yaml（示例）
 - id: HK
   name: 香港
   icon: "🇭🇰"
@@ -225,7 +226,7 @@ e-hentai:
   icon: "🇹🇼"
   pattern: 🇹🇼|🇨🇳.*台湾|台湾|(?<![A-Z])TW(?![A-Z])|Taiwan
   flags: i
-# ... 完整列表见 definitions/runtime/regions.yaml
+# ... 完整列表见 definitions/proxy-groups/regions.yaml
 ```
 
 **已知局限（v1）**：
@@ -693,7 +694,7 @@ sources:
     source_kind: custom
     behavior: classical
     format: yaml
-    url: "https://cdn.jsdelivr.net/gh/{OWNER}/proxy-config-hub@dist/rules/custom/e-hentai.yaml"
+    url: "https://cdn.jsdelivr.net/gh/{OWNER}/proxy-config-hub@dist/assets/custom/e-hentai.yaml"
     target_group: non_cn
 
   # (完整列表见 clash-config-example.yaml 对应的所有服务)
@@ -762,10 +763,10 @@ function buildRuleProviders(groupDefs) {
 
 ### 6.1 架构：按需选入口，对内模块化
 
-当前仓库公开主入口是 `main.js`；如果后续补齐轻量入口，它们也会复用同一套 runtime source pipeline。运行时固定值现在以 YAML 声明在 `definitions/runtime/` 下，构建后生成 `scripts/config/runtime/`，运行时只保留注入逻辑：
+当前仓库公开主入口是 `main.js`；如果后续补齐轻量入口，它们也会复用同一套 runtime source pipeline。运行时固定值现在以 YAML 声明在 `definitions/mihomo-preset/` 下，构建后生成 `scripts/config/mihomo-preset/`，运行时只保留注入逻辑：
 
 ```
-definitions/runtime/
+definitions/mihomo-preset/
 ├── base.yaml
 ├── dns.yaml
 ├── geodata.yaml
@@ -773,7 +774,7 @@ definitions/runtime/
 ├── sniffer.yaml
 └── tun.yaml
 
-scripts/config/runtime/
+scripts/config/mihomo-preset/
 ├── base.js
 ├── dns.js
 ├── geodata.js
@@ -805,12 +806,12 @@ scripts/override/lib/
 | **保留上游** | proxy-providers | ✅ | ✅ | ✅ |
 | **缺失时注入** | allow-lan (false), tun (enable: false) | ✅ | — | — |
 
-### 6.3 运行时源数据（definitions/runtime）
+### 6.3 运行时源数据（definitions/mihomo-preset）
 
 运行时固定值已经拆成 6 份 YAML 源文件：
 
 ```text
-definitions/runtime/
+definitions/mihomo-preset/
 ├── base.yaml      # mixed-port / mode / log-level / tcp-concurrent / find-process-mode
 ├── profile.yaml   # profile.store-selected / profile.store-fake-ip
 ├── geodata.yaml   # geodata-mode / geo-auto-update / geodata-loader / geox-url
@@ -819,9 +820,9 @@ definitions/runtime/
 └── tun.yaml       # 缺失时注入的默认 tun 配置
 ```
 
-构建后这些 YAML 会被编译成 `scripts/config/runtime/*.js`，由 `applyRuntimePreset()` 统一消费。
+构建后这些 YAML 会被编译成 `scripts/config/mihomo-preset/*.js`，由 `applyRuntimePreset()` 统一消费。
 
-### 6.4 DNS 预设（definitions/runtime/dns.yaml）
+### 6.4 DNS 预设（definitions/mihomo-preset/dns.yaml）
 
 `dns.yaml` 是 DNS 防泄漏的声明式来源。当前结构示意如下：
 
@@ -952,14 +953,16 @@ proxy-config-hub/
 │   │   └── rename.js
 │   │
 │   └── config/
-│       ├── rules/                        # 从 definitions/rules/registry/ 生成
-│       └── runtime/                      # 从 definitions/runtime/ 生成
+│       ├── mihomo-preset/                # 从 definitions/mihomo-preset/ 生成
+│       ├── proxy-groups/                 # 从 definitions/proxy-groups/ 生成
+│       └── rules/                        # 从 definitions/rules/ 生成
 │
 ├── definitions/
-│   ├── rules/
-│   │   ├── registry/                     # 活跃规则注册表 YAML
-│   │   └── custom/                       # 自定义规则模板/资源
-│   └── runtime/                          # 运行时预设 YAML + regions.yaml + placeholders.yaml
+│   ├── mihomo-preset/                    # Mihomo 顶层键预设 YAML（base/dns/sniffer/tun/profile/geodata）
+│   ├── proxy-groups/                     # 策略组与链式代理构建数据 YAML（groupDefinitions/regions/placeholders/chains）
+│   ├── rules/                            # 活跃规则装配 YAML（inlineRules/ruleProviders）
+│   └── assets/
+│       └── custom/                       # 自定义规则模板/资源（仅复制到 dist）
 │
 ├── templates/
 │   └── mihomo/
@@ -973,8 +976,7 @@ proxy-config-hub/
 │   ├── yaml-to-js.js                     # 将 definitions/ 编译为 scripts/config/
 │   ├── generate-example-config.js        # 生成完整示例配置
 │   ├── check-rule-overlap.js             # 规则重叠检测
-│   ├── verify-main.js                    # 打包/运行时校验（动态发现产物）
-│   └── verify-yaml-migration.js          # YAML 迁移兼容性校验（动态扫描文件列表）
+│   └── verify-main.js                    # 打包/运行时校验（动态发现产物）
 │
 └── .github/
     └── workflows/
@@ -990,7 +992,7 @@ dist/
 │   │   └── main.js                       # 已内联配置与依赖的自包含脚本
 │   └── sub-store/
 │       └── rename.js
-└── rules/
+└── assets/
     └── custom/
         └── _template.yaml
 ```
@@ -1005,7 +1007,7 @@ https://cdn.jsdelivr.net/gh/{OWNER}/proxy-config-hub@dist/scripts/override/main.
 https://cdn.jsdelivr.net/gh/{OWNER}/proxy-config-hub@dist/scripts/sub-store/rename.js
 
 # 自定义规则集
-https://cdn.jsdelivr.net/gh/{OWNER}/proxy-config-hub@dist/rules/custom/<文件名>
+https://cdn.jsdelivr.net/gh/{OWNER}/proxy-config-hub@dist/assets/custom/<文件名>
 ```
 
 ---
@@ -1018,11 +1020,11 @@ push to main
         ├─ validate:
         │   ├─ npm run build
         │   ├─ npm run verify
-        │   └─ 生成 scripts/config/runtime/*.js 与 rules/*.js
+        │   └─ 生成 scripts/config/mihomo-preset/*.js、proxy-groups/*.js 与 rules/*.js
         ├─ bundle:
         │   ├─ esbuild 打包 scripts/override/main.js
         │   ├─ 复制 scripts/sub-store/*.js
-        │   └─ 复制 definitions/rules/custom/* → dist/rules/custom/
+        │   └─ 复制 definitions/assets/custom/* → dist/assets/custom/
         └─ deploy: 推送 dist 分支
 ```
 
@@ -1033,7 +1035,7 @@ push to main
 ## 九、自定义规则集模板
 
 ```yaml
-# rules/custom/_template.yaml
+# definitions/assets/custom/_template.yaml
 # 文件名即规则集 ID，使用 classical behavior
 # 支持的规则类型：DOMAIN, DOMAIN-SUFFIX, DOMAIN-KEYWORD, IP-CIDR, IP-CIDR6
 #
@@ -1057,7 +1059,7 @@ payload:
 |------|------|
 | 稳定 ID 层（GROUP_DEFINITIONS + target_group） | 避免策略组名漂移，支持重命名而不影响 sources.yaml |
 | 业务组不直接挂节点 | 新增/删除节点只影响地区组和控制组，业务组零维护 |
-| definitions/runtime + scripts/config/runtime | 运行时固定值声明化，编辑源数据而不是手改脚本常量 |
+| definitions/mihomo-preset + scripts/config/mihomo-preset | 运行时固定值声明化，编辑源数据而不是手改脚本常量 |
 | 三入口分级（main / routing-only / dns-leak-fix） | main.js 是 full-profile 一键搞定；routing-only.js 只管分组和规则不碰运行时模板；dns-leak-fix.js 最轻量只补 DNS。用户按需选一个 URL |
 | 声明顺序 = 规则顺序 | 所见即所得，不需要心算号段或 phase 映射 |
 | mode: full/direct/reject 三值 | v1 最小模型，覆盖所有已知场景；不够用时升级为 allowed_targets |
@@ -1066,7 +1068,7 @@ payload:
 
 ## 十一、建议实施顺序
 
-1. **声明式源数据 + 核心模块**：先落地 `definitions/runtime/*.yaml`、`definitions/rules/registry/*.yaml`、`runtime-preset.js`、`proxy-groups.js` 和规则装配器，这是所有入口的共享基础
+1. **声明式源数据 + 核心模块**：先落地 `definitions/mihomo-preset/*.yaml`、`definitions/proxy-groups/*.yaml`、`definitions/rules/*.yaml`、`runtime-preset.js`、`proxy-groups.js` 和规则装配器，这是所有入口的共享基础
 2. **`rule-builder.js` + `validator.js`**：规则生成和校验逻辑，可独立单测
 3. **`main.js` 覆写入口**：先保证 full-profile 主链路稳定，再视需要拆分轻量入口
 4. **构建链**：`tools/yaml-to-js.js` + `build.js`，先编译声明式源数据，再打包发布脚本

@@ -32,7 +32,7 @@ const TEMPLATE_PATH = resolve("templates", "mihomo", "config-example.yaml");
 const DEFAULT_EXAMPLE_OUTPUT_PATH = resolve("dist", "example-full-config.yaml");
 
 /** rule-providers YAML 源文件路径 */
-const RULE_PROVIDERS_YAML_PATH = resolve("definitions", "rules", "registry", "ruleProviders.yaml");
+const RULE_PROVIDERS_YAML_PATH = resolve("definitions", "rules", "ruleProviders.yaml");
 
 /**
  * 资产复制映射表。构建时遍历此表将源目录复制到目标目录。
@@ -40,39 +40,29 @@ const RULE_PROVIDERS_YAML_PATH = resolve("definitions", "rules", "registry", "ru
  * @type {Array<{source: string, target: string}>}
  */
 const COPY_ASSETS = [
-  { source: resolve("definitions", "rules", "custom"), target: resolve("dist", "rules", "custom") },
+  { source: resolve("definitions", "assets", "custom"), target: resolve("dist", "assets", "custom") },
   { source: resolve("scripts", "sub-store"), target: resolve("dist", "scripts", "sub-store") },
 ];
 
 /**
  * YAML->JS 编译管线的命名空间配置（canonical 布局）。
  * 每个命名空间定义了源目录到输出目录的映射关系。
- * @type {Array<{name: string, type: string, sourceSubdir: string, outputSubdir: string}>}
+ * @type {Array<{name: string, sourceSubdir: string, outputSubdir: string}>}
  */
 const CANONICAL_NAMESPACES = [
   {
-    name: "rules",
-    type: "directory",
-    sourceSubdir: path.join("rules", "registry"),
-    outputSubdir: "rules",
+    name: "mihomo-preset",
+    sourceSubdir: "mihomo-preset",
+    outputSubdir: "mihomo-preset",
   },
   {
-    name: "runtime",
-    type: "directory",
-    sourceSubdir: "runtime",
-    outputSubdir: "runtime",
+    name: "proxy-groups",
+    sourceSubdir: "proxy-groups",
+    outputSubdir: "proxy-groups",
   },
-];
-
-/**
- * YAML->JS 编译管线的命名空间配置（legacy 布局）。
- * @type {Array<{name: string, type: string, sourceFiles: string[], outputSubdir: string}>}
- */
-const LEGACY_NAMESPACES = [
   {
     name: "rules",
-    type: "files",
-    sourceFiles: ["groupDefinitions.yaml", "ruleProviders.yaml"],
+    sourceSubdir: "rules",
     outputSubdir: "rules",
   },
 ];
@@ -80,20 +70,11 @@ const LEGACY_NAMESPACES = [
 /** definitions/ 源定义目录的名称 */
 const CANONICAL_ROOT_NAME = "definitions";
 
-/** 旧版 rules/ 根目录名称 */
-const LEGACY_ROOT_NAME = "rules";
-
 /** 生成产物相对根目录的路径 */
 const GENERATED_ROOT_NAME = path.join("scripts", "config");
 
 /** canonical 布局下 definitions/ 允许的顶层子目录 */
-const CANONICAL_TOP_LEVEL_NAMES = new Set(["rules", "runtime"]);
-
-/** canonical 布局下 definitions/rules/ 允许的子目录 */
-const CANONICAL_RULES_NAMES = new Set(["registry", "custom"]);
-
-/** legacy 布局下 rules/ 允许的条目 */
-const LEGACY_ALLOWED_ENTRIES = new Set(["groupDefinitions.yaml", "ruleProviders.yaml", "custom"]);
+const CANONICAL_TOP_LEVEL_NAMES = new Set(["mihomo-preset", "proxy-groups", "rules", "assets"]);
 
 export {
   REPO_ROOT,
@@ -106,11 +87,7 @@ export {
   RULE_PROVIDERS_YAML_PATH,
   COPY_ASSETS,
   CANONICAL_NAMESPACES,
-  LEGACY_NAMESPACES,
   CANONICAL_ROOT_NAME,
-  LEGACY_ROOT_NAME,
   GENERATED_ROOT_NAME,
   CANONICAL_TOP_LEVEL_NAMES,
-  CANONICAL_RULES_NAMES,
-  LEGACY_ALLOWED_ENTRIES,
 };
