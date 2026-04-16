@@ -5,6 +5,7 @@ import baseConfig from "../scripts/config/mihomo-preset/base.js";
 import dnsConfig from "../scripts/config/mihomo-preset/dns.js";
 import geodataConfig from "../scripts/config/mihomo-preset/geodata.js";
 import profileConfig from "../scripts/config/mihomo-preset/profile.js";
+import chainsConfig from "../scripts/config/proxy-groups/chains.js";
 import groupDefinitionsConfig from "../scripts/config/proxy-groups/groupDefinitions.js";
 import inlineRulesConfig from "../scripts/config/rules/inlineRules.js";
 import ruleProvidersConfig from "../scripts/config/rules/ruleProviders.js";
@@ -261,25 +262,100 @@ function testBundlePositivePath() {
 }
 
 /**
- * 链式代理默认禁用（chains.yaml transit_group: [] / chain_group: []）时，
- * bundle 产出的 proxies 不得带有 dialer-proxy 字段，proxy-groups 不得包含
- * 🔀 中转 或 🚪 落地 这样的默认链组名（保持与旧版输出等价）。
+ * 端到端校验 bundle 对链式代理的处理与 chains.yaml 的配置保持一致。
+ *
+ * 不依赖具体的组名/正则字面量——期望结果全部从 chains.yaml（经 yaml-to-js
+ * 编译后的 chains.js）与模板节点动态派生，修改 chains.yaml 中的 name/pattern
+ * 后无需同步改动本测试。
+ *
+ * 校验规则（与 scripts/override/main.js 里 chainsEffective 判定保持对齐）：
+ *   - 若 chain_group / transit_group 均能构建出至少一个非空组（chainsEffective=true）：
+ *       * proxy-groups 中必须出现对应的每个 chain_group.name 与 transit_group.name
+ *       * 命中某 chain.landing_pattern 的节点应被注入 dialer-proxy = 其 entry 指向
+ *         的 transit_group.name（首个命中的 chain 胜出，与 buildChainGroups 一致）
+ *       * 未命中任何 landing_pattern 的节点不得带 dialer-proxy
+ *   - 若 chainsEffective=false：任何 chain/transit 组名都不应出现，proxies 不得带 dialer-proxy
+ *
  * @returns {void}
  */
-function testBundleNoopWhenChainsDisabled() {
+function testBundleChainsEndToEnd() {
   const { main } = loadBundleRuntime();
-  const result = main({ proxies: loadTemplateProxies() });
+  const inputProxies = loadTemplateProxies();
+  const result = main({ proxies: inputProxies });
+
+  const transitDefs = Array.isArray(chainsConfig.transit_group) ? chainsConfig.transit_group : [];
+  const chainDefs = Array.isArray(chainsConfig.chain_group) ? chainsConfig.chain_group : [];
+
+  // 使用与 bundle 相同的库函数派生预期：避免重新实现匹配逻辑
+  const namedProxies = inputProxies.filter(
+    (proxy) => proxy && typeof proxy.name === "string" && proxy.name.trim().length > 0,
+  );
+  const { chainGroups, remainingProxies } = buildChainGroups(namedProxies, chainDefs);
+  const { groups: transitGroups, idToName: transitIdToName } = buildTransitGroups(
+    remainingProxies,
+    transitDefs,
+  );
+  const chainsEffective = chainGroups.length > 0 && transitGroups.length > 0;
+
+  const producedGroupNames = new Set(result["proxy-groups"].map((group) => group.name));
+
+  if (chainsEffective) {
+    for (const group of chainGroups) {
+      assert.equal(
+        producedGroupNames.has(group.name),
+        true,
+        `chainsEffective=true 时 chain_group "${group.name}" 应出现在 proxy-groups`,
+      );
+    }
+    for (const group of transitGroups) {
+      assert.equal(
+        producedGroupNames.has(group.name),
+        true,
+        `chainsEffective=true 时 transit_group "${group.name}" 应出现在 proxy-groups`,
+      );
+    }
+  } else {
+    for (const definition of chainDefs) {
+      assert.equal(
+        producedGroupNames.has(definition.name),
+        false,
+        `chainsEffective=false 时 chain_group "${definition.name}" 不应出现`,
+      );
+    }
+    for (const definition of transitDefs) {
+      assert.equal(
+        producedGroupNames.has(definition.name),
+        false,
+        `chainsEffective=false 时 transit_group "${definition.name}" 不应出现`,
+      );
+    }
+  }
+
+  // 计算每个节点名应有的 dialer-proxy 值（首个命中的 chain 胜出）
+  const expectedDialerByName = new Map();
+  if (chainsEffective) {
+    for (const definition of chainDefs) {
+      const transitName = transitIdToName.get(definition.entry);
+      if (!transitName) {
+        continue;
+      }
+      const pattern = new RegExp(definition.landing_pattern, definition.flags || "");
+      for (const proxy of namedProxies) {
+        if (pattern.test(proxy.name) && !expectedDialerByName.has(proxy.name)) {
+          expectedDialerByName.set(proxy.name, transitName);
+        }
+      }
+    }
+  }
 
   for (const proxy of result.proxies) {
+    const expected = expectedDialerByName.get(proxy.name);
     assert.equal(
       proxy["dialer-proxy"],
-      undefined,
-      `默认配置下节点不应带 dialer-proxy: ${proxy.name}`,
+      expected,
+      `节点 "${proxy.name}" 的 dialer-proxy 应为 ${expected ?? "undefined"}，实际为 ${proxy["dialer-proxy"]}`,
     );
   }
-  const names = new Set(result["proxy-groups"].map((g) => g.name));
-  assert.equal(names.has("🔀 中转"), false, "默认配置下不应出现中转组");
-  assert.equal(names.has("🚪 落地"), false, "默认配置下不应出现落地组");
 }
 
 /**
@@ -1001,7 +1077,7 @@ function main() {
   assertGeneratedFiles();
   assertCustomAssetCopy();
   testBundlePositivePath();
-  testBundleNoopWhenChainsDisabled();
+  testBundleChainsEndToEnd();
   testRuntimeInjectionSemantics();
   testNoProxyFallback();
   testInvalidInlineRuleTargetRejected();

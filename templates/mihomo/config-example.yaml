@@ -107,6 +107,7 @@ geox-url:
   asn: https://github.com/xishang0128/geoip/releases/download/latest/GeoLite2-ASN.mmdb
 
 proxies:
+  # ===== 常规节点（覆盖多区域 + 主流协议类型） =====
   - name: "Sample-🇭🇰-Hong Kong-01"
     type: hysteria2
     server: hk-01.example.com
@@ -136,6 +137,155 @@ proxies:
     skip-cert-verify: true
     client-fingerprint: chrome
     network: tcp
+    udp: true
+  - name: "Sample-🇹🇼-Taiwan-01"
+    type: vmess
+    server: tw-01.example.com
+    port: 443
+    uuid: 00000000-0000-4000-8000-000000000002
+    alterId: 0
+    cipher: auto
+    tls: true
+    servername: tw-01.example.com
+    skip-cert-verify: false
+    network: ws
+    ws-opts:
+      path: /vmess
+      headers:
+        Host: tw-01.example.com
+    udp: true
+  - name: "Sample-🇰🇷-Korea-01"
+    type: snell
+    server: kr-01.example.com
+    port: 6160
+    psk: example-psk-0000000000000000
+    version: 3
+    obfs-opts:
+      mode: http
+      host: www.example.com
+  - name: "Sample-🇺🇸-US-02"
+    type: hysteria
+    server: us-02.example.com
+    port: 443
+    auth_str: example-auth-string
+    obfs: example-obfs
+    alpn:
+      - h3
+    protocol: udp
+    up: "50 Mbps"
+    down: "200 Mbps"
+    sni: us-02.example.com
+    skip-cert-verify: true
+  - name: "Sample-🇨🇦-Canada-01"
+    type: socks5
+    server: ca-01.example.com
+    port: 1080
+    username: example-user
+    password: example-password
+    udp: true
+  - name: "Sample-🇦🇺-Australia-01"
+    type: http
+    server: au-01.example.com
+    port: 8080
+    username: example-user
+    password: example-password
+    tls: true
+    sni: au-01.example.com
+    skip-cert-verify: false
+  - name: "Sample-🇩🇪-Germany-01"
+    type: ssr
+    server: de-01.example.com
+    port: 8443
+    cipher: chacha20-ietf
+    password: example-password
+    obfs: tls1.2_ticket_auth
+    obfs-param: www.example.com
+    protocol: auth_sha1_v4
+    protocol-param: ""
+    udp: true
+  - name: "Sample-🇬🇧-UK-01"
+    type: vless
+    server: uk-01.example.com
+    port: 443
+    uuid: 00000000-0000-4000-8000-000000000003
+    tls: true
+    servername: uk-01.example.com
+    network: grpc
+    client-fingerprint: chrome
+    grpc-opts:
+      grpc-service-name: vless-grpc
+    udp: true
+  - name: "Sample-🇫🇷-France-01"
+    type: ss
+    server: fr-01.example.com
+    port: 8388
+    cipher: chacha20-ietf-poly1305
+    password: example-password
+    plugin: obfs
+    plugin-opts:
+      mode: tls
+      host: www.example.com
+    udp: true
+  - name: "Sample-Misc-Unknown-01"
+    type: ss
+    server: misc-01.example.com
+    port: 8388
+    cipher: aes-256-gcm
+    password: example-password
+    udp: false
+  # ===== 自建节点（匹配 transit_pattern "自建"，用于 🔀 中转组） =====
+  - name: "自建-🇸🇬-Transit-01"
+    type: wireguard
+    server: sg-transit-01.example.com
+    port: 51820
+    ip: 172.16.0.2
+    private-key: example-private-key-base64==
+    public-key: example-public-key-base64==
+    pre-shared-key: example-preshared-key-base64==
+    mtu: 1420
+    udp: true
+  - name: "自建-🇭🇰-Transit-02"
+    type: tuic
+    server: hk-transit-02.example.com
+    port: 443
+    uuid: 00000000-0000-4000-8000-000000000004
+    password: example-password
+    alpn:
+      - h3
+    sni: hk-transit-02.example.com
+    skip-cert-verify: false
+    congestion-controller: bbr
+    udp-relay-mode: native
+  # ===== 落地节点（匹配 landing_pattern "Relay|落地"，用于 🚪 落地组） =====
+  - name: "Relay-🇺🇸-US-01"
+    type: ss
+    server: us-relay-01.example.com
+    port: 8388
+    cipher: aes-256-gcm
+    password: example-password
+    udp: true
+  - name: "落地-🇯🇵-JP-02"
+    type: ss
+    server: jp-landing-02.example.com
+    port: 8388
+    cipher: aes-256-gcm
+    password: example-password
+    udp: true
+  - name: "Relay-🇬🇧-UK-03"
+    type: trojan
+    server: uk-relay-03.example.com
+    port: 443
+    password: example-password
+    sni: uk-relay-03.example.com
+    skip-cert-verify: true
+    udp: true
+  - name: "落地-🇩🇪-DE-04"
+    type: hysteria2
+    server: de-landing-04.example.com
+    port: 443
+    password: example-password
+    sni: de-landing-04.example.com
+    skip-cert-verify: true
     udp: true
 
 proxy-groups:

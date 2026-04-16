@@ -17,5 +17,17 @@
 #     entry: transit       # 引用 transit_group[].id
 #     type: select
 
-transit_group: []
-chain_group: []
+transit_group:
+  - id: transit
+    name: "🔀 中转"
+    transit_pattern: "自建" # 空 = 所有非 landing 节点；非空则额外正则过滤
+    flags: i
+    type: select
+
+chain_group:
+  - id: landing
+    name: "🚪 落地"
+    landing_pattern: "Relay|落地" # 空 = 所有非 transit 节点；非空则额外正则过滤
+    flags: i
+    type: select
+    entry: transit
