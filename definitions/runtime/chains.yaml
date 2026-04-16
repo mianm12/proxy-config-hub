@@ -1,0 +1,21 @@
+# 链式代理配置。默认空数组 = 不启用链式代理，输出与启用前完全一致。
+#
+# 启用示例：
+#
+# transit_group:
+#   - id: transit
+#     name: "🔀 中转"
+#     transit_pattern: ""   # 空 = 所有非 landing 节点；非空则额外正则过滤
+#     flags: i
+#     type: select
+#
+# chain_group:
+#   - id: chain
+#     name: "🚪 落地"
+#     landing_pattern: "自建|Relay|落地"
+#     flags: i
+#     entry: transit       # 引用 transit_group[].id
+#     type: select
+
+transit_group: []
+chain_group: []

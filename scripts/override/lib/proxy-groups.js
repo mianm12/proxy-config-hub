@@ -168,12 +168,19 @@ function buildConfiguredGroup(groupId, definition, context) {
 }
 
 /**
- * 构建完整的代理组列表: 保留组 -> 自定义组 -> 区域组 -> fallback 组。
+ * 构建完整的代理组列表。
+ * 顺序（自顶向下）：
+ *   保留组 → 其他自定义组 → chain_groups → transit_groups → 区域组 → fallback
  * @param {Array<{name: string}>} proxies - 已过滤的代理节点列表。
  * @param {Record<string, Object>} groupDefinitions - 策略组定义。
+ * @param {{chainGroups?: Array<object>, transitGroups?: Array<object>}} [extras]
+ *   可选：额外插入的 chain_groups 与 transit_groups。省略或数组为空时等价于旧版行为。
  * @returns {Array<{name: string, type: string, proxies: string[]}>} 完整的代理组列表。
  */
-function buildProxyGroups(proxies, groupDefinitions) {
+function buildProxyGroups(proxies, groupDefinitions, extras = {}) {
+  const chainGroups = Array.isArray(extras.chainGroups) ? extras.chainGroups : [];
+  const transitGroups = Array.isArray(extras.transitGroups) ? extras.transitGroups : [];
+
   const namedProxies = getNamedProxies(proxies);
   const allProxyNames = namedProxies.map((proxy) => proxy.name);
   const regionGroups = buildRegionGroups(namedProxies);
@@ -184,21 +191,41 @@ function buildProxyGroups(proxies, groupDefinitions) {
   };
 
   const groups = [];
+
+  // 1. 保留组
   for (const groupId of RESERVED_GROUP_IDS) {
     groups.push(buildConfiguredGroup(groupId, groupDefinitions[groupId], context));
   }
 
+  // 2. 其他自定义组（非保留、非 fallback）
   for (const [groupId, definition] of Object.entries(groupDefinitions)) {
     if (RESERVED_GROUP_IDS.includes(groupId) || groupId === FALLBACK_GROUP_ID) {
       continue;
     }
-
     groups.push(buildConfiguredGroup(groupId, definition, context));
   }
 
+  // 3. chain_groups（落地）
+  groups.push(...chainGroups);
+
+  // 4. transit_groups（中转）
+  groups.push(...transitGroups);
+
+  // 5. 区域组
   groups.push(...regionGroups);
 
+  // 6. fallback
   groups.push(buildConfiguredGroup(FALLBACK_GROUP_ID, groupDefinitions[FALLBACK_GROUP_ID], context));
+
+  // 组名冲突检测：chain/transit 的 name 不得与其他组重名
+  const seenNames = new Set();
+  for (const group of groups) {
+    if (seenNames.has(group.name)) {
+      throw new Error(`proxy-groups 存在重名组: ${group.name}`);
+    }
+    seenNames.add(group.name);
+  }
+
   return groups;
 }
 

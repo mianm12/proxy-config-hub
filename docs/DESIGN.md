@@ -786,6 +786,7 @@ scripts/override/lib/
 ├── runtime-preset.js      # 注入运行时预设
 ├── proxy-groups.js        # 地区识别、节点分类、策略组生成（区域/占位符从 YAML 加载）
 ├── rule-assembly.js       # rule-providers + rules 组装（导出 extractRuleTarget）
+├── proxy-chains.js        # 链式代理（chains.yaml 驱动）：构建 chain_group / transit_group，并为落地节点注入 dialer-proxy
 └── validate-output.js     # 输出校验（引用 extractRuleTarget）
 ```
 

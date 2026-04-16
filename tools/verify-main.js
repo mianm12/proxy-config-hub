@@ -12,6 +12,15 @@ import snifferConfig from "../scripts/config/runtime/sniffer.js";
 import tunConfig from "../scripts/config/runtime/tun.js";
 import { assembleRuleSet } from "../scripts/override/lib/rule-assembly.js";
 import {
+  applyProxyChains,
+  buildChainGroups,
+  buildTransitGroups,
+  validateChainsSchema,
+} from "../scripts/override/lib/proxy-chains.js";
+import { buildProxyGroups } from "../scripts/override/lib/proxy-groups.js";
+import { applyRuntimePreset } from "../scripts/override/lib/runtime-preset.js";
+import { validateOutput } from "../scripts/override/lib/validate-output.js";
+import {
   loadBundleRuntime,
   loadTemplateProxies,
   stringifyExampleConfig,
@@ -247,6 +256,28 @@ function testBundlePositivePath() {
 }
 
 /**
+ * 链式代理默认禁用（chains.yaml transit_group: [] / chain_group: []）时，
+ * bundle 产出的 proxies 不得带有 dialer-proxy 字段，proxy-groups 不得包含
+ * 🔀 中转 或 🚪 落地 这样的默认链组名（保持与旧版输出等价）。
+ * @returns {void}
+ */
+function testBundleNoopWhenChainsDisabled() {
+  const { main } = loadBundleRuntime();
+  const result = main({ proxies: loadTemplateProxies() });
+
+  for (const proxy of result.proxies) {
+    assert.equal(
+      proxy["dialer-proxy"],
+      undefined,
+      `默认配置下节点不应带 dialer-proxy: ${proxy.name}`,
+    );
+  }
+  const names = new Set(result["proxy-groups"].map((g) => g.name));
+  assert.equal(names.has("🔀 中转"), false, "默认配置下不应出现中转组");
+  assert.equal(names.has("🚪 落地"), false, "默认配置下不应出现落地组");
+}
+
+/**
  * 校验 runtime preset 仅在缺失字段时注入，不覆盖用户已有配置。
  * @returns {void}
  */
@@ -315,6 +346,614 @@ function testInlineRuleWithNoResolveTargetAccepted() {
 }
 
 /**
+ * 校验 buildChainGroups：按 first-match-wins 抽出 landing 节点，
+ * 返回每个 chain_group 定义对应的组与剔除 landing 后的 remainingProxies。
+ * @returns {void}
+ */
+function testBuildChainGroupsBasic() {
+  const namedProxies = [
+    { name: "Sample-🇭🇰-Hong Kong-01" },
+    { name: "Sample-🇸🇬-Singapore-01" },
+    { name: "自建-SG-Relay-01" },
+    { name: "Relay-JP-02" },
+    { name: "落地-US-03" },
+  ];
+  const chainDefinitions = [
+    {
+      id: "chain",
+      name: "🚪 落地",
+      landing_pattern: "自建|Relay|落地",
+      flags: "i",
+      entry: "transit",
+      type: "select",
+    },
+  ];
+
+  const { chainGroups, remainingProxies } = buildChainGroups(namedProxies, chainDefinitions);
+
+  assert.equal(chainGroups.length, 1, "应构建 1 个 chain_group");
+  assert.equal(chainGroups[0].name, "🚪 落地", "chain_group.name 应等于 definition.name");
+  assert.equal(chainGroups[0].type, "select", "chain_group.type 应等于 definition.type");
+  assert.deepEqual(
+    chainGroups[0].proxies,
+    ["自建-SG-Relay-01", "Relay-JP-02", "落地-US-03"],
+    "chain_group.proxies 应保留订阅顺序，仅包含命中 landing_pattern 的节点名",
+  );
+  assert.deepEqual(
+    remainingProxies.map((p) => p.name),
+    ["Sample-🇭🇰-Hong Kong-01", "Sample-🇸🇬-Singapore-01"],
+    "remainingProxies 应剔除 landing 节点，保留其余节点的原顺序",
+  );
+}
+
+/**
+ * 校验 chainDefinitions 为空数组时，remainingProxies 直接等于入参副本，chainGroups 为空。
+ * @returns {void}
+ */
+function testBuildChainGroupsEmptyDefinitions() {
+  const namedProxies = [{ name: "A" }, { name: "B" }];
+  const { chainGroups, remainingProxies } = buildChainGroups(namedProxies, []);
+  assert.deepEqual(chainGroups, [], "chainGroups 应为空数组");
+  assert.deepEqual(
+    remainingProxies.map((p) => p.name),
+    ["A", "B"],
+    "remainingProxies 应保留全部节点",
+  );
+}
+
+/**
+ * 校验 chain_group 未命中任何节点时会被跳过（不返回空成员组）。
+ * @returns {void}
+ */
+function testBuildChainGroupsNoMatch() {
+  const namedProxies = [{ name: "Sample-HK-01" }, { name: "Sample-JP-02" }];
+  const chainDefinitions = [
+    {
+      id: "chain",
+      name: "🚪 落地",
+      landing_pattern: "自建|Relay|落地",
+      flags: "i",
+      entry: "transit",
+      type: "select",
+    },
+  ];
+  const { chainGroups, remainingProxies } = buildChainGroups(namedProxies, chainDefinitions);
+  assert.equal(chainGroups.length, 0, "未命中 landing_pattern 时应跳过该 chain_group");
+  assert.equal(remainingProxies.length, 2, "remainingProxies 应包含全部入参节点");
+}
+
+/**
+ * 校验 id 重复抛错。
+ * @returns {void}
+ */
+function testBuildChainGroupsDuplicateId() {
+  assert.throws(
+    () =>
+      buildChainGroups(
+        [{ name: "自建-01" }],
+        [
+          { id: "dup", name: "A", landing_pattern: "自建", flags: "i", entry: "transit", type: "select" },
+          { id: "dup", name: "B", landing_pattern: "自建", flags: "i", entry: "transit", type: "select" },
+        ],
+      ),
+    (error) => error instanceof Error && error.message.includes("dup"),
+    "id 重复应抛错且错误信息包含冲突 id",
+  );
+}
+
+/**
+ * 校验 landing_pattern 非法正则时抛错。
+ * @returns {void}
+ */
+function testBuildChainGroupsInvalidRegex() {
+  assert.throws(
+    () =>
+      buildChainGroups(
+        [{ name: "自建-01" }],
+        [{ id: "c", name: "A", landing_pattern: "[", flags: "", entry: "transit", type: "select" }],
+      ),
+    (error) => error instanceof Error && error.message.includes("landing_pattern"),
+    "非法正则应抛错且错误信息提示 landing_pattern",
+  );
+}
+
+/**
+ * 校验 transit_pattern 为空时成员等于全部 remainingProxies。
+ * @returns {void}
+ */
+function testBuildTransitGroupsEmptyPattern() {
+  const remaining = [{ name: "Sample-🇭🇰-Hong Kong-01" }, { name: "Sample-🇯🇵-Japan-01" }];
+  const defs = [
+    { id: "transit", name: "🔀 中转", transit_pattern: "", flags: "i", type: "select" },
+  ];
+  const { groups, idToName } = buildTransitGroups(remaining, defs);
+  assert.equal(groups.length, 1);
+  assert.equal(groups[0].name, "🔀 中转");
+  assert.equal(groups[0].type, "select");
+  assert.deepEqual(
+    groups[0].proxies,
+    ["Sample-🇭🇰-Hong Kong-01", "Sample-🇯🇵-Japan-01"],
+    "空 transit_pattern 应包含全部 remainingProxies",
+  );
+  assert.equal(idToName.get("transit"), "🔀 中转", "idToName 应映射 id 到 name");
+}
+
+/**
+ * 校验 transit_pattern 非空时按正则过滤 remainingProxies。
+ * @returns {void}
+ */
+function testBuildTransitGroupsFiltered() {
+  const remaining = [{ name: "Sample-🇭🇰-Hong Kong-01" }, { name: "Sample-🇯🇵-Japan-01" }];
+  const defs = [
+    { id: "hk", name: "🇭🇰 中转-港", transit_pattern: "Hong\\s*Kong", flags: "i", type: "select" },
+  ];
+  const { groups } = buildTransitGroups(remaining, defs);
+  assert.equal(groups.length, 1);
+  assert.deepEqual(groups[0].proxies, ["Sample-🇭🇰-Hong Kong-01"]);
+}
+
+/**
+ * 校验成员为空的 transit_group 会被跳过（不进入 idToName，不进入 groups）。
+ * @returns {void}
+ */
+function testBuildTransitGroupsEmptyMembersSkipped() {
+  const remaining = [{ name: "Sample-🇭🇰-Hong Kong-01" }];
+  const defs = [
+    { id: "jp", name: "🇯🇵 中转-日", transit_pattern: "Japan", flags: "i", type: "select" },
+  ];
+  const { groups, idToName } = buildTransitGroups(remaining, defs);
+  assert.equal(groups.length, 0, "成员为空的 transit_group 应被跳过");
+  assert.equal(idToName.has("jp"), false, "被跳过的 transit 不进入 idToName");
+}
+
+/**
+ * 校验 transit_group id 重复抛错。
+ * @returns {void}
+ */
+function testBuildTransitGroupsDuplicateId() {
+  assert.throws(
+    () =>
+      buildTransitGroups(
+        [{ name: "A" }],
+        [
+          { id: "t", name: "X", transit_pattern: "", flags: "", type: "select" },
+          { id: "t", name: "Y", transit_pattern: "", flags: "", type: "select" },
+        ],
+      ),
+    (error) => error instanceof Error && error.message.includes("transit_group"),
+    "transit_group id 重复应抛错",
+  );
+}
+
+/**
+ * 校验 applyProxyChains 为命中 landing_pattern 的节点注入 dialer-proxy = transit.name。
+ * @returns {void}
+ */
+function testApplyProxyChainsBasic() {
+  const config = {
+    proxies: [
+      { name: "Sample-🇭🇰-Hong Kong-01" },
+      { name: "自建-SG-Relay-01" },
+      { name: "Relay-JP-02" },
+    ],
+  };
+  const chainDefinitions = [
+    {
+      id: "chain",
+      name: "🚪 落地",
+      landing_pattern: "自建|Relay|落地",
+      flags: "i",
+      entry: "transit",
+      type: "select",
+    },
+  ];
+  const transitIdToName = new Map([["transit", "🔀 中转"]]);
+
+  applyProxyChains(config, chainDefinitions, transitIdToName);
+
+  assert.equal(config.proxies[0]["dialer-proxy"], undefined, "非 landing 节点不应被注入");
+  assert.equal(config.proxies[1]["dialer-proxy"], "🔀 中转", "landing 节点应注入 dialer-proxy");
+  assert.equal(config.proxies[2]["dialer-proxy"], "🔀 中转", "landing 节点应注入 dialer-proxy");
+}
+
+/**
+ * 校验节点已存在 dialer-proxy 时保留原值并 WARN，不覆盖。
+ * @returns {void}
+ */
+function testApplyProxyChainsPreservesExisting() {
+  const config = {
+    proxies: [
+      { name: "自建-SG-Relay-01", "dialer-proxy": "既有前置" },
+    ],
+  };
+  const chainDefinitions = [
+    {
+      id: "chain",
+      name: "🚪 落地",
+      landing_pattern: "自建",
+      flags: "i",
+      entry: "transit",
+      type: "select",
+    },
+  ];
+  const transitIdToName = new Map([["transit", "🔀 中转"]]);
+
+  applyProxyChains(config, chainDefinitions, transitIdToName);
+
+  assert.equal(
+    config.proxies[0]["dialer-proxy"],
+    "既有前置",
+    "已有 dialer-proxy 应被保留",
+  );
+}
+
+/**
+ * 校验 chain.entry 对应的 transit 未被构建（不在 idToName 中）时，该 chain 整体跳过。
+ * @returns {void}
+ */
+function testApplyProxyChainsSkipsMissingTransit() {
+  const config = { proxies: [{ name: "自建-01" }] };
+  const chainDefinitions = [
+    {
+      id: "chain",
+      name: "🚪 落地",
+      landing_pattern: "自建",
+      flags: "i",
+      entry: "transit-missing",
+      type: "select",
+    },
+  ];
+  const transitIdToName = new Map();
+
+  applyProxyChains(config, chainDefinitions, transitIdToName);
+
+  assert.equal(
+    config.proxies[0]["dialer-proxy"],
+    undefined,
+    "entry 指向未构建的 transit 时不应注入",
+  );
+}
+
+/**
+ * 校验 validateChainsSchema：chain.entry 指向未定义的 transit_group.id 时必须抛错。
+ * 与 applyProxyChains 的运行时 WARN 行为（transit 定义过但成员空）区分开。
+ * @returns {void}
+ */
+function testValidateChainsSchemaRejectsUnknownEntry() {
+  const chainDefinitions = [
+    {
+      id: "chain",
+      name: "🚪 落地",
+      landing_pattern: "自建",
+      flags: "i",
+      entry: "transti", // 故意拼写错误
+      type: "select",
+    },
+  ];
+  const transitDefinitions = [
+    { id: "transit", name: "🔀 中转", transit_pattern: "", flags: "i", type: "select" },
+  ];
+
+  assert.throws(
+    () => validateChainsSchema(chainDefinitions, transitDefinitions),
+    (error) =>
+      error instanceof Error &&
+      error.message.includes("transti") &&
+      error.message.includes("entry"),
+    "entry 指向未定义的 transit.id 应抛错，错误信息含冲突 id 与 entry 关键字",
+  );
+}
+
+/**
+ * 校验 validateChainsSchema：合法配置不抛错。
+ * @returns {void}
+ */
+function testValidateChainsSchemaAcceptsValid() {
+  const chainDefinitions = [
+    {
+      id: "chain",
+      name: "🚪 落地",
+      landing_pattern: "自建",
+      flags: "i",
+      entry: "transit",
+      type: "select",
+    },
+  ];
+  const transitDefinitions = [
+    { id: "transit", name: "🔀 中转", transit_pattern: "", flags: "i", type: "select" },
+  ];
+  validateChainsSchema(chainDefinitions, transitDefinitions);
+  // 无抛错即通过
+}
+
+/**
+ * 校验 validateChainsSchema：chain_group 或 transit_group 为空数组时视为合法（跳过校验）。
+ * @returns {void}
+ */
+function testValidateChainsSchemaEmptyArraysAccepted() {
+  validateChainsSchema([], []);
+  validateChainsSchema([], [{ id: "t", name: "X", transit_pattern: "", flags: "", type: "select" }]);
+  // 无抛错即通过
+}
+
+/**
+ * 校验 buildProxyGroups 的 extras 参数：chain_groups 和 transit_groups
+ * 按约定位置（自定义组之后、区域组之前）插入。
+ * @returns {void}
+ */
+function testBuildProxyGroupsInsertsChainAndTransit() {
+  const namedProxies = [
+    { name: "Sample-🇭🇰-Hong Kong-01" },
+    { name: "Sample-🇯🇵-Japan-01" },
+  ];
+  const chainGroupFixture = {
+    name: "🚪 落地",
+    type: "select",
+    proxies: ["自建-SG-Relay-01"],
+  };
+  const transitGroupFixture = {
+    name: "🔀 中转",
+    type: "select",
+    proxies: ["Sample-🇭🇰-Hong Kong-01", "Sample-🇯🇵-Japan-01"],
+  };
+
+  const groupsWithoutExtras = buildProxyGroups(
+    namedProxies,
+    groupDefinitionsConfig.groupDefinitions,
+  );
+  const groupsWithExtras = buildProxyGroups(
+    namedProxies,
+    groupDefinitionsConfig.groupDefinitions,
+    { chainGroups: [chainGroupFixture], transitGroups: [transitGroupFixture] },
+  );
+
+  assert.equal(
+    groupsWithExtras.length,
+    groupsWithoutExtras.length + 2,
+    "extras 非空时应额外增加 2 个组",
+  );
+
+  const names = groupsWithExtras.map((g) => g.name);
+  const chainIndex = names.indexOf("🚪 落地");
+  const transitIndex = names.indexOf("🔀 中转");
+  const hkIndex = names.indexOf("🇭🇰 香港");
+
+  assert.ok(chainIndex > -1, "应包含 chain_group");
+  assert.ok(transitIndex > -1, "应包含 transit_group");
+  assert.ok(chainIndex < transitIndex, "chain_group 应位于 transit_group 之前");
+  if (hkIndex > -1) {
+    assert.ok(transitIndex < hkIndex, "transit_group 应位于区域组之前");
+  }
+
+  // 自定义组与保留组都应位于 chain_group 之前
+  const chainGroupIds = Object.keys(groupDefinitionsConfig.groupDefinitions);
+  for (const id of chainGroupIds) {
+    const def = groupDefinitionsConfig.groupDefinitions[id];
+    if (id === "fallback") continue;
+    const idx = names.indexOf(def.name);
+    assert.ok(
+      idx > -1 && idx < chainIndex,
+      `已配置策略组 ${def.name} 应位于 chain_group 之前`,
+    );
+  }
+}
+
+/**
+ * 校验未传 extras 或 extras 为空数组时，buildProxyGroups 行为与旧版完全一致。
+ * @returns {void}
+ */
+function testBuildProxyGroupsExtrasOptional() {
+  const namedProxies = [{ name: "Sample-🇭🇰-Hong Kong-01" }];
+  const groupsA = buildProxyGroups(namedProxies, groupDefinitionsConfig.groupDefinitions);
+  const groupsB = buildProxyGroups(
+    namedProxies,
+    groupDefinitionsConfig.groupDefinitions,
+    { chainGroups: [], transitGroups: [] },
+  );
+  assert.deepEqual(
+    normalize(groupsA),
+    normalize(groupsB),
+    "空 extras 应产生与未传参时相同的结果",
+  );
+}
+
+/**
+ * 端到端（source 层）：手工组合 pipeline 函数，验证非空 chains 配置下
+ * chain_group / transit_group / dialer-proxy 均按预期产生。
+ * @returns {void}
+ */
+function testChainPipelineIntegration() {
+  const config = {
+    proxies: [
+      { name: "Sample-🇭🇰-Hong Kong-01" },
+      { name: "Sample-🇯🇵-Japan-01" },
+      { name: "自建-SG-Relay-01" },
+      { name: "Relay-US-02" },
+    ],
+  };
+  const chainDefinitions = [
+    {
+      id: "chain",
+      name: "🚪 落地",
+      landing_pattern: "自建|Relay|落地",
+      flags: "i",
+      entry: "transit",
+      type: "select",
+    },
+  ];
+  const transitDefinitions = [
+    { id: "transit", name: "🔀 中转", transit_pattern: "", flags: "i", type: "select" },
+  ];
+
+  applyRuntimePreset(config);
+
+  const namedProxies = config.proxies.filter(
+    (p) => typeof p.name === "string" && p.name.trim().length > 0,
+  );
+  const { chainGroups, remainingProxies } = buildChainGroups(namedProxies, chainDefinitions);
+  const { groups: transitGroups, idToName: transitIdToName } = buildTransitGroups(
+    remainingProxies,
+    transitDefinitions,
+  );
+
+  config["proxy-groups"] = buildProxyGroups(
+    namedProxies,
+    groupDefinitionsConfig.groupDefinitions,
+    { chainGroups, transitGroups },
+  );
+
+  applyProxyChains(config, chainDefinitions, transitIdToName);
+
+  // dialer-proxy 注入
+  const byName = new Map(config.proxies.map((p) => [p.name, p]));
+  assert.equal(byName.get("自建-SG-Relay-01")["dialer-proxy"], "🔀 中转");
+  assert.equal(byName.get("Relay-US-02")["dialer-proxy"], "🔀 中转");
+  assert.equal(byName.get("Sample-🇭🇰-Hong Kong-01")["dialer-proxy"], undefined);
+
+  // transit_group 不含 landing 节点
+  const transit = config["proxy-groups"].find((g) => g.name === "🔀 中转");
+  assert.ok(transit, "应存在 transit_group");
+  for (const memberName of transit.proxies) {
+    assert.ok(
+      !["自建-SG-Relay-01", "Relay-US-02"].includes(memberName),
+      "transit_group 不得包含 landing 节点",
+    );
+  }
+
+  // chain_group 仅含 landing 节点
+  const chain = config["proxy-groups"].find((g) => g.name === "🚪 落地");
+  assert.ok(chain, "应存在 chain_group");
+  assert.deepEqual(chain.proxies, ["自建-SG-Relay-01", "Relay-US-02"]);
+}
+
+/**
+ * 校验：存在 dialer-proxy 的节点必须指向某个 proxy-group.name，否则抛错。
+ * @returns {void}
+ */
+function testValidateOutputRejectsDanglingDialerProxy() {
+  // 构造一份最小可校验的配置
+  const config = {
+    proxies: [
+      { name: "A" },
+      { name: "B", "dialer-proxy": "不存在的组" },
+    ],
+    "proxy-groups": [
+      {
+        name: groupDefinitionsConfig.groupDefinitions.proxy_select.name,
+        type: "select",
+        proxies: ["A"],
+      },
+      {
+        name: groupDefinitionsConfig.groupDefinitions.fallback.name,
+        type: "select",
+        proxies: ["A"],
+      },
+    ],
+    rules: [`MATCH,${groupDefinitionsConfig.groupDefinitions.fallback.name}`],
+  };
+  // 为满足 validateOutput 的"策略组完整"检查，补齐其他已配置组
+  for (const [id, def] of Object.entries(groupDefinitionsConfig.groupDefinitions)) {
+    if (id === "proxy_select" || id === "fallback") continue;
+    config["proxy-groups"].push({ name: def.name, type: "select", proxies: ["A"] });
+  }
+
+  assert.throws(
+    () => validateOutput(config, groupDefinitionsConfig.groupDefinitions),
+    (error) => error instanceof Error && error.message.includes("dialer-proxy"),
+    "dialer-proxy 指向不存在的组时应抛错，错误信息包含 dialer-proxy",
+  );
+}
+
+/**
+ * 校验 §7.2：transit_group 的成员若命中任意 chain_group.landing_pattern，validateOutput 应抛错。
+ * 用于在未来重构破坏 "landing 节点必须已从 remainingProxies 剔除" 不变量时立即失败。
+ * @returns {void}
+ */
+function testValidateOutputRejectsTransitContainingLanding() {
+  const chainDefinitions = [
+    {
+      id: "chain",
+      name: "🚪 落地",
+      landing_pattern: "自建",
+      flags: "i",
+      entry: "transit",
+      type: "select",
+    },
+  ];
+  const transitDefinitions = [
+    { id: "transit", name: "🔀 中转", transit_pattern: "", flags: "i", type: "select" },
+  ];
+
+  const config = {
+    proxies: [{ name: "自建-01" }, { name: "Sample-HK-01" }],
+    "proxy-groups": [
+      // transit_group 错误地包含了 landing 节点 "自建-01"
+      { name: "🔀 中转", type: "select", proxies: ["自建-01", "Sample-HK-01"] },
+      { name: "🚪 落地", type: "select", proxies: ["自建-01"] },
+    ],
+    rules: [`MATCH,${groupDefinitionsConfig.groupDefinitions.fallback.name}`],
+  };
+  for (const [id, def] of Object.entries(groupDefinitionsConfig.groupDefinitions)) {
+    config["proxy-groups"].push({ name: def.name, type: "select", proxies: ["Sample-HK-01"] });
+  }
+
+  assert.throws(
+    () =>
+      validateOutput(config, groupDefinitionsConfig.groupDefinitions, {
+        chainDefinitions,
+        transitDefinitions,
+      }),
+    (error) =>
+      error instanceof Error &&
+      error.message.includes("transit_group") &&
+      error.message.includes("landing"),
+    "transit_group 含 landing 节点应抛错，错误信息应提示 transit_group 与 landing",
+  );
+}
+
+/**
+ * 校验 §7.3：chain_group.proxies 为空时 validateOutput 应抛错。
+ * @returns {void}
+ */
+function testValidateOutputRejectsEmptyChainGroup() {
+  const chainDefinitions = [
+    {
+      id: "chain",
+      name: "🚪 落地",
+      landing_pattern: "自建",
+      flags: "i",
+      entry: "transit",
+      type: "select",
+    },
+  ];
+  const transitDefinitions = [
+    { id: "transit", name: "🔀 中转", transit_pattern: "", flags: "i", type: "select" },
+  ];
+
+  const config = {
+    proxies: [{ name: "Sample-HK-01" }],
+    "proxy-groups": [
+      { name: "🚪 落地", type: "select", proxies: [] }, // 空 chain_group
+      { name: "🔀 中转", type: "select", proxies: ["Sample-HK-01"] },
+    ],
+    rules: [`MATCH,${groupDefinitionsConfig.groupDefinitions.fallback.name}`],
+  };
+  for (const [id, def] of Object.entries(groupDefinitionsConfig.groupDefinitions)) {
+    config["proxy-groups"].push({ name: def.name, type: "select", proxies: ["Sample-HK-01"] });
+  }
+
+  assert.throws(
+    () =>
+      validateOutput(config, groupDefinitionsConfig.groupDefinitions, {
+        chainDefinitions,
+        transitDefinitions,
+      }),
+    (error) => error instanceof Error && error.message.includes("chain_group"),
+    "空 chain_group 应抛错，错误信息应提示 chain_group",
+  );
+}
+
+/**
  * 校验示例配置序列化结果仍包含关键产物分段。
  * @returns {void}
  */
@@ -333,9 +972,31 @@ function testExampleConfigSerialization() {
  * @returns {void}
  */
 function main() {
+  testBuildChainGroupsBasic();
+  testBuildChainGroupsEmptyDefinitions();
+  testBuildChainGroupsNoMatch();
+  testBuildChainGroupsDuplicateId();
+  testBuildChainGroupsInvalidRegex();
+  testBuildTransitGroupsEmptyPattern();
+  testBuildTransitGroupsFiltered();
+  testBuildTransitGroupsEmptyMembersSkipped();
+  testBuildTransitGroupsDuplicateId();
+  testApplyProxyChainsBasic();
+  testApplyProxyChainsPreservesExisting();
+  testApplyProxyChainsSkipsMissingTransit();
+  testValidateChainsSchemaRejectsUnknownEntry();
+  testValidateChainsSchemaAcceptsValid();
+  testValidateChainsSchemaEmptyArraysAccepted();
+  testBuildProxyGroupsInsertsChainAndTransit();
+  testBuildProxyGroupsExtrasOptional();
+  testChainPipelineIntegration();
+  testValidateOutputRejectsDanglingDialerProxy();
+  testValidateOutputRejectsTransitContainingLanding();
+  testValidateOutputRejectsEmptyChainGroup();
   assertGeneratedFiles();
   assertCustomAssetCopy();
   testBundlePositivePath();
+  testBundleNoopWhenChainsDisabled();
   testRuntimeInjectionSemantics();
   testNoProxyFallback();
   testInvalidInlineRuleTargetRejected();

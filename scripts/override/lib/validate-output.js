@@ -5,9 +5,12 @@ import { extractRuleTarget } from "./rule-assembly.js";
  * 检查 proxy-groups 结构、规则引用、MATCH 位置等。
  * @param {Record<string, unknown>} config - 生成后的配置对象。
  * @param {Record<string, {name: string}>} groupDefinitions - 策略组定义。
+ * @param {{chainDefinitions?: Array, transitDefinitions?: Array}} [chainsContext]
+ *   可选链式代理上下文：用于执行 spec §7.2（transit 不得含 landing）/ §7.3（chain_group 非空）断言。
+ *   省略时跳过这两项断言。
  * @returns {void}
  */
-function validateOutput(config, groupDefinitions) {
+function validateOutput(config, groupDefinitions, chainsContext = {}) {
   const proxyGroups = Array.isArray(config["proxy-groups"]) ? config["proxy-groups"] : [];
   const rules = Array.isArray(config.rules) ? config.rules : [];
 
@@ -30,6 +33,58 @@ function validateOutput(config, groupDefinitions) {
   }
 
   const proxyGroupNames = new Set(proxyGroups.map((group) => group.name));
+
+  // §7.2 / §7.3: chain/transit 不变量断言（仅当 chainsContext 提供时）
+  const chainDefs = Array.isArray(chainsContext.chainDefinitions) ? chainsContext.chainDefinitions : [];
+  const transitDefs = Array.isArray(chainsContext.transitDefinitions) ? chainsContext.transitDefinitions : [];
+
+  if (chainDefs.length > 0 || transitDefs.length > 0) {
+    const chainGroupNames = new Set();
+    const compiledLandingPatterns = [];
+    for (const chain of chainDefs) {
+      if (typeof chain?.name === "string") {
+        chainGroupNames.add(chain.name);
+      }
+      if (typeof chain?.landing_pattern === "string" && chain.landing_pattern.length > 0) {
+        try {
+          compiledLandingPatterns.push(new RegExp(chain.landing_pattern, chain.flags || ""));
+        } catch (error) {
+          throw new Error(
+            `chain_group ${chain.id} 的 landing_pattern 非法正则: ${error.message}`,
+          );
+        }
+      }
+    }
+    const transitGroupNames = new Set();
+    for (const transit of transitDefs) {
+      if (typeof transit?.name === "string") {
+        transitGroupNames.add(transit.name);
+      }
+    }
+
+    for (const group of proxyGroups) {
+      // §7.3: chain_group.proxies 必须非空
+      if (chainGroupNames.has(group.name)) {
+        if (!Array.isArray(group.proxies) || group.proxies.length === 0) {
+          throw new Error(`chain_group ${group.name} 的 proxies 不得为空`);
+        }
+      }
+      // §7.2: transit_group 成员不得命中任何 chain_group.landing_pattern
+      if (transitGroupNames.has(group.name)) {
+        const members = Array.isArray(group.proxies) ? group.proxies : [];
+        for (const memberName of members) {
+          if (typeof memberName !== "string") continue;
+          for (const pattern of compiledLandingPatterns) {
+            if (pattern.test(memberName)) {
+              throw new Error(
+                `transit_group ${group.name} 成员 ${memberName} 命中 landing_pattern，违反防环不变量`,
+              );
+            }
+          }
+        }
+      }
+    }
+  }
 
   for (const definition of Object.values(groupDefinitions)) {
     if (!proxyGroupNames.has(definition.name)) {
@@ -82,6 +137,23 @@ function validateOutput(config, groupDefinitions) {
 
   if (!matchRuleFound) {
     throw new Error("缺少 fallback MATCH 规则");
+  }
+
+  // 链式代理一致性校验
+  const proxies = Array.isArray(config.proxies) ? config.proxies : [];
+  for (const proxy of proxies) {
+    const dialerTarget = proxy?.["dialer-proxy"];
+    if (dialerTarget === undefined) {
+      continue;
+    }
+    if (typeof dialerTarget !== "string" || dialerTarget.length === 0) {
+      throw new Error(`proxy ${proxy?.name} 的 dialer-proxy 类型非法`);
+    }
+    if (!proxyGroupNames.has(dialerTarget)) {
+      throw new Error(
+        `proxy ${proxy?.name} 的 dialer-proxy 指向不存在的策略组: ${dialerTarget}`,
+      );
+    }
   }
 }
 
