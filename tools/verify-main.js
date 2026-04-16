@@ -251,6 +251,28 @@ function testBundlePositivePath() {
 }
 
 /**
+ * 链式代理默认禁用（chains.yaml transit_group: [] / chain_group: []）时，
+ * bundle 产出的 proxies 不得带有 dialer-proxy 字段，proxy-groups 不得包含
+ * 🔀 中转 或 🚪 落地 这样的默认链组名（保持与旧版输出等价）。
+ * @returns {void}
+ */
+function testBundleNoopWhenChainsDisabled() {
+  const { main } = loadBundleRuntime();
+  const result = main({ proxies: loadTemplateProxies() });
+
+  for (const proxy of result.proxies) {
+    assert.equal(
+      proxy["dialer-proxy"],
+      undefined,
+      `默认配置下节点不应带 dialer-proxy: ${proxy.name}`,
+    );
+  }
+  const names = new Set(result["proxy-groups"].map((g) => g.name));
+  assert.equal(names.has("🔀 中转"), false, "默认配置下不应出现中转组");
+  assert.equal(names.has("🚪 落地"), false, "默认配置下不应出现落地组");
+}
+
+/**
  * 校验 runtime preset 仅在缺失字段时注入，不覆盖用户已有配置。
  * @returns {void}
  */
@@ -813,6 +835,7 @@ function main() {
   assertGeneratedFiles();
   assertCustomAssetCopy();
   testBundlePositivePath();
+  testBundleNoopWhenChainsDisabled();
   testRuntimeInjectionSemantics();
   testNoProxyFallback();
   testInvalidInlineRuleTargetRejected();
