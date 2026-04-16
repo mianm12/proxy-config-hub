@@ -17,6 +17,7 @@ export default {
       "type": "select",
       "category": "core",
       "proxies": [
+        "@chain-groups",
         "@all-nodes"
       ]
     },

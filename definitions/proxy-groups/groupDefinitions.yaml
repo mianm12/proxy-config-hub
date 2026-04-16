@@ -14,17 +14,24 @@ groupDefinitions:
     name: "🚀 代理选择"
     type: "select"
     category: "core"
-    proxies: ["@manual-select", "@auto-select", "@chain-groups", "@region-groups", "DIRECT"]
+    proxies:
+      [
+        "@manual-select",
+        "@auto-select",
+        "@chain-groups",
+        "@region-groups",
+        "DIRECT",
+      ]
   manual_select:
     name: "🔧 手动选择"
     type: "select"
     category: "core"
-    proxies: ["@all-nodes"]
+    proxies: [ "@chain-groups", "@all-nodes" ]
   auto_select:
     name: "⚡ 自动选择"
     type: "url-test"
     category: "core"
-    proxies: ["@all-nodes"]
+    proxies: [ "@all-nodes" ]
     url: "https://www.gstatic.com/generate_204"
     interval: 300
     lazy: false
@@ -32,7 +39,7 @@ groupDefinitions:
     name: "🛑 广告拦截"
     type: "select"
     category: "core"
-    proxies: ["REJECT", "DIRECT"]
+    proxies: [ "REJECT", "DIRECT" ]
   private:
     name: "🏠 私有网络"
     type: "select"
