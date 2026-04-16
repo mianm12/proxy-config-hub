@@ -83,6 +83,23 @@ function validateOutput(config, groupDefinitions) {
   if (!matchRuleFound) {
     throw new Error("缺少 fallback MATCH 规则");
   }
+
+  // 链式代理一致性校验
+  const proxies = Array.isArray(config.proxies) ? config.proxies : [];
+  for (const proxy of proxies) {
+    const dialerTarget = proxy?.["dialer-proxy"];
+    if (dialerTarget === undefined) {
+      continue;
+    }
+    if (typeof dialerTarget !== "string" || dialerTarget.length === 0) {
+      throw new Error(`proxy ${proxy?.name} 的 dialer-proxy 类型非法`);
+    }
+    if (!proxyGroupNames.has(dialerTarget)) {
+      throw new Error(
+        `proxy ${proxy?.name} 的 dialer-proxy 指向不存在的策略组: ${dialerTarget}`,
+      );
+    }
+  }
 }
 
 export { validateOutput };

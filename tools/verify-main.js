@@ -14,6 +14,7 @@ import { assembleRuleSet } from "../scripts/override/lib/rule-assembly.js";
 import { applyProxyChains, buildChainGroups, buildTransitGroups } from "../scripts/override/lib/proxy-chains.js";
 import { buildProxyGroups } from "../scripts/override/lib/proxy-groups.js";
 import { applyRuntimePreset } from "../scripts/override/lib/runtime-preset.js";
+import { validateOutput } from "../scripts/override/lib/validate-output.js";
 import {
   loadBundleRuntime,
   loadTemplateProxies,
@@ -737,6 +738,44 @@ function testChainPipelineIntegration() {
 }
 
 /**
+ * 校验：存在 dialer-proxy 的节点必须指向某个 proxy-group.name，否则抛错。
+ * @returns {void}
+ */
+function testValidateOutputRejectsDanglingDialerProxy() {
+  // 构造一份最小可校验的配置
+  const config = {
+    proxies: [
+      { name: "A" },
+      { name: "B", "dialer-proxy": "不存在的组" },
+    ],
+    "proxy-groups": [
+      {
+        name: groupDefinitionsConfig.groupDefinitions.proxy_select.name,
+        type: "select",
+        proxies: ["A"],
+      },
+      {
+        name: groupDefinitionsConfig.groupDefinitions.fallback.name,
+        type: "select",
+        proxies: ["A"],
+      },
+    ],
+    rules: [`MATCH,${groupDefinitionsConfig.groupDefinitions.fallback.name}`],
+  };
+  // 为满足 validateOutput 的"策略组完整"检查，补齐其他已配置组
+  for (const [id, def] of Object.entries(groupDefinitionsConfig.groupDefinitions)) {
+    if (id === "proxy_select" || id === "fallback") continue;
+    config["proxy-groups"].push({ name: def.name, type: "select", proxies: ["A"] });
+  }
+
+  assert.throws(
+    () => validateOutput(config, groupDefinitionsConfig.groupDefinitions),
+    (error) => error instanceof Error && error.message.includes("dialer-proxy"),
+    "dialer-proxy 指向不存在的组时应抛错，错误信息包含 dialer-proxy",
+  );
+}
+
+/**
  * 校验示例配置序列化结果仍包含关键产物分段。
  * @returns {void}
  */
@@ -770,6 +809,7 @@ function main() {
   testBuildProxyGroupsInsertsChainAndTransit();
   testBuildProxyGroupsExtrasOptional();
   testChainPipelineIntegration();
+  testValidateOutputRejectsDanglingDialerProxy();
   assertGeneratedFiles();
   assertCustomAssetCopy();
   testBundlePositivePath();
