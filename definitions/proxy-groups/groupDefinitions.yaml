@@ -14,7 +14,7 @@ groupDefinitions:
     name: "🚀 代理选择"
     type: "select"
     category: "core"
-    proxies: ["@manual-select", "@auto-select", "@region-groups", "DIRECT"]
+    proxies: ["@manual-select", "@auto-select", "@chain-groups", "@region-groups", "DIRECT"]
   manual_select:
     name: "🔧 手动选择"
     type: "select"
@@ -43,6 +43,7 @@ groupDefinitions:
         "@proxy-select",
         "@manual-select",
         "@auto-select",
+        "@chain-groups",
         "@region-groups",
       ]
   cn_service:
@@ -55,6 +56,7 @@ groupDefinitions:
         "@proxy-select",
         "@manual-select",
         "@auto-select",
+        "@chain-groups",
         "@region-groups",
       ]
   non_cn:
@@ -67,6 +69,7 @@ groupDefinitions:
         "@manual-select",
         "@auto-select",
         "DIRECT",
+        "@chain-groups",
         "@region-groups",
       ]
   ssh_22:
@@ -79,6 +82,7 @@ groupDefinitions:
         "@proxy-select",
         "@manual-select",
         "@auto-select",
+        "@chain-groups",
         "@region-groups",
       ]
   fallback:
@@ -91,6 +95,7 @@ groupDefinitions:
         "@manual-select",
         "@auto-select",
         "DIRECT",
+        "@chain-groups",
         "@region-groups",
       ]
 
@@ -106,6 +111,7 @@ groupDefinitions:
         "@manual-select",
         "@auto-select",
         "DIRECT",
+        "@chain-groups",
         "@region-groups",
       ]
   youtube:
@@ -118,6 +124,7 @@ groupDefinitions:
         "@manual-select",
         "@auto-select",
         "DIRECT",
+        "@chain-groups",
         "@region-groups",
       ]
   google:
@@ -130,6 +137,7 @@ groupDefinitions:
         "@manual-select",
         "@auto-select",
         "DIRECT",
+        "@chain-groups",
         "@region-groups",
       ]
   microsoft:
@@ -142,6 +150,7 @@ groupDefinitions:
         "@manual-select",
         "@auto-select",
         "DIRECT",
+        "@chain-groups",
         "@region-groups",
       ]
   apple:
@@ -154,6 +163,7 @@ groupDefinitions:
         "@manual-select",
         "@auto-select",
         "DIRECT",
+        "@chain-groups",
         "@region-groups",
       ]
   ## 社交通讯
@@ -167,6 +177,7 @@ groupDefinitions:
         "@manual-select",
         "@auto-select",
         "DIRECT",
+        "@chain-groups",
         "@region-groups",
       ]
   ## 技术服务
@@ -180,6 +191,7 @@ groupDefinitions:
         "@manual-select",
         "@auto-select",
         "DIRECT",
+        "@chain-groups",
         "@region-groups",
       ]
 
@@ -195,6 +207,7 @@ groupDefinitions:
         "@manual-select",
         "@auto-select",
         "DIRECT",
+        "@chain-groups",
         "@region-groups",
       ]
   meta_social:
@@ -207,6 +220,7 @@ groupDefinitions:
         "@manual-select",
         "@auto-select",
         "DIRECT",
+        "@chain-groups",
         "@region-groups",
       ]
   discord:
@@ -219,6 +233,7 @@ groupDefinitions:
         "@manual-select",
         "@auto-select",
         "DIRECT",
+        "@chain-groups",
         "@region-groups",
       ]
   social_other:
@@ -231,6 +246,7 @@ groupDefinitions:
         "@manual-select",
         "@auto-select",
         "DIRECT",
+        "@chain-groups",
         "@region-groups",
       ]
   ## 流媒体
@@ -244,6 +260,7 @@ groupDefinitions:
         "@manual-select",
         "@auto-select",
         "DIRECT",
+        "@chain-groups",
         "@region-groups",
       ]
   disney_plus:
@@ -256,6 +273,7 @@ groupDefinitions:
         "@manual-select",
         "@auto-select",
         "DIRECT",
+        "@chain-groups",
         "@region-groups",
       ]
   western_streaming:
@@ -268,6 +286,7 @@ groupDefinitions:
         "@manual-select",
         "@auto-select",
         "DIRECT",
+        "@chain-groups",
         "@region-groups",
       ]
   asia_streaming:
@@ -280,6 +299,7 @@ groupDefinitions:
         "@manual-select",
         "@auto-select",
         "DIRECT",
+        "@chain-groups",
         "@region-groups",
       ]
   ## 游戏平台
@@ -293,6 +313,7 @@ groupDefinitions:
         "@manual-select",
         "@auto-select",
         "DIRECT",
+        "@chain-groups",
         "@region-groups",
       ]
   game_pc:
@@ -305,6 +326,7 @@ groupDefinitions:
         "@manual-select",
         "@auto-select",
         "DIRECT",
+        "@chain-groups",
         "@region-groups",
       ]
   game_console:
@@ -317,6 +339,7 @@ groupDefinitions:
         "@manual-select",
         "@auto-select",
         "DIRECT",
+        "@chain-groups",
         "@region-groups",
       ]
   ## 技术服务
@@ -330,6 +353,7 @@ groupDefinitions:
         "@manual-select",
         "@auto-select",
         "DIRECT",
+        "@chain-groups",
         "@region-groups",
       ]
   developer_tools:
@@ -342,6 +366,7 @@ groupDefinitions:
         "@manual-select",
         "@auto-select",
         "DIRECT",
+        "@chain-groups",
         "@region-groups",
       ]
   storage_service:
@@ -354,6 +379,7 @@ groupDefinitions:
         "@manual-select",
         "@auto-select",
         "DIRECT",
+        "@chain-groups",
         "@region-groups",
       ]
   ## 金融服务
@@ -367,6 +393,7 @@ groupDefinitions:
         "@manual-select",
         "@auto-select",
         "DIRECT",
+        "@chain-groups",
         "@region-groups",
       ]
   encryption:
@@ -379,6 +406,7 @@ groupDefinitions:
         "@manual-select",
         "@auto-select",
         "DIRECT",
+        "@chain-groups",
         "@region-groups",
       ]
   ## 其他
@@ -392,6 +420,7 @@ groupDefinitions:
         "@manual-select",
         "@auto-select",
         "DIRECT",
+        "@chain-groups",
         "@region-groups",
       ]
   news:
@@ -404,6 +433,7 @@ groupDefinitions:
         "@manual-select",
         "@auto-select",
         "DIRECT",
+        "@chain-groups",
         "@region-groups",
       ]
   shopping:
@@ -416,5 +446,6 @@ groupDefinitions:
         "@manual-select",
         "@auto-select",
         "DIRECT",
+        "@chain-groups",
         "@region-groups",
       ]

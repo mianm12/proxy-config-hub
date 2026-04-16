@@ -7,6 +7,7 @@ export default {
       "proxies": [
         "@manual-select",
         "@auto-select",
+        "@chain-groups",
         "@region-groups",
         "DIRECT"
       ]
@@ -48,6 +49,7 @@ export default {
         "@proxy-select",
         "@manual-select",
         "@auto-select",
+        "@chain-groups",
         "@region-groups"
       ]
     },
@@ -60,6 +62,7 @@ export default {
         "@proxy-select",
         "@manual-select",
         "@auto-select",
+        "@chain-groups",
         "@region-groups"
       ]
     },
@@ -72,6 +75,7 @@ export default {
         "@manual-select",
         "@auto-select",
         "DIRECT",
+        "@chain-groups",
         "@region-groups"
       ]
     },
@@ -84,6 +88,7 @@ export default {
         "@proxy-select",
         "@manual-select",
         "@auto-select",
+        "@chain-groups",
         "@region-groups"
       ]
     },
@@ -96,6 +101,7 @@ export default {
         "@manual-select",
         "@auto-select",
         "DIRECT",
+        "@chain-groups",
         "@region-groups"
       ]
     },
@@ -108,6 +114,7 @@ export default {
         "@manual-select",
         "@auto-select",
         "DIRECT",
+        "@chain-groups",
         "@region-groups"
       ]
     },
@@ -120,6 +127,7 @@ export default {
         "@manual-select",
         "@auto-select",
         "DIRECT",
+        "@chain-groups",
         "@region-groups"
       ]
     },
@@ -132,6 +140,7 @@ export default {
         "@manual-select",
         "@auto-select",
         "DIRECT",
+        "@chain-groups",
         "@region-groups"
       ]
     },
@@ -144,6 +153,7 @@ export default {
         "@manual-select",
         "@auto-select",
         "DIRECT",
+        "@chain-groups",
         "@region-groups"
       ]
     },
@@ -156,6 +166,7 @@ export default {
         "@manual-select",
         "@auto-select",
         "DIRECT",
+        "@chain-groups",
         "@region-groups"
       ]
     },
@@ -168,6 +179,7 @@ export default {
         "@manual-select",
         "@auto-select",
         "DIRECT",
+        "@chain-groups",
         "@region-groups"
       ]
     },
@@ -180,6 +192,7 @@ export default {
         "@manual-select",
         "@auto-select",
         "DIRECT",
+        "@chain-groups",
         "@region-groups"
       ]
     },
@@ -192,6 +205,7 @@ export default {
         "@manual-select",
         "@auto-select",
         "DIRECT",
+        "@chain-groups",
         "@region-groups"
       ]
     },
@@ -204,6 +218,7 @@ export default {
         "@manual-select",
         "@auto-select",
         "DIRECT",
+        "@chain-groups",
         "@region-groups"
       ]
     },
@@ -216,6 +231,7 @@ export default {
         "@manual-select",
         "@auto-select",
         "DIRECT",
+        "@chain-groups",
         "@region-groups"
       ]
     },
@@ -228,6 +244,7 @@ export default {
         "@manual-select",
         "@auto-select",
         "DIRECT",
+        "@chain-groups",
         "@region-groups"
       ]
     },
@@ -240,6 +257,7 @@ export default {
         "@manual-select",
         "@auto-select",
         "DIRECT",
+        "@chain-groups",
         "@region-groups"
       ]
     },
@@ -252,6 +270,7 @@ export default {
         "@manual-select",
         "@auto-select",
         "DIRECT",
+        "@chain-groups",
         "@region-groups"
       ]
     },
@@ -264,6 +283,7 @@ export default {
         "@manual-select",
         "@auto-select",
         "DIRECT",
+        "@chain-groups",
         "@region-groups"
       ]
     },
@@ -276,6 +296,7 @@ export default {
         "@manual-select",
         "@auto-select",
         "DIRECT",
+        "@chain-groups",
         "@region-groups"
       ]
     },
@@ -288,6 +309,7 @@ export default {
         "@manual-select",
         "@auto-select",
         "DIRECT",
+        "@chain-groups",
         "@region-groups"
       ]
     },
@@ -300,6 +322,7 @@ export default {
         "@manual-select",
         "@auto-select",
         "DIRECT",
+        "@chain-groups",
         "@region-groups"
       ]
     },
@@ -312,6 +335,7 @@ export default {
         "@manual-select",
         "@auto-select",
         "DIRECT",
+        "@chain-groups",
         "@region-groups"
       ]
     },
@@ -324,6 +348,7 @@ export default {
         "@manual-select",
         "@auto-select",
         "DIRECT",
+        "@chain-groups",
         "@region-groups"
       ]
     },
@@ -336,6 +361,7 @@ export default {
         "@manual-select",
         "@auto-select",
         "DIRECT",
+        "@chain-groups",
         "@region-groups"
       ]
     },
@@ -348,6 +374,7 @@ export default {
         "@manual-select",
         "@auto-select",
         "DIRECT",
+        "@chain-groups",
         "@region-groups"
       ]
     },
@@ -360,6 +387,7 @@ export default {
         "@manual-select",
         "@auto-select",
         "DIRECT",
+        "@chain-groups",
         "@region-groups"
       ]
     },
@@ -372,6 +400,7 @@ export default {
         "@manual-select",
         "@auto-select",
         "DIRECT",
+        "@chain-groups",
         "@region-groups"
       ]
     },
@@ -384,6 +413,7 @@ export default {
         "@manual-select",
         "@auto-select",
         "DIRECT",
+        "@chain-groups",
         "@region-groups"
       ]
     },
@@ -396,6 +426,7 @@ export default {
         "@manual-select",
         "@auto-select",
         "DIRECT",
+        "@chain-groups",
         "@region-groups"
       ]
     },
@@ -408,6 +439,7 @@ export default {
         "@manual-select",
         "@auto-select",
         "DIRECT",
+        "@chain-groups",
         "@region-groups"
       ]
     }
