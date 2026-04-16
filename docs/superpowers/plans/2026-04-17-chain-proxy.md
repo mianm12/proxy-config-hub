@@ -1337,7 +1337,407 @@ git commit -m "test: 增加链式代理默认禁用时的 bundle 回归断言"
 
 ---
 
-## Self-Review
+## Task 10: 严格校验 chain.entry 引用完整性（spec §4.3 补全）
+
+**背景**：Task 1-9 完成后的整体 review 发现 `applyProxyChains` 仅根据运行时 `transitIdToName` 判断 entry 是否有效，无法区分两种不同情形：
+- (A) `chain.entry` 指向**未在 `transit_group` 中定义**的 id（YAML 拼写错误）→ spec §4.3 要求抛 error
+- (B) `chain.entry` 指向已定义但因成员为空而被跳过的 transit（运行时退化）→ spec §6 要求 WARN+跳过
+
+当前实现把两种情形都当作 (B) 处理，违反 §4.3。本任务引入 schema 校验以区分两者。
+
+**Files:**
+- Modify: `scripts/override/lib/proxy-chains.js`
+- Modify: `scripts/override/main.js`
+- Modify: `tools/verify-main.js`
+
+- [ ] **Step 1: 写失败的测试**
+
+在 `tools/verify-main.js`，import 扩展（新增 `validateChainsSchema`）：
+```js
+import {
+  applyProxyChains,
+  buildChainGroups,
+  buildTransitGroups,
+  validateChainsSchema,
+} from "../scripts/override/lib/proxy-chains.js";
+```
+
+在 `testApplyProxyChainsSkipsMissingTransit` 之后追加：
+```js
+/**
+ * 校验 validateChainsSchema：chain.entry 指向未定义的 transit_group.id 时必须抛错。
+ * 与 applyProxyChains 的运行时 WARN 行为（transit 定义过但成员空）区分开。
+ * @returns {void}
+ */
+function testValidateChainsSchemaRejectsUnknownEntry() {
+  const chainDefinitions = [
+    {
+      id: "chain",
+      name: "🚪 落地",
+      landing_pattern: "自建",
+      flags: "i",
+      entry: "transti", // 故意拼写错误
+      type: "select",
+    },
+  ];
+  const transitDefinitions = [
+    { id: "transit", name: "🔀 中转", transit_pattern: "", flags: "i", type: "select" },
+  ];
+
+  assert.throws(
+    () => validateChainsSchema(chainDefinitions, transitDefinitions),
+    (error) =>
+      error instanceof Error &&
+      error.message.includes("transti") &&
+      error.message.includes("entry"),
+    "entry 指向未定义的 transit.id 应抛错，错误信息含冲突 id 与 entry 关键字",
+  );
+}
+
+/**
+ * 校验 validateChainsSchema：合法配置不抛错。
+ * @returns {void}
+ */
+function testValidateChainsSchemaAcceptsValid() {
+  const chainDefinitions = [
+    {
+      id: "chain",
+      name: "🚪 落地",
+      landing_pattern: "自建",
+      flags: "i",
+      entry: "transit",
+      type: "select",
+    },
+  ];
+  const transitDefinitions = [
+    { id: "transit", name: "🔀 中转", transit_pattern: "", flags: "i", type: "select" },
+  ];
+  validateChainsSchema(chainDefinitions, transitDefinitions);
+  // 无抛错即通过
+}
+
+/**
+ * 校验 validateChainsSchema：chain_group 或 transit_group 为空数组时视为合法（跳过校验）。
+ * @returns {void}
+ */
+function testValidateChainsSchemaEmptyArraysAccepted() {
+  validateChainsSchema([], []);
+  validateChainsSchema([], [{ id: "t", name: "X", transit_pattern: "", flags: "", type: "select" }]);
+  // 无抛错即通过
+}
+```
+
+在 `main()` 中紧跟 `testApplyProxyChainsSkipsMissingTransit();` 之后追加：
+```js
+  testValidateChainsSchemaRejectsUnknownEntry();
+  testValidateChainsSchemaAcceptsValid();
+  testValidateChainsSchemaEmptyArraysAccepted();
+```
+
+- [ ] **Step 2: 运行验证确认失败**
+
+Run: `npm run verify`
+Expected: FAIL，`SyntaxError: ... does not provide an export named 'validateChainsSchema'`。
+
+- [ ] **Step 3: 在 proxy-chains.js 实现 validateChainsSchema**
+
+在 `scripts/override/lib/proxy-chains.js` 的 `buildChainGroups` 定义**之前**追加（让它成为最早被引用的函数，与使用位置顺序一致）：
+```js
+/**
+ * 静态 schema 校验：每个 chain.entry 必须等于某个已定义的 transit_group.id。
+ * 本校验独立于运行时成员是否为空，用于区分 "YAML 拼写错误"（schema 错误）
+ * 与 "transit 成员空被跳过"（运行时退化）两种场景。
+ *
+ * @param {Array<{id:string, entry:string}>} chainDefinitions
+ * @param {Array<{id:string}>} transitDefinitions
+ * @returns {void}  合法时无返回值；不合法时抛 Error。
+ */
+function validateChainsSchema(chainDefinitions, transitDefinitions) {
+  if (!Array.isArray(chainDefinitions) || chainDefinitions.length === 0) {
+    return;
+  }
+  if (!Array.isArray(transitDefinitions)) {
+    throw new Error("transit_group 必须是数组");
+  }
+
+  const definedTransitIds = new Set();
+  for (const definition of transitDefinitions) {
+    if (typeof definition?.id === "string" && definition.id.length > 0) {
+      definedTransitIds.add(definition.id);
+    }
+  }
+
+  for (const chain of chainDefinitions) {
+    if (typeof chain?.entry !== "string" || chain.entry.length === 0) {
+      throw new Error(`chain_group ${chain?.id} 缺少非空的 entry 字段`);
+    }
+    if (!definedTransitIds.has(chain.entry)) {
+      throw new Error(
+        `chain_group ${chain.id} 的 entry=${chain.entry} 未在 transit_group 中定义`,
+      );
+    }
+  }
+}
+```
+
+更新文件末尾的 export 语句（从 `{ applyProxyChains, buildChainGroups, buildTransitGroups }` 改为包含新函数，字母序）：
+```js
+export { applyProxyChains, buildChainGroups, buildTransitGroups, validateChainsSchema };
+```
+
+- [ ] **Step 4: 在 main.js 调用 validateChainsSchema**
+
+在 `scripts/override/main.js` 的 import 区更新：
+```js
+import {
+  applyProxyChains,
+  buildChainGroups,
+  buildTransitGroups,
+  validateChainsSchema,
+} from "./lib/proxy-chains.js";
+```
+
+在模块顶层 `const transitDefinitions = ...` / `const chainDefinitions = ...` 两行之**后**、`function main(config = {}) {` 之**前**，插入：
+```js
+// 模块加载期执行 schema 校验：entry 必须引用已定义的 transit_group.id
+validateChainsSchema(chainDefinitions, transitDefinitions);
+```
+
+这确保 YAML schema 错误在 bundle 加载（模块解析）时立即抛出，而不是等到运行时某个请求触发 main()。
+
+- [ ] **Step 5: 运行验证确认通过**
+
+Run: `npm run verify`
+Expected: PASS，包括 3 个新测试 + 全部既有测试。
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add scripts/override/lib/proxy-chains.js scripts/override/main.js tools/verify-main.js
+git commit -m "feat: 严格校验 chain.entry 必须引用已定义的 transit_group.id"
+```
+
+---
+
+## Task 11: validate-output 补全 §7.2 / §7.3 不变量断言
+
+**背景**：spec §7 要求 validate-output 执行四项断言：(1) dialer-proxy 指向存在（Task 8 已实现）、(2) transit_group 成员不得命中 landing_pattern（防环双保险）、(3) chain_group.proxies 非空（不变量）、(4) 组名全局唯一（Task 6 已实现于 buildProxyGroups）。本任务补全 (2) 和 (3)。
+
+结构上当前 pipeline 已保证 (2) 和 (3)，但 spec 要求作为不变量断言捕获未来重构回归。
+
+**Files:**
+- Modify: `scripts/override/lib/validate-output.js`
+- Modify: `scripts/override/main.js`（更新 validateOutput 调用，传入额外参数）
+- Modify: `tools/verify-main.js`
+
+- [ ] **Step 1: 写失败的测试**
+
+在 `testValidateOutputRejectsDanglingDialerProxy` 之后追加：
+```js
+/**
+ * 校验 §7.2：transit_group 的成员若命中任意 chain_group.landing_pattern，validateOutput 应抛错。
+ * 用于在未来重构破坏 "landing 节点必须已从 remainingProxies 剔除" 不变量时立即失败。
+ * @returns {void}
+ */
+function testValidateOutputRejectsTransitContainingLanding() {
+  const chainDefinitions = [
+    {
+      id: "chain",
+      name: "🚪 落地",
+      landing_pattern: "自建",
+      flags: "i",
+      entry: "transit",
+      type: "select",
+    },
+  ];
+  const transitDefinitions = [
+    { id: "transit", name: "🔀 中转", transit_pattern: "", flags: "i", type: "select" },
+  ];
+
+  const config = {
+    proxies: [{ name: "自建-01" }, { name: "Sample-HK-01" }],
+    "proxy-groups": [
+      // transit_group 错误地包含了 landing 节点 "自建-01"
+      { name: "🔀 中转", type: "select", proxies: ["自建-01", "Sample-HK-01"] },
+      { name: "🚪 落地", type: "select", proxies: ["自建-01"] },
+    ],
+    rules: [`MATCH,${groupDefinitionsConfig.groupDefinitions.fallback.name}`],
+  };
+  for (const [id, def] of Object.entries(groupDefinitionsConfig.groupDefinitions)) {
+    config["proxy-groups"].push({ name: def.name, type: "select", proxies: ["Sample-HK-01"] });
+  }
+
+  assert.throws(
+    () =>
+      validateOutput(config, groupDefinitionsConfig.groupDefinitions, {
+        chainDefinitions,
+        transitDefinitions,
+      }),
+    (error) =>
+      error instanceof Error &&
+      error.message.includes("transit_group") &&
+      error.message.includes("landing"),
+    "transit_group 含 landing 节点应抛错，错误信息应提示 transit_group 与 landing",
+  );
+}
+
+/**
+ * 校验 §7.3：chain_group.proxies 为空时 validateOutput 应抛错。
+ * @returns {void}
+ */
+function testValidateOutputRejectsEmptyChainGroup() {
+  const chainDefinitions = [
+    {
+      id: "chain",
+      name: "🚪 落地",
+      landing_pattern: "自建",
+      flags: "i",
+      entry: "transit",
+      type: "select",
+    },
+  ];
+  const transitDefinitions = [
+    { id: "transit", name: "🔀 中转", transit_pattern: "", flags: "i", type: "select" },
+  ];
+
+  const config = {
+    proxies: [{ name: "Sample-HK-01" }],
+    "proxy-groups": [
+      { name: "🚪 落地", type: "select", proxies: [] }, // 空 chain_group
+      { name: "🔀 中转", type: "select", proxies: ["Sample-HK-01"] },
+    ],
+    rules: [`MATCH,${groupDefinitionsConfig.groupDefinitions.fallback.name}`],
+  };
+  for (const [id, def] of Object.entries(groupDefinitionsConfig.groupDefinitions)) {
+    config["proxy-groups"].push({ name: def.name, type: "select", proxies: ["Sample-HK-01"] });
+  }
+
+  assert.throws(
+    () =>
+      validateOutput(config, groupDefinitionsConfig.groupDefinitions, {
+        chainDefinitions,
+        transitDefinitions,
+      }),
+    (error) => error instanceof Error && error.message.includes("chain_group"),
+    "空 chain_group 应抛错，错误信息应提示 chain_group",
+  );
+}
+```
+
+**注意**：`testValidateOutputRejectsEmptyChainGroup` 的配置中 `🚪 落地` 的 `proxies: []` 会先触发 validate-output 现有的 "策略组节点为空" 断言（第 41 行附近）而无法到达新的 §7.3 断言。为避免与旧断言冲突，新断言必须在同一函数中**更早**位置捕获 chain_group 专属违例（或者检查错误信息同时包含 "chain_group" 标记以区分来源）。最简方案：新断言位置在函数早期，紧跟 group.name 提取之后、现有 "proxies 为空" 循环之前，只针对 chain_group name 做空检查。实现细节见 Step 3。
+
+在 `main()` 中紧跟 `testValidateOutputRejectsDanglingDialerProxy();` 之后追加：
+```js
+  testValidateOutputRejectsTransitContainingLanding();
+  testValidateOutputRejectsEmptyChainGroup();
+```
+
+- [ ] **Step 2: 运行验证确认失败**
+
+Run: `npm run verify`
+Expected: FAIL：两个新测试因 validateOutput 不接受第三参数或未针对 chain/transit 做专项断言而失败。
+
+- [ ] **Step 3: 扩展 validateOutput 签名并实现 §7.2 / §7.3 断言**
+
+在 `scripts/override/lib/validate-output.js`：
+
+(a) 修改函数签名，增加可选第三参（含 chain/transit 定义）：
+```js
+function validateOutput(config, groupDefinitions, chainsContext = {}) {
+```
+
+(b) 更新顶部 JSDoc，新增参数说明：
+```js
+/**
+ * 校验生成配置的完整性和正确性。
+ * 检查 proxy-groups 结构、规则引用、MATCH 位置等。
+ * @param {Record<string, unknown>} config - 生成后的配置对象。
+ * @param {Record<string, {name: string}>} groupDefinitions - 策略组定义。
+ * @param {{chainDefinitions?: Array, transitDefinitions?: Array}} [chainsContext]
+ *   可选链式代理上下文：用于执行 spec §7.2（transit 不得含 landing）/ §7.3（chain_group 非空）断言。
+ *   省略时跳过这两项断言。
+ * @returns {void}
+ */
+```
+
+(c) 在函数**早期**、现有 "strategy group completeness" 检查**之前**（即 `const proxyGroupNames = ...` 声明之后、`for (const group of proxyGroups)` 循环之前），插入 chain/transit 专项断言：
+```js
+  // §7.2 / §7.3: chain/transit 不变量断言（仅当 chainsContext 提供时）
+  const chainDefs = Array.isArray(chainsContext.chainDefinitions) ? chainsContext.chainDefinitions : [];
+  const transitDefs = Array.isArray(chainsContext.transitDefinitions) ? chainsContext.transitDefinitions : [];
+
+  if (chainDefs.length > 0 || transitDefs.length > 0) {
+    const chainGroupNames = new Set();
+    const compiledLandingPatterns = [];
+    for (const chain of chainDefs) {
+      if (typeof chain?.name === "string") {
+        chainGroupNames.add(chain.name);
+      }
+      if (typeof chain?.landing_pattern === "string" && chain.landing_pattern.length > 0) {
+        try {
+          compiledLandingPatterns.push(new RegExp(chain.landing_pattern, chain.flags || ""));
+        } catch (error) {
+          throw new Error(
+            `chain_group ${chain.id} 的 landing_pattern 非法正则: ${error.message}`,
+          );
+        }
+      }
+    }
+    const transitGroupNames = new Set();
+    for (const transit of transitDefs) {
+      if (typeof transit?.name === "string") {
+        transitGroupNames.add(transit.name);
+      }
+    }
+
+    for (const group of proxyGroups) {
+      // §7.3: chain_group.proxies 必须非空
+      if (chainGroupNames.has(group.name)) {
+        if (!Array.isArray(group.proxies) || group.proxies.length === 0) {
+          throw new Error(`chain_group ${group.name} 的 proxies 不得为空`);
+        }
+      }
+      // §7.2: transit_group 成员不得命中任何 chain_group.landing_pattern
+      if (transitGroupNames.has(group.name)) {
+        const members = Array.isArray(group.proxies) ? group.proxies : [];
+        for (const memberName of members) {
+          if (typeof memberName !== "string") continue;
+          for (const pattern of compiledLandingPatterns) {
+            if (pattern.test(memberName)) {
+              throw new Error(
+                `transit_group ${group.name} 成员 ${memberName} 命中 landing_pattern，违反防环不变量`,
+              );
+            }
+          }
+        }
+      }
+    }
+  }
+```
+
+- [ ] **Step 4: 在 main.js 调用 validateOutput 时传入 chainsContext**
+
+在 `scripts/override/main.js` 中，将现有调用：
+```js
+validateOutput(workingConfig, groupDefinitions);
+```
+替换为：
+```js
+validateOutput(workingConfig, groupDefinitions, { chainDefinitions, transitDefinitions });
+```
+
+- [ ] **Step 5: 运行验证确认通过**
+
+Run: `npm run verify`
+Expected: PASS。
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add scripts/override/lib/validate-output.js scripts/override/main.js tools/verify-main.js
+git commit -m "feat: validate-output 补全 transit 防环与 chain 非空断言"
+```
+
 
 **Spec coverage:**
 - §3 数据模型 → Task 1（chains.yaml 脚手架）
