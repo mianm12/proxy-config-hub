@@ -1035,14 +1035,17 @@ push to main
 ## 九、自定义规则集模板
 
 ```yaml
-# definitions/assets/custom/_template.yaml
+# Source: definitions/assets/custom/_template.yaml
+# Published as: dist/assets/custom/_template.yaml
+#   (referenced via raw.githubusercontent.com/<owner>/<repo>/dist/assets/custom/<filename>)
+#
 # 文件名即规则集 ID，使用 classical behavior
 # 支持的规则类型：DOMAIN, DOMAIN-SUFFIX, DOMAIN-KEYWORD, IP-CIDR, IP-CIDR6
 #
 # 添加步骤：
 # 1. 复制此文件并重命名（如 my-service.yaml）
-# 2. 在 rules/sources.yaml 的 sources 列表中插入到目标位置
-# 3. 指定 target_group 为 GROUP_DEFINITIONS 中已有的 id
+# 2. 在 definitions/rules/ruleProviders.yaml 中声明新的 provider
+# 3. 指定 target-group 为 definitions/proxy-groups/groupDefinitions.yaml 中已有的 id
 # 4. 提交后 CI 自动构建到 dist 分支
 
 payload:
