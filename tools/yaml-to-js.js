@@ -31,26 +31,88 @@ const PLACEHOLDER_ALLOWED_CONTEXT_SOURCES = new Set([
   "chainGroups",
 ]);
 
+/** placeholders.yaml 文件名。 */
+const PLACEHOLDERS_FILENAME = "placeholders.yaml";
+
+/** proxy-groups/groupDefinitions.yaml 文件名。 */
+const GROUP_DEFINITIONS_FILENAME = "groupDefinitions.yaml";
+
 /**
- * 校验 placeholders 字段结构合法性。
- * 仅在被校验数据包含 placeholders 字段时生效，避免误伤其他 YAML。
+ * 从 groupDefinitions.yaml 提取全部策略组 ID，用于交叉校验 placeholders.yaml 引用。
+ * @param {string} namespaceRoot - definitions/proxy-groups 的绝对路径。
+ * @returns {Promise<Set<string>>} 当前声明的策略组 ID 集合。
+ */
+async function loadGroupDefinitionIds(namespaceRoot) {
+  const inputFile = path.join(namespaceRoot, GROUP_DEFINITIONS_FILENAME);
+  const text = await fs.readFile(inputFile, "utf8");
+  const data = yaml.load(text);
+  const groupDefinitions = data?.groupDefinitions;
+
+  if (!groupDefinitions || typeof groupDefinitions !== "object" || Array.isArray(groupDefinitions)) {
+    throw new Error(`${inputFile}: groupDefinitions 必须是对象`);
+  }
+
+  return new Set(Object.keys(groupDefinitions));
+}
+
+/**
+ * 校验 placeholders.yaml 结构合法性，并在可用时校验其与 groupDefinitions 的交叉引用。
  * @param {unknown} data - YAML 解析后的对象。
  * @param {string} inputFile - 用于错误定位的源文件路径。
+ * @param {{groupDefinitionIds?: Set<string>}} [options] - 可选的交叉校验上下文。
  * @returns {void}
  */
-function validatePlaceholdersSchema(data, inputFile) {
+function validatePlaceholdersSchema(data, inputFile, options = {}) {
+  if (path.basename(inputFile) !== PLACEHOLDERS_FILENAME) {
+    return;
+  }
+
   if (!data || typeof data !== "object" || Array.isArray(data)) {
-    return;
+    throw new Error(`${inputFile}: 根对象必须是对象`);
   }
-  const placeholders = data.placeholders;
-  if (placeholders === undefined) {
-    return;
+
+  const { groupDefinitionIds } = options;
+  const { reserved, fallback, placeholders } = data;
+
+  if (!Array.isArray(reserved) || reserved.length === 0) {
+    throw new Error(`${inputFile}: reserved 必须是非空数组`);
   }
+  if (reserved.some((groupId) => typeof groupId !== "string" || groupId.length === 0)) {
+    throw new Error(`${inputFile}: reserved 中的每一项都必须是非空字符串`);
+  }
+  if (new Set(reserved).size !== reserved.length) {
+    throw new Error(`${inputFile}: reserved 中存在重复策略组 ID`);
+  }
+
+  if (typeof fallback !== "string" || fallback.length === 0) {
+    throw new Error(`${inputFile}: fallback 必须是非空字符串`);
+  }
+  if (reserved.includes(fallback)) {
+    throw new Error(`${inputFile}: fallback 不得与 reserved 重复`);
+  }
+
   if (!placeholders || typeof placeholders !== "object" || Array.isArray(placeholders)) {
     throw new Error(`${inputFile}: placeholders 必须是对象`);
   }
+  if (Object.keys(placeholders).length === 0) {
+    throw new Error(`${inputFile}: placeholders 不得为空对象`);
+  }
+
+  if (groupDefinitionIds instanceof Set) {
+    for (const groupId of reserved) {
+      if (!groupDefinitionIds.has(groupId)) {
+        throw new Error(`${inputFile}: reserved 引用了未定义的策略组: ${groupId}`);
+      }
+    }
+    if (!groupDefinitionIds.has(fallback)) {
+      throw new Error(`${inputFile}: fallback 引用了未定义的策略组: ${fallback}`);
+    }
+  }
 
   for (const [key, entry] of Object.entries(placeholders)) {
+    if (!key.startsWith("@")) {
+      throw new Error(`${inputFile}: 占位符键名必须以 @ 开头: ${key}`);
+    }
     if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
       throw new Error(`${inputFile}: 占位符 ${key} 必须是对象`);
     }
@@ -64,6 +126,9 @@ function validatePlaceholdersSchema(data, inputFile) {
     if (entry.kind === "ref") {
       if (typeof entry.target !== "string" || entry.target.length === 0) {
         throw new Error(`${inputFile}: 占位符 ${key} (kind=ref) 缺少非空 target 字段`);
+      }
+      if (groupDefinitionIds instanceof Set && !groupDefinitionIds.has(entry.target)) {
+        throw new Error(`${inputFile}: 占位符 ${key} (kind=ref) 引用了未定义的策略组: ${entry.target}`);
       }
     }
 
@@ -167,15 +232,16 @@ async function collectNamespaceFiles(rootDir, namespace) {
  * @param {string} inputFile - 输入 YAML 文件的绝对路径。
  * @param {string} inputRoot - 输入根目录，用于计算相对路径。
  * @param {string} outputRoot - 输出根目录。
+ * @param {{groupDefinitionIds?: Set<string>}} [validationOptions] - 可选的 YAML 交叉校验上下文。
  * @returns {Promise<{inputFile: string, outputFile: string}>}
  */
-async function convertOne(inputFile, inputRoot, outputRoot) {
+async function convertOne(inputFile, inputRoot, outputRoot, validationOptions = {}) {
   const relativePath = path.relative(inputRoot, inputFile);
   const outputFile = path.join(outputRoot, relativePath.replace(/\.(ya?ml)$/i, ".js"));
   const text = await fs.readFile(inputFile, "utf8");
   const data = yaml.load(text);
 
-  validatePlaceholdersSchema(data, inputFile);
+  validatePlaceholdersSchema(data, inputFile, validationOptions);
 
   await fs.mkdir(path.dirname(outputFile), { recursive: true });
   await fs.writeFile(outputFile, `export default ${JSON.stringify(data, null, 2)};\n`, "utf8");
@@ -201,13 +267,9 @@ async function buildYamlModules({
     requiredNamespaces ?? CANONICAL_NAMESPACES.map((namespace) => namespace.name),
   );
 
-  // 清理本次会重建的命名空间产物（按 outputSubdir 派生），以及历史遗留目录。
-  const dirsToClean = [
-    ...CANONICAL_NAMESPACES.map((namespace) => namespace.outputSubdir),
-    ...LEGACY_GENERATED_DIRS,
-  ];
+  // 历史遗留目录始终清理，避免旧产物干扰当前构建。
   await Promise.all(
-    dirsToClean.map((dirName) =>
+    LEGACY_GENERATED_DIRS.map((dirName) =>
       fs.rm(path.join(cwd, GENERATED_ROOT_NAME, dirName), {
         recursive: true,
         force: true,
@@ -231,9 +293,20 @@ async function buildYamlModules({
 
     const { files, inputRoot } = await collectNamespaceFiles(activeTree.rootDir, namespace);
     const outputRoot = path.join(cwd, GENERATED_ROOT_NAME, namespace.outputSubdir);
+    const validationOptions = {};
+
+    if (namespace.name === "proxy-groups") {
+      validationOptions.groupDefinitionIds = await loadGroupDefinitionIds(inputRoot);
+    }
+
+    // 仅清理当前要重建的命名空间，未参与本次构建的生成目录必须保留，支持增量编译。
+    await fs.rm(path.join(cwd, GENERATED_ROOT_NAME, namespace.outputSubdir), {
+      recursive: true,
+      force: true,
+    });
 
     for (const inputFile of files) {
-      const result = await convertOne(inputFile, inputRoot, outputRoot);
+      const result = await convertOne(inputFile, inputRoot, outputRoot, validationOptions);
       results.push(result);
       log(`已转换: ${path.relative(cwd, result.inputFile)} -> ${path.relative(cwd, result.outputFile)}`);
     }

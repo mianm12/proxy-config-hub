@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
+import { promises as fsPromises } from "node:fs";
 import baseConfig from "../scripts/config/mihomo-preset/base.js";
 import dnsConfig from "../scripts/config/mihomo-preset/dns.js";
 import geodataConfig from "../scripts/config/mihomo-preset/geodata.js";
@@ -28,6 +30,7 @@ import {
   loadTemplateProxies,
   stringifyExampleConfig,
 } from "./lib/bundle-runtime.js";
+import { buildYamlModules } from "./yaml-to-js.js";
 import {
   REPO_ROOT,
   DEFINITIONS_DIR,
@@ -42,6 +45,44 @@ import {
  */
 function normalize(value) {
   return JSON.parse(JSON.stringify(value));
+}
+
+/**
+ * 在临时目录中复制 definitions/，执行回调后自动清理。
+ * 用于验证 yaml-to-js 的构建行为，避免污染当前仓库工作区。
+ * @template T
+ * @param {(workspaceRoot: string) => Promise<T>} callback - 接收临时工作区根目录的异步回调。
+ * @returns {Promise<T>} 回调返回值。
+ */
+async function withTempDefinitionsWorkspace(callback) {
+  const workspaceRoot = await fsPromises.mkdtemp(
+    path.join(os.tmpdir(), "proxy-config-hub-verify-"),
+  );
+
+  await fsPromises.cp(DEFINITIONS_DIR, path.join(workspaceRoot, "definitions"), {
+    recursive: true,
+  });
+
+  try {
+    return await callback(workspaceRoot);
+  } finally {
+    await fsPromises.rm(workspaceRoot, { recursive: true, force: true });
+  }
+}
+
+/**
+ * 读取文本文件并写回变换后的内容。
+ * 若变换结果与原文一致则立即失败，避免测试误以为已注入故障场景。
+ * @param {string} filePath - 待修改文件的绝对路径。
+ * @param {(sourceText: string) => string} transform - 文本变换函数。
+ * @returns {Promise<void>}
+ */
+async function transformTextFile(filePath, transform) {
+  const sourceText = await fsPromises.readFile(filePath, "utf8");
+  const nextText = transform(sourceText);
+
+  assert.notEqual(nextText, sourceText, `测试未能修改目标文件: ${filePath}`);
+  await fsPromises.writeFile(filePath, nextText, "utf8");
 }
 
 /**
@@ -1149,6 +1190,141 @@ function testValidateOutputRejectsEmptyChainGroup() {
 }
 
 /**
+ * 校验 placeholders.yaml 缺少必填 placeholders 字段时，buildYamlModules 应在构建阶段失败。
+ * @returns {Promise<void>}
+ */
+async function testBuildYamlModulesRejectsMissingPlaceholdersField() {
+  await withTempDefinitionsWorkspace(async (workspaceRoot) => {
+    const placeholdersPath = path.join(
+      workspaceRoot,
+      "definitions",
+      "proxy-groups",
+      "placeholders.yaml",
+    );
+
+    await transformTextFile(placeholdersPath, (sourceText) =>
+      sourceText.replace(/^placeholders:/m, "mappings:"),
+    );
+
+    await assert.rejects(
+      buildYamlModules({
+        cwd: workspaceRoot,
+        requiredNamespaces: ["proxy-groups"],
+        log: () => {},
+      }),
+      (error) =>
+        error instanceof Error && error.message.includes("placeholders 必须是对象"),
+      "缺少 placeholders 字段时应在构建阶段报错",
+    );
+  });
+}
+
+/**
+ * 校验 placeholders.yaml 的 fallback 若引用未定义策略组，buildYamlModules 应失败。
+ * @returns {Promise<void>}
+ */
+async function testBuildYamlModulesRejectsUnknownFallbackGroup() {
+  await withTempDefinitionsWorkspace(async (workspaceRoot) => {
+    const placeholdersPath = path.join(
+      workspaceRoot,
+      "definitions",
+      "proxy-groups",
+      "placeholders.yaml",
+    );
+
+    await transformTextFile(placeholdersPath, (sourceText) =>
+      sourceText.replace(/^fallback:\s+\S+$/m, "fallback: missing_fallback"),
+    );
+
+    await assert.rejects(
+      buildYamlModules({
+        cwd: workspaceRoot,
+        requiredNamespaces: ["proxy-groups"],
+        log: () => {},
+      }),
+      (error) =>
+        error instanceof Error && error.message.includes("fallback 引用了未定义的策略组"),
+      "fallback 引用未定义策略组时应在构建阶段报错",
+    );
+  });
+}
+
+/**
+ * 校验 placeholders.yaml 的 kind=ref 占位符若引用未定义策略组，buildYamlModules 应失败。
+ * @returns {Promise<void>}
+ */
+async function testBuildYamlModulesRejectsUnknownPlaceholderRefTarget() {
+  await withTempDefinitionsWorkspace(async (workspaceRoot) => {
+    const placeholdersPath = path.join(
+      workspaceRoot,
+      "definitions",
+      "proxy-groups",
+      "placeholders.yaml",
+    );
+
+    await transformTextFile(placeholdersPath, (sourceText) =>
+      sourceText.replace("target: proxy_select", "target: missing_target"),
+    );
+
+    await assert.rejects(
+      buildYamlModules({
+        cwd: workspaceRoot,
+        requiredNamespaces: ["proxy-groups"],
+        log: () => {},
+      }),
+      (error) =>
+        error instanceof Error && error.message.includes("引用了未定义的策略组: missing_target"),
+      "kind=ref 占位符引用未定义策略组时应在构建阶段报错",
+    );
+  });
+}
+
+/**
+ * 校验仅编译指定命名空间时，不得误删其他命名空间产物；但历史 runtime 目录仍应被清理。
+ * @returns {Promise<void>}
+ */
+async function testBuildYamlModulesPartialCompilePreservesOtherNamespaces() {
+  await withTempDefinitionsWorkspace(async (workspaceRoot) => {
+    const preservedFile = path.join(
+      workspaceRoot,
+      "scripts",
+      "config",
+      "mihomo-preset",
+      "sentinel.js",
+    );
+    const legacyRuntimeFile = path.join(
+      workspaceRoot,
+      "scripts",
+      "config",
+      "runtime",
+      "legacy.js",
+    );
+
+    await fsPromises.mkdir(path.dirname(preservedFile), { recursive: true });
+    await fsPromises.writeFile(preservedFile, "export default 1;\n", "utf8");
+    await fsPromises.mkdir(path.dirname(legacyRuntimeFile), { recursive: true });
+    await fsPromises.writeFile(legacyRuntimeFile, "export default 1;\n", "utf8");
+
+    await buildYamlModules({
+      cwd: workspaceRoot,
+      requiredNamespaces: ["rules"],
+      log: () => {},
+    });
+
+    await fsPromises.access(preservedFile);
+    await assert.rejects(
+      fsPromises.access(legacyRuntimeFile),
+      (error) => error instanceof Error && "code" in error && error.code === "ENOENT",
+      "历史 runtime 目录应在部分编译时被清理",
+    );
+    assert.ok(
+      fs.existsSync(path.join(workspaceRoot, "scripts", "config", "rules", "inlineRules.js")),
+      "仅编译 rules 时仍应生成 rules 命名空间产物",
+    );
+  });
+}
+
+/**
  * 校验示例配置序列化结果仍包含关键产物分段。
  * @returns {void}
  */
@@ -1164,9 +1340,9 @@ function testExampleConfigSerialization() {
 
 /**
  * 执行主 bundle 的完整校验流程。
- * @returns {void}
+ * @returns {Promise<void>}
  */
-function main() {
+async function main() {
   testBuildChainGroupsBasic();
   testBuildChainGroupsEmptyDefinitions();
   testBuildChainGroupsNoMatch();
@@ -1190,6 +1366,10 @@ function main() {
   testValidateOutputRejectsDanglingDialerProxy();
   testValidateOutputRejectsTransitContainingLanding();
   testValidateOutputRejectsEmptyChainGroup();
+  await testBuildYamlModulesRejectsMissingPlaceholdersField();
+  await testBuildYamlModulesRejectsUnknownFallbackGroup();
+  await testBuildYamlModulesRejectsUnknownPlaceholderRefTarget();
+  await testBuildYamlModulesPartialCompilePreservesOtherNamespaces();
   assertGeneratedFiles();
   assertCustomAssetCopy();
   testBundlePositivePath();
@@ -1202,4 +1382,7 @@ function main() {
   console.log("主 bundle 验证通过");
 }
 
-main();
+main().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});
