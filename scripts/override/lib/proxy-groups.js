@@ -18,6 +18,19 @@ function compileRegionPatterns(rawRegions) {
 }
 
 const REGION_PATTERNS = compileRegionPatterns(regionsConfig);
+
+/**
+ * 兜底 region：约定 regions.yaml 数组的最后一项是兜底，pattern 必须能
+ * 匹配任意字符串（如 ".*"），用于收纳未命中前面具体国家的节点。
+ * 启动期校验该约定，避免节点静默丢失。
+ */
+const FALLBACK_REGION = REGION_PATTERNS.at(-1);
+if (!FALLBACK_REGION || !FALLBACK_REGION.pattern.test("")) {
+  throw new Error(
+    "regions.yaml 末项必须是兜底 region（pattern 能匹配空字符串），用于收纳未命中具体国家的节点",
+  );
+}
+
 const RESERVED_GROUP_IDS = placeholdersConfig.reserved;
 const FALLBACK_GROUP_ID = placeholdersConfig.fallback;
 const PLACEHOLDERS = placeholdersConfig.placeholders;
@@ -48,7 +61,8 @@ function getNamedProxies(proxies) {
 /**
  * 根据区域正则模式匹配代理节点名称，返回匹配到的区域 ID。
  * 采用 first-match-wins 策略: 按 REGION_PATTERNS 数组顺序依次匹配，
- * 返回第一个命中的区域 ID；全部未命中则返回 "OTHER"。
+ * 返回第一个命中的区域 ID。由于 REGION_PATTERNS 末项是兜底（pattern=`.*`），
+ * 任意非空字符串必然命中，循环不会落到末尾的防御性返回。
  * @param {string} proxyName - 代理节点名称。
  * @returns {string} 区域 ID。
  */
@@ -59,7 +73,7 @@ function detectRegionId(proxyName) {
     }
   }
 
-  return "OTHER";
+  return FALLBACK_REGION.id;
 }
 
 /**
@@ -68,7 +82,7 @@ function detectRegionId(proxyName) {
  * @returns {Record<string, Array<{name: string}>>} 区域 ID 到节点数组的映射。
  */
 function classifyProxies(proxies) {
-  const regionMap = { OTHER: [] };
+  const regionMap = {};
 
   for (const proxy of proxies) {
     const regionId = detectRegionId(proxy.name);
