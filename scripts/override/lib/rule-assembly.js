@@ -1,3 +1,5 @@
+import placeholdersConfig from "../../config/proxy-groups/placeholders.js";
+
 const BUILTIN_RULE_TARGETS = new Set([
   "COMPATIBLE",
   "DIRECT",
@@ -8,6 +10,12 @@ const BUILTIN_RULE_TARGETS = new Set([
 ]);
 
 const RULE_TRAILING_OPTIONS = new Set(["no-resolve"]);
+
+/**
+ * 兜底策略组 ID。来源于 placeholders.yaml 的 fallback 字段，
+ * 用于 MATCH 规则与缺失校验，避免在多个文件中硬编码字面量。
+ */
+const FALLBACK_GROUP_ID = placeholdersConfig.fallback;
 
 /**
  * 提取 prepend 规则指向的目标策略组名称。
@@ -114,11 +122,11 @@ function assembleRuleSet(groupDefinitions, ruleProviders, inlineRules) {
     );
   }
 
-  if (!groupDefinitions.fallback?.name) {
-    throw new Error("Missing fallback group definition");
+  if (!groupDefinitions[FALLBACK_GROUP_ID]?.name) {
+    throw new Error(`Missing fallback group definition: ${FALLBACK_GROUP_ID}`);
   }
 
-  rules.push(`MATCH,${groupDefinitions.fallback.name}`);
+  rules.push(`MATCH,${groupDefinitions[FALLBACK_GROUP_ID].name}`);
   return { providers, rules };
 }
 

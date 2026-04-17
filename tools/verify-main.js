@@ -110,11 +110,12 @@ function buildExpectedRuleSnapshot(groupDefinitions, ruleProviders, prependRules
   assert.ok(Array.isArray(prependRules), "prependRules 必须为数组");
 
   const normalizedPrependRules = [...prependRules];
-  const fallbackGroupName = groupDefinitions?.fallback?.name;
+  const fallbackGroupId = placeholdersConfig.fallback;
+  const fallbackGroupName = groupDefinitions?.[fallbackGroupId]?.name;
 
   assert.ok(
     typeof fallbackGroupName === "string" && fallbackGroupName.length > 0,
-    "groupDefinitions.fallback.name 必须已定义",
+    `groupDefinitions[${fallbackGroupId}].name 必须已定义`,
   );
 
   const expectedProviders = {};
@@ -257,7 +258,7 @@ function testBundlePositivePath() {
     normalize(expectedRuleSetRules),
     "provider RULE-SET 规则应严格按 ruleProviders 声明顺序排列，且 MATCH 前不得插入其它规则",
   );
-  assert.equal(result.rules.at(-1), fallbackRule, "最后一条规则应为 groupDefinitions.fallback 对应的 MATCH");
+  assert.equal(result.rules.at(-1), fallbackRule, "最后一条规则应为 placeholdersConfig.fallback 指向组的 MATCH");
   assert.ok(!bundleCode.includes("definitions/runtime"), "bundle 不得引用旧 definitions/runtime 路径");
   assert.ok(!bundleCode.includes("definitions/rules/registry"), "bundle 不得引用旧 definitions/rules/registry 路径");
   assert.ok(!bundleCode.includes("definitions/rules/custom"), "bundle 不得引用旧 definitions/rules/custom 路径");
@@ -1038,16 +1039,16 @@ function testValidateOutputRejectsDanglingDialerProxy() {
         proxies: ["A"],
       },
       {
-        name: groupDefinitionsConfig.groupDefinitions.fallback.name,
+        name: groupDefinitionsConfig.groupDefinitions[placeholdersConfig.fallback].name,
         type: "select",
         proxies: ["A"],
       },
     ],
-    rules: [`MATCH,${groupDefinitionsConfig.groupDefinitions.fallback.name}`],
+    rules: [`MATCH,${groupDefinitionsConfig.groupDefinitions[placeholdersConfig.fallback].name}`],
   };
   // 为满足 validateOutput 的"策略组完整"检查，补齐其他已配置组
   for (const [id, def] of Object.entries(groupDefinitionsConfig.groupDefinitions)) {
-    if (id === "proxy_select" || id === "fallback") continue;
+    if (id === "proxy_select" || id === placeholdersConfig.fallback) continue;
     config["proxy-groups"].push({ name: def.name, type: "select", proxies: ["A"] });
   }
 
@@ -1085,7 +1086,7 @@ function testValidateOutputRejectsTransitContainingLanding() {
       { name: "🔀 中转", type: "select", proxies: ["自建-01", "Sample-HK-01"] },
       { name: "🚪 落地", type: "select", proxies: ["自建-01"] },
     ],
-    rules: [`MATCH,${groupDefinitionsConfig.groupDefinitions.fallback.name}`],
+    rules: [`MATCH,${groupDefinitionsConfig.groupDefinitions[placeholdersConfig.fallback].name}`],
   };
   for (const def of Object.values(groupDefinitionsConfig.groupDefinitions)) {
     config["proxy-groups"].push({ name: def.name, type: "select", proxies: ["Sample-HK-01"] });
@@ -1130,7 +1131,7 @@ function testValidateOutputRejectsEmptyChainGroup() {
       { name: "🚪 落地", type: "select", proxies: [] }, // 空 chain_group
       { name: "🔀 中转", type: "select", proxies: ["Sample-HK-01"] },
     ],
-    rules: [`MATCH,${groupDefinitionsConfig.groupDefinitions.fallback.name}`],
+    rules: [`MATCH,${groupDefinitionsConfig.groupDefinitions[placeholdersConfig.fallback].name}`],
   };
   for (const def of Object.values(groupDefinitionsConfig.groupDefinitions)) {
     config["proxy-groups"].push({ name: def.name, type: "select", proxies: ["Sample-HK-01"] });

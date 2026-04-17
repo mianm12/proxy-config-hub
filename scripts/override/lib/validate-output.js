@@ -1,4 +1,11 @@
+import placeholdersConfig from "../../config/proxy-groups/placeholders.js";
 import { extractRuleTarget } from "./rule-assembly.js";
+
+/**
+ * 兜底策略组 ID。来源于 placeholders.yaml 的 fallback 字段，
+ * 与 rule-assembly.js 共享同一来源，避免硬编码字面量。
+ */
+const FALLBACK_GROUP_ID = placeholdersConfig.fallback;
 
 /**
  * 校验生成配置的完整性和正确性。
@@ -14,14 +21,14 @@ function validateOutput(config, groupDefinitions, chainsContext = {}) {
   const proxyGroups = Array.isArray(config["proxy-groups"]) ? config["proxy-groups"] : [];
   const rules = Array.isArray(config.rules) ? config.rules : [];
 
-  if (!groupDefinitions.fallback) {
-    throw new Error("策略组定义中缺少 fallback 组");
+  if (!groupDefinitions[FALLBACK_GROUP_ID]) {
+    throw new Error(`策略组定义中缺少 fallback 组: ${FALLBACK_GROUP_ID}`);
   }
 
-  const fallbackName = groupDefinitions.fallback.name;
+  const fallbackName = groupDefinitions[FALLBACK_GROUP_ID].name;
 
   if (!fallbackName) {
-    throw new Error("fallback 策略组缺少 name 字段");
+    throw new Error(`fallback 策略组缺少 name 字段: ${FALLBACK_GROUP_ID}`);
   }
 
   if (!proxyGroups.length) {
