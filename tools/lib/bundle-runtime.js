@@ -76,7 +76,7 @@ function generateExampleConfig() {
  */
 function stringifyExampleConfig(config) {
   return yaml.dump(config, {
-    lineWidth: -1, // lineWidth: -1 表示不自动换行，保持单行输出
+    lineWidth: -1, // 禁用自动换行，避免长字符串（如正则 / URL）被拆行破坏语义
     noRefs: true,
     sortKeys: false,
   });

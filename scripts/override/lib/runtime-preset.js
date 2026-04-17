@@ -26,8 +26,8 @@ function applyRuntimeSection(config, section) {
  * allow-lan: 仅在未设置时默认禁用（个人使用场景下无需暴露给局域网，需要时可显式开启）。
  * tun: 仅在未设置时应用预设（TUN 配置涉及系统网络栈，已有配置应被保留以避免冲突）。
  *
- * @param {Record<string, unknown>} config - 目标配置对象。
- * @returns {Record<string, unknown>} 应用预设后的配置对象。
+ * @param {Record<string, unknown>} config - 目标配置对象，将被就地修改。
+ * @returns {Record<string, unknown>} 同一 config 引用（未做拷贝），便于链式调用。
  */
 function applyRuntimePreset(config) {
   applyRuntimeSection(config, baseConfig);

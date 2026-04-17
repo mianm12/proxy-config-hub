@@ -29,7 +29,7 @@ No test framework — verification is done via `tools/verify-main.js` (bundle sa
    - `definitions/mihomo-preset/*.yaml` → `scripts/config/mihomo-preset/*.js` (base, dns, sniffer, tun, profile, geodata)
    - `definitions/proxy-groups/*.yaml` → `scripts/config/proxy-groups/*.js` (groupDefinitions, regions, placeholders, chains)
    - `definitions/rules/*.yaml` → `scripts/config/rules/*.js` (inlineRules, ruleProviders)
-2. **`build.js`** bundles `scripts/override/main.js` via esbuild into `dist/scripts/override/main.js` (IIFE, exposes `globalThis.main`), then copies assets listed in `tools/lib/paths.js:COPY_ASSETS` to `dist/`.
+2. **`build.js`** bundles `scripts/override/main.js` via esbuild into `dist/scripts/override/main.js` (IIFE with `globalName: __proxyConfigHub`; the footer exposes `main` both as `globalThis.main` and `module.exports = { main }` to cover Sub-Store / CommonJS loaders), then copies assets listed in `tools/lib/paths.js:COPY_ASSETS` to `dist/`.
 
 ### Shared tool modules
 
@@ -39,18 +39,23 @@ No test framework — verification is done via `tools/verify-main.js` (bundle sa
 
 ### Override script (`scripts/override/main.js`)
 
-Entry point: `function main(config)` — receives a Mihomo config object with `proxies` populated, returns the fully configured object. Pipeline:
+Entry point: `function main(config)` — receives a Mihomo config object with `proxies` populated, returns the fully configured object. At module load, `validateChainsSchema(chainDefinitions, transitDefinitions)` runs once so YAML schema errors fail fast. Runtime pipeline:
 
-1. **`applyRuntimePreset(config)`** — merges all runtime YAML presets (DNS, sniffer, tun, geodata, profile, base) onto config
-2. **`buildProxyGroups(proxies, groupDefinitions)`** — creates proxy-groups from `groupDefinitions.yaml`, with region patterns loaded from `regions.yaml` and the unified placeholder table loaded from `placeholders.yaml`
-3. **`assembleRuleSet(groupDefinitions, ruleProviders, inlineRules)`** — prepends inline rules, maps each rule provider to its target group, then appends fallback `MATCH`
-4. **`validateOutput(config)`** — post-assembly validation (uses `extractRuleTarget` from rule-assembly for consistent rule parsing)
+1. **`applyRuntimePreset(config)`** — merges all runtime YAML presets (base, profile, geodata, sniffer, dns; tun / allow-lan only when absent) onto config in-place
+2. **Empty-proxy guard** — `getNamedProxies(config.proxies)` filters nodes with a non-empty `name`; when the result is empty, logs an error and returns after preset (skips groups / rules generation)
+3. **`buildChainGroups(namedProxies, chainDefinitions)`** — extracts landing nodes via `landing_pattern` (first-match-wins), returns `{chainGroups, remainingProxies}`
+4. **`buildTransitGroups(remainingProxies, transitDefinitions)`** — builds transit groups from the remaining pool (empty `transit_pattern` means "all remaining"), returns `{groups, idToName}`. If either chain or transit list is empty, the chain flow is skipped for this run (`chainsEffective = false`)
+5. **`buildProxyGroups(remainingProxies, groupDefinitions, {chainGroups, transitGroups})`** — emits `reserved → chain → transit → other custom → region → fallback`; region patterns and the unified placeholder table are loaded from compiled YAML products; also enforces group-name uniqueness
+6. **`applyProxyChains(config, chainDefinitions, transitIdToName)`** — (only when `chainsEffective`) injects `dialer-proxy = <transit group name>` onto every proxy whose name matches a chain's `landing_pattern`
+7. **`assembleRuleSet(groupDefinitions, ruleProviders, inlineRulesConfig)`** — returns `{providers, rules}`: normalized `inlineRules.prependRules` first, then one `RULE-SET,<id>,<group>[,no-resolve]` per provider, then the fallback `MATCH`. The caller writes `providers` to `config["rule-providers"]` and `rules` to `config.rules`
+8. **`validateOutput(config, groupDefinitions, {chainDefinitions, transitDefinitions})`** — post-assembly validation: RULE-SET targets exist, MATCH is last and points at the fallback group, no unexpanded `@`-placeholders leak into group members, chain / transit invariants (spec §7.2 / §7.3), and every `dialer-proxy` references an existing proxy group. Reuses `extractRuleTarget` from rule-assembly
 
 Shared modules live in `scripts/override/lib/`:
 - **`utils.js`** — shared utilities (`cloneData`)
-- **`proxy-groups.js`** — region detection, proxy classification, group building. Region patterns and the placeholder table are loaded from compiled YAML products (`scripts/config/proxy-groups/regions.js`, `scripts/config/proxy-groups/placeholders.js`), not hardcoded. `expandGroupTarget` dispatches each placeholder via the unified `placeholders` table by `kind`.
+- **`proxy-groups.js`** — region detection, proxy classification, and group building. Region patterns and the placeholder table are loaded from compiled YAML products (`scripts/config/proxy-groups/regions.js`, `scripts/config/proxy-groups/placeholders.js`), not hardcoded. Public exports: `buildProxyGroups`, `getNamedProxies`. Internally, `expandGroupTarget` dispatches each placeholder via the unified `placeholders` table by `kind`; the `CONTEXT_SOURCES` map (`allNodes` / `regionGroups` / `chainGroups`) is the single place to extend when adding a new `kind: context` source
+- **`proxy-chains.js`** — chain / transit group construction and `dialer-proxy` injection. Exports `validateChainsSchema` (run at module load), `buildChainGroups`, `buildTransitGroups`, `applyProxyChains`
 - **`rule-assembly.js`** — rule set assembly, exports `assembleRuleSet` and `extractRuleTarget`
-- **`runtime-preset.js`** — runtime preset application
+- **`runtime-preset.js`** — runtime preset application (in-place on the passed config)
 - **`validate-output.js`** — output validation
 
 ### Data model

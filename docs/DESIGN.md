@@ -1,1044 +1,663 @@
 # proxy-config-hub 设计方案 v1
 
-> 当前仓库实现状态（2026-04-12）
->
-> - 当前唯一的声明型 YAML 源目录是 `definitions/`，不是 `rules/`
-> - `definitions/rules/` 承载规则装配 YAML（inlineRules/ruleProviders），并生成到 `scripts/config/rules/`
-> - `definitions/proxy-groups/` 承载策略组与链式代理构建数据（groupDefinitions/regions/placeholders/chains），并生成到 `scripts/config/proxy-groups/`
-> - `definitions/mihomo-preset/` 承载 Mihomo 顶层键预设 YAML（base/dns/sniffer/tun/profile/geodata），并生成到 `scripts/config/mihomo-preset/`
-> - `definitions/assets/custom/` 是模板/发布资产子树，不参与 active ruleset 装配
-> - `scripts/config/` 是生成树，不是源数据目录
-> - 当前对外入口是单入口 `scripts/override/main.js`，构建产物是 `dist/scripts/override/main.js`
-> - 本文后续若仍出现 `rules/` 作为长期源目录的描述，均视为历史设计记录；以本状态说明为准
-
-## 一、项目目标与 v1 范围
-
-为 Sub-Store、Mihomo (Clash.Meta) 建立统一配置仓库。
-
-**v1 范围（本文档）**：
-
-- 设计基线：**仅 Mihomo**
-- Sub-Store：**实验性兼容**——仅在其脚本运行环境支持 ES2018+（含负向后行断言）且满足输入契约（`config.proxies` 已展开）时可尝试复用覆写脚本；否则仅保留节点处理的功能脚本
-- 通过 raw URL 直接引用覆写脚本和规则集
-- 支持灵活添加自定义分流规则集（如 E-Hentai、Steam 等）
-
-**v1 明确不做**：
-
-- Loon / Quantumult X / Surge 适配（无目录骨架、无转换器、无 CI 产物）
-- 运行时自动回退机制
-- 通用跨平台抽象
-
-**未来工作**（v2+ 视需求再开）：
-
-- 跨平台规则格式转换
-- 多平台覆写脚本
+本文档描述 proxy-config-hub 当前实现（v1）的架构与约束，作为代码之外的唯一事实来源。行为描述以代码实现为准；一旦偏离，以代码为准并回填本文档。
 
 ---
 
-## 二、脚本职责划分
+## 一、项目目标与范围
 
-### 2.1 功能脚本（Sub-Store 专用）
+**proxy-config-hub** 的唯一交付物是一份可被 Mihomo（Clash.Meta）或 Sub-Store 直接引用的覆写脚本，把一份只含 `proxies` 的裸订阅，扩展成完整的 Mihomo 配置（DNS、嗅探、TUN、策略组、rule-provider、规则列表）。
 
-只在 Sub-Store 中使用，用于节点本身的操作，不涉及策略组、分流、DNS：
+| 维度 | 当前状态 |
+|------|----------|
+| 主脚本 | `dist/scripts/override/main.js`（esbuild IIFE，通过 jsDelivr/CDN 分发） |
+| 功能脚本 | `dist/scripts/sub-store/rename.js`（Sub-Store 专用节点改名） |
+| 自定义规则集 | `dist/assets/custom/*.yaml`（占位模板 `_template.yaml`） |
+| 声明式源数据 | `definitions/**.yaml`（唯一手编位置） |
+| 编译产物 | `scripts/config/**.js`（`tools/yaml-to-js.js` 生成，**不得手改**） |
+| 发布渠道 | GitHub Actions 将 `dist/` 推送到 `dist` 分支并刷新 jsDelivr 缓存 |
+| 运行时兼容 | Mihomo Party / Clash Verge Rev（V8 / QuickJS）；Sub-Store 在 V8 环境下亦可加载（经 `module.exports = { main }` 兼容） |
 
-- 节点重命名（统一命名格式）
-- 节点过滤（去除过期/不可用节点）
-- 节点去重、排序
-
-### 2.2 覆写脚本（Mihomo 为主，Sub-Store 实验性兼容）
-
-覆写脚本的设计基线是 Mihomo Party / Clash Verge Rev。Sub-Store 生成 mihomo 配置时兼容同一 `function main(config)` 签名，但 v1 的正则使用了 ES2018 负向后行断言，Sub-Store 在非 V8/Node 环境（如 iOS JSC）下可能不支持。因此 Sub-Store 复用属于**实验性兼容**——仅在运行环境满足 ES2018+ 且 `config.proxies` 已展开时可尝试。
-
-**Sub-Store 运行环境兼容矩阵**：
-
-| 部署方式 | JS 引擎 | ES2018 lookbehind | 兼容状态 |
-| --------- | --------- | ------------------- | --------- |
-| Docker / VPS（Node.js ≥ 10） | V8 | ✅ 支持 | 已验证 |
-| Vercel / Cloudflare Workers | V8 | ✅ 支持 | 预期兼容，待验证 |
-| iOS Loon / Surge（JSC） | JavaScriptCore | ❌ 不支持 | 不兼容 |
-| iOS Quantumult X | JavaScriptCore | ❌ 不支持 | 不兼容（且 v1 不做适配） |
-
-未列出的环境默认不承诺兼容。
-
-v1 提供三个覆写入口，覆盖不同使用场景：
-
-| 入口 | 职责 | 适用场景 |
-| ------ | ------ | --------- |
-| **`main.js`** | **Full-profile 覆写**：接管 DNS、端口、sniffer、geodata 等全部运行时字段 + 动态策略组 + 分流规则 | 从只有节点的裸订阅生成完整可用配置（最常用） |
-| **`routing-only.js`**（设计预留） | **仅路由覆写**：只生成 proxy-groups、rule-providers、rules，不碰 DNS / 端口 / sniffer / geodata 等 | 已有完整基础配置，只想补上动态分组和分流规则 |
-| **`dns-leak-fix.js`**（设计预留） | **仅 DNS 覆写**：只注入 DNS 防泄漏配置 | 已有完整配置，只想补 DNS 防泄漏 |
-
-> `main.js` 是 full-profile 入口——它会强制覆写 dns、mixed-port、sniffer、geox-url 等运行时字段。这是有意为之：目标用户从裸订阅出发，需要一个脚本搞定一切。如果你已有自己的基础配置只想加上动态分组和分流，请使用 `routing-only.js`。
-
-当前仓库实际发布的是 `main.js`；其余两个轻量入口在本文中保留为设计扩展方向。
-
-三个入口共享 `scripts/override/lib/` 中的模块；其中运行时固定值已从 `definitions/mihomo-preset/*.yaml` 声明化，构建后生成 `scripts/config/mihomo-preset/*.js`，再由 `runtime-preset.js` 注入：
-
-```javascript
-// main.js（full-profile）
-function main(config) {
-  applyRuntimePreset(config); // 强制覆写 runtime YAML 中定义的运行时字段
-  applyRouting(config);      // 动态策略组 + 分流规则
-  return config;
-}
-
-// routing-only.js（仅路由）
-function main(config) {
-  applyRouting(config);      // 只动态策略组 + 分流规则，不碰其他字段
-  return config;
-}
-
-// dns-leak-fix.js（仅 DNS）
-function main(config) {
-  applyDns(config);          // 只注入 DNS 防泄漏
-  return config;
-}
-```
-
-### 2.3 输入契约
-
-```
-需要动态策略组和分流规则的脚本（main.js / routing-only.js）要求：
-  config.proxies 为已展开的节点数组，且至少包含一个可引用的节点名
-
-仅 DNS 覆写的脚本（dns-leak-fix.js）无此要求。
-
-✅ 合法输入：config.proxies = [{ name: "...", type: "...", ... }, ...]
-❌ 不支持：仅有 proxy-providers 而 config.proxies 为空或不存在
-```
-
-**proxy-providers-only 输入的降级处理**：
-
-如果检测到 `config.proxies` 为空或不存在，脚本**不尝试**从 proxy-providers 动态拉取节点（运行时无法 await 远程请求）。每个入口有独立的 unsupported-input 行为：
-
-| 入口 | 空节点行为 | 理由 |
-|------|-----------|------|
-| **`main.js`** | 降级为 runtime-preset-only：应用完整运行时预设，跳过策略组/规则生成 | full-profile 入口应继续提供完整运行时模板；只有依赖节点的路由部分被跳过 |
-| **`routing-only.js`** | 原样返回：打印诊断信息，不改写任何字段 | 纯路由入口，承诺不碰 DNS；降级不应偷偷引入 DNS 覆写 |
-| **`dns-leak-fix.js`** | 正常执行：无论 proxies 是否存在都注入 DNS | 不依赖 proxies，无需降级 |
-
-```javascript
-// main.js 的空节点降级路径
-const proxies = config.proxies || [];
-const namedProxies = proxies.filter(p => typeof p?.name === "string" && p.name.length > 0);
-applyRuntimePreset(config);
-
-if (namedProxies.length === 0) {
-  console.log("[override] ERROR: config.proxies 为空，无法生成策略组和分流规则");
-  console.log("[override] 已应用 runtime preset，跳过 proxy-groups、rule-providers 和 rules 生成");
-  return config;
-}
-
-// routing-only.js 的空节点降级路径
-const proxies = config.proxies || [];
-const namedProxies = proxies.filter(p => typeof p?.name === "string" && p.name.length > 0);
-if (namedProxies.length === 0) {
-  console.log("[override] ERROR: config.proxies 为空，无法生成策略组和分流规则");
-  console.log("[override] routing-only 入口不碰 DNS 和运行时字段，原样返回");
-  return config;  // 不改写任何字段
-}
-```
+v1 的范围**不含**：早期设计中设想的 `routing-only.js` / `dns-leak-fix.js` 轻量入口（仅 `main.js` 存在）、远程规则回退、自建 CDN。这些未来可扩展的方向见 §13 与附录 B。
 
 ---
 
-## 三、公开规则仓库选型
+## 二、架构总览
 
-### 3.1 推荐方案：MetaCubeX/meta-rules-dat（明文 yaml 优先）
+### 2.1 分层
 
-| 维度 | 说明 |
+```
+┌──────────────────────────────────────────────────────────────┐
+│ definitions/            源定义（人写 YAML，单一事实来源）     │
+├──────────────────────────────────────────────────────────────┤
+│ tools/yaml-to-js.js     编译 + 模式校验 + 交叉引用校验        │
+├──────────────────────────────────────────────────────────────┤
+│ scripts/config/         生成产物（纯数据 ES 模块）            │
+├──────────────────────────────────────────────────────────────┤
+│ scripts/override/       覆写脚本源码（main + lib/*.js）       │
+├──────────────────────────────────────────────────────────────┤
+│ build.js / esbuild      打包为 IIFE bundle                    │
+├──────────────────────────────────────────────────────────────┤
+│ dist/                   交付目录（含资产复制）                │
+└──────────────────────────────────────────────────────────────┘
+```
+
+**设计取舍**：把"声明"（YAML）与"逻辑"（JS 函数）彻底分离，定义新区域、新策略组、新 rule-provider 只改 YAML，不改 JS；反之，算法演进只改 `scripts/override/lib/`，不影响数据。
+
+### 2.2 顶层数据流
+
+1. 用户订阅解析后得到 `{ proxies: [...] }`。
+2. 订阅工具（Mihomo Party / Sub-Store）加载 `dist/scripts/override/main.js`，把上述对象作为 `config` 传入 `main(config)`。
+3. `main` 同步返回补全后的 Mihomo 配置对象；上层应用按原流程渲染或推送。
+
+整个过程是纯函数性的：没有网络、没有文件系统访问（规则集 URL 的拉取由 Mihomo 运行时执行，脚本本身不联网）。
+
+---
+
+## 三、构建与发布管线
+
+### 3.1 源定义目录（`definitions/`）
+
+| 子目录 | 文件 | 作用 |
+|--------|------|------|
+| `mihomo-preset/` | `base.yaml`, `profile.yaml`, `geodata.yaml`, `sniffer.yaml`, `dns.yaml`, `tun.yaml` | Mihomo 顶层键预设（6 份，1:1 映射到最终配置字段） |
+| `proxy-groups/` | `groupDefinitions.yaml`, `regions.yaml`, `placeholders.yaml`, `chains.yaml` | 策略组 / 区域 / 占位符 / 链式代理声明 |
+| `rules/` | `inlineRules.yaml`, `ruleProviders.yaml` | prepend 规则 + rule-provider 清单 |
+| `assets/custom/` | `_template.yaml` 等 | 自定义规则集，**不参与编译**，仅复制到 `dist/assets/custom/` |
+
+`definitions/` 顶层允许的子目录被硬编码在 `tools/lib/paths.js:CANONICAL_TOP_LEVEL_NAMES`（`mihomo-preset` / `proxy-groups` / `rules` / `assets`），新增未注册目录会让构建失败。
+
+### 3.2 YAML → JS 编译（`tools/yaml-to-js.js`）
+
+- 根据 `CANONICAL_NAMESPACES`（3 个：`mihomo-preset` / `proxy-groups` / `rules`）扫描 `definitions/`。
+- 每个 YAML 编译为对应位置的 `scripts/config/**/name.js`（内容形如 `export default <JSON>;`）。
+- 每次构建只清理**参与本次构建**的命名空间输出目录，以支持增量；历史遗留目录（当前列表：`runtime/`）无条件清理。
+- `assets/` 命名空间不会被编译，任何被复制到 `scripts/config/assets` 的产物会被 `verify-main.js` 阻止。
+
+**模式校验**在 `convertOne` 内触发，当前仅对 `proxy-groups/placeholders.yaml` 做深度校验：
+
+1. 根对象必须是对象。
+2. `reserved`：非空字符串数组，无重复，全部在 `groupDefinitions` 中已定义。
+3. `fallback`：非空字符串，不能与 `reserved` 重复，且在 `groupDefinitions` 中已定义。
+4. `placeholders`：非空对象；每个键必须以 `@` 开头。
+5. 每个 entry：`kind ∈ {ref, context}`；`kind=ref` 要求 `target` 非空且在 `groupDefinitions` 里；`kind=context` 要求 `source ∈ {allNodes, regionGroups, chainGroups}`。
+
+`kind=context` 的 source 白名单集中在 `tools/yaml-to-js.js` 的 `PLACEHOLDER_ALLOWED_CONTEXT_SOURCES`，必须与 `scripts/override/lib/proxy-groups.js` 的 `CONTEXT_SOURCES` 对象手动同步。
+
+### 3.3 打包（`build.js`）
+
+```
+npm run build
+  = npm run rules:build (yaml-to-js)
+  + node build.js (esbuild + 资产复制)
+```
+
+esbuild 产物特征：
+
+| 选项 | 值 |
+|------|----|
+| `entryPoints` | `scripts/override/main.js` |
+| `format` | `iife` |
+| `globalName` | `__proxyConfigHub` |
+| `target` | `es2020` |
+| 输出 | `dist/scripts/override/main.js` |
+
+Footer 注入一段桥接代码：
+
+```js
+if (typeof globalThis !== "undefined" && __proxyConfigHub && typeof __proxyConfigHub.main === "function") {
+  globalThis.main = __proxyConfigHub.main;
+}
+if (typeof module !== "undefined" && module && module.exports && __proxyConfigHub && typeof __proxyConfigHub.main === "function") {
+  module.exports = { main: __proxyConfigHub.main };
+}
+```
+
+这保证了 bundle 既能在 `globalThis.main` 风格的加载环境（Mihomo Party、Clash Verge Rev）运行，也能被 Sub-Store 的 CommonJS loader 以 `require` 方式载入。
+
+打包完成后，`build.js` 遍历 `tools/lib/paths.js:COPY_ASSETS` 复制静态资产（当前包含 `definitions/assets/custom/ → dist/assets/custom/` 与 `scripts/sub-store/ → dist/scripts/sub-store/`）。
+
+### 3.4 运行时注意事项
+
+- ESM 贯通（`package.json` `"type": "module"`），Node.js ≥ 24。
+- 覆写脚本源码中使用了 ES2018 负向后行断言（`(?<![A-Z])..(?![A-Z])`，主要在 `regions.yaml`），V8 与 QuickJS 支持；若未来需支持 iOS JSC，需替换为前向等价写法。
+- 脚本运行时不访问文件系统、不联网。rule-provider URL 的拉取由 Mihomo 运行时自行完成。
+
+---
+
+## 四、占位符机制
+
+### 4.1 动机
+
+`groupDefinitions.yaml` 声明策略组时，常需要引用"所有节点"、"全部区域组"或"手动选择组的名字"。硬编码节点名会随订阅漂移，硬编码组名会随本仓库文案调整而失效。占位符把这两类动态值抽象为 `@`-前缀关键字，在运行时由 `expandGroupTarget` 展开。
+
+### 4.2 声明（`definitions/proxy-groups/placeholders.yaml`）
+
+```yaml
+reserved:
+  - proxy_select
+  - manual_select
+  - auto_select
+
+fallback: fallback
+
+placeholders:
+  "@proxy-select":  { kind: ref, target: proxy_select }
+  "@manual-select": { kind: ref, target: manual_select }
+  "@auto-select":   { kind: ref, target: auto_select }
+  "@all-nodes":     { kind: context, source: allNodes }
+  "@region-groups": { kind: context, source: regionGroups }
+  "@chain-groups":  { kind: context, source: chainGroups }
+```
+
+| 字段 | 含义 |
 |------|------|
-| 仓库 | MetaCubeX/meta-rules-dat |
-| 状态 | 持续更新（最近更新 2026-04-09） |
-| 规则分支 | **meta 分支**（明文 yaml），release 分支（二进制 mrs/dat） |
-| v1 默认格式 | meta 分支 `.yaml` 明文（可读、可改、便于调试） |
+| `reserved` | 需要在 `proxy-groups` 输出最前部强制出现的组 ID（构建顺序 = 声明顺序） |
+| `fallback` | 用于最终 `MATCH,<name>` 规则的组 ID，也是兜底组 |
+| `placeholders` | `@`-前缀占位符全集。**不在此表内的 `@*` 值一律被拒绝**（`expandGroupTarget` 抛错） |
 
-**geox-url 与 rule-provider 分开管理**：
+### 4.3 两类 entry
 
-- `geox-url`（geoip.dat / geosite.dat / country.mmdb）→ **release 分支**（mihomo 全局 geodata 引擎，只有二进制格式）
-- `rule-providers` → **meta 分支 yaml 明文**（具体业务分流规则，优先可读性）
+- `kind: ref` — 引用另一个已定义的保留组，`expandGroupTarget(target)` 返回 `[groupDefinitions[entry.target].name]`。
+- `kind: context` — 引用运行时计算的集合；`expandGroupTarget(target, context)` 调用 `CONTEXT_SOURCES[entry.source](context)`。当前支持的三种 source：
 
-### 3.2 已知缺失规则的处理
+| source | 返回 |
+|--------|------|
+| `allNodes` | `context.allProxyNames`（调用 `buildProxyGroups` 时传入的 `proxies` 的 `name` 列表） |
+| `regionGroups` | 当前运行中已生成的区域组名数组 |
+| `chainGroups` | `extras.chainGroups` 传入的组名数组（未启用链式代理时为空数组） |
 
-`meta-rules-dat` 历史上曾缺失过 `geosite:private`。截至 **2026-04-11**，`geosite/private.yaml` 与 `geoip/private.yaml` 已可直接使用。
+### 4.4 扩展一个新占位符
 
-**v1 当前处理方式：优先复用上游，不做运行时回退**。
-
-只有在上游确实缺失、且短期内必须落地时，才在本仓库维护替代版本。不存在"远程优先 + 自动回退"的运行时机制——这种机制在 CI 构建时探活不等于用户运行时可达，且 mihomo rule-provider 本身没有 fallback URL 能力。
-
-### 3.3 rule-provider URL 模式
-
-```yaml
-# MetaCubeX 远程规则（meta 分支 yaml 明文）
-youtube:
-  type: http
-  behavior: domain
-  format: yaml
-  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/youtube.yaml"
-  path: ./ruleset/youtube.yaml
-  interval: 86400
-
-private:
-  type: http
-  behavior: domain
-  format: yaml
-  url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/private.yaml"
-  path: ./ruleset/private.yaml
-  interval: 86400
-
-# 本仓库提供的规则（自定义 / 远程缺失替代）
-e-hentai:
-  type: http
-  behavior: classical
-  format: yaml
-  url: "https://cdn.jsdelivr.net/gh/{OWNER}/proxy-config-hub@dist/assets/custom/e-hentai.yaml"
-  path: ./ruleset/e-hentai.yaml
-  interval: 86400
-```
-
-### 3.4 关于 format 与文件扩展名
-
-- `format` 是 mihomo rule-provider 的配置字段，**只有 `yaml`、`text`、`mrs` 三种合法值**（[来源](https://wiki.metacubex.one/config/rule-providers/)）
-- 文件扩展名可以是 `.yaml`、`.list`、`.txt`、`.mrs` 等，与 format 不一定相同
-- 对应关系：`format: yaml` → 扩展名 `.yaml`；`format: text` → 扩展名 `.list` 或 `.txt`；`format: mrs` → 扩展名 `.mrs`
-- v1 全部使用 `format: yaml`
+- **新增 `kind=ref` 占位符**：只改 `placeholders.yaml`，指向 `groupDefinitions.yaml` 已有 ID 即可。
+- **新增 `kind=context` 占位符，复用现有 source**：同样只改 `placeholders.yaml`。
+- **新增一种 source**（例如 `@premium-nodes`）：
+  1. 在 `placeholders.yaml` 中声明 `source: premiumNodes`。
+  2. 在 `scripts/override/lib/proxy-groups.js` 的 `CONTEXT_SOURCES` 添加对应解析函数。
+  3. 在 `tools/yaml-to-js.js` 的 `PLACEHOLDER_ALLOWED_CONTEXT_SOURCES` 同步加入白名单。
+  4. 调用端在 `buildProxyGroups` 的 `context` 对象上提供数据源字段。
 
 ---
 
-## 四、策略组生成算法
+## 五、策略组生成
 
-### 4.1 Step 1：地区识别
+### 5.1 区域识别（`definitions/proxy-groups/regions.yaml`）
 
-**地区注册表是预定义的（可扩展），最终输出的分组集合由实际节点动态决定。**
-
-识别策略：优先匹配 emoji 国旗（最可靠），其次中文全称，最后英文。短 token（如 HK、US）加边界约束避免误匹配。
-
-地区注册表以声明式 YAML 维护在 `definitions/proxy-groups/regions.yaml`，构建时编译为 `scripts/config/proxy-groups/regions.js`，运行时由 `proxy-groups.js` 的 `compileRegionPatterns()` 将字符串正则编译为 `RegExp` 对象。新增地区只需在 YAML 中添加一条记录，无需修改 JS 代码。
+每个条目：
 
 ```yaml
-# definitions/proxy-groups/regions.yaml（示例）
 - id: HK
   name: 香港
   icon: "🇭🇰"
   pattern: 🇭🇰|香港|(?<![A-Z])HK(?![A-Z])|Hong\s*Kong
   flags: i
-- id: TW
-  name: 台湾
-  icon: "🇹🇼"
-  pattern: 🇹🇼|🇨🇳.*台湾|台湾|(?<![A-Z])TW(?![A-Z])|Taiwan
-  flags: i
-# ... 完整列表见 definitions/proxy-groups/regions.yaml
 ```
 
-**已知局限（v1）**：
+- 当前包含 ~29 个国家/地区 + 1 个 `OTHER`（`pattern: ".*"`，`flags: ""`）。
+- **最后一项必须是能匹配空字符串的兜底 region**；`compileRegionPatterns` 在模块加载时执行断言，不满足则启动阶段抛错（避免节点静默丢失）。
+- 每个节点只会归属首个命中的 region（first-match-wins），所以短 token（`HK` / `US`）使用负向后行断言避开 `HKUS` 这种误匹配。
+- 0 节点的 region 不会生成分组。
 
-- 地区识别是启发式的，依赖节点名称中包含地区信息。如果节点名称无地区标识（如纯 IP 或编号），该节点会归入"其他"
-- 短 token 误匹配风险已通过边界断言 `(?<![A-Z])..(?![A-Z])` 缓解，但不能完全消除
-- 正则中使用了 ES2018 负向后行断言 `(?<!...)`。Mihomo Party / Clash Verge Rev 的 JS 引擎（QuickJS / V8）支持此语法；但 Sub-Store 在非 V8/Node 环境（如 iOS JSC）下可能不支持，需替换为前向匹配方案
-- 在 proxy-providers-only 输入下，此算法不工作（见 2.3 输入契约）
+### 5.2 保留组与兜底组
 
-**分类规则**：
+保留组由 `placeholders.yaml:reserved` 钉死在 `proxy-groups` 数组前部，顺序即声明顺序。当前为：
 
-- 遍历节点，首个命中的 pattern 决定归属
-- 0 节点的地区不生成分组（直接跳过，不用 DIRECT 占位）
-- 未匹配任何 pattern 的节点归入隐含的 OTHER 集合（不单独建组，仅进入手动选择和自动选择）
+| ID | 组名 | 类型 | proxies（展开后） |
+|----|------|------|-------------------|
+| `proxy_select` | 🚀 代理选择 | select | `@manual-select, @auto-select, @chain-groups, @region-groups, DIRECT` |
+| `manual_select` | 🔧 手动选择 | select | `@chain-groups, @all-nodes` |
+| `auto_select` | ⚡ 自动选择 | url-test | `@all-nodes` + `url: https://www.gstatic.com/generate_204`, `interval: 300`, `lazy: false` |
 
-### 4.2 Step 2：生成地区分组
+兜底组 ID 由 `placeholders.yaml:fallback` 指定（当前 = `fallback` → "🐟 漏网之鱼"）。该组会被放在 `proxy-groups` 最末，同时 `assembleRuleSet` 生成的最后一条规则 `MATCH,<fallback.name>` 引用它。
 
-```javascript
-function buildRegionGroups(regionMap) {
-  const groups = [];
-  for (const region of REGION_PATTERNS) {
-    const nodes = regionMap[region.id];
-    if (!nodes || nodes.length === 0) continue;  // 空地区不生成
-    groups.push({
-      name: `${region.icon} ${region.name}`,
-      type: "select",
-      proxies: nodes.map(n => n.name)
-    });
-  }
-  return groups;
-}
-```
-
-### 4.3 Step 3：生成基础控制分组
-
-```javascript
-// 手动选择：包含所有节点
-{ 
-  name: "🔧 手动选择",
-  type: "select",
-  proxies: allProxyNames
-}
-
-// 自动选择：包含所有节点，自动测速
-{
-  name: "⚡ 自动选择",
-  type: "url-test",
-  proxies: allProxyNames,
-  url: "http://www.gstatic.com/generate_204",
-  interval: 300,
-  tolerance: 50
-}
-```
-
-**关于全量节点 url-test 的已知问题**：当节点数量很大（100+）时，全量 url-test 会产生较高的测速流量。v1 先保持此设计（简单且普遍），如果实际使用中发现性能问题，可在 v2 中优化为：按地区分组各自 url-test + 顶层 fallback，或引入 `filter` 过滤掉高倍率节点。
-
-### 4.4 Step 4：生成代理选择分组
-
-```javascript
-{
-  name: "🚀 代理选择",
-  type: "select",
-  proxies: [...regionGroupNames, "🔧 手动选择", "⚡ 自动选择", "DIRECT"]
-}
-```
-
-### 4.5 Step 5：生成业务分流分组
-
-所有业务分组引用相同的选项集，**绝不直接包含节点名称**：
-
-```javascript
-const BUSINESS_PROXIES = ["🚀 代理选择", ...regionGroupNames, "🔧 手动选择", "⚡ 自动选择", "DIRECT"];
-
-// mode: "full" → proxies = BUSINESS_PROXIES（首项为 🚀 代理选择，select 组默认跟随全局入口）
-{ name: "🤖 AI 服务", type: "select", proxies: BUSINESS_PROXIES }
-{ name: "📹 油管视频", type: "select", proxies: BUSINESS_PROXIES }
-
-// mode: "direct" → 默认直连
-{ name: "🔒 国内服务", type: "select", proxies: ["DIRECT", "🚀 代理选择"] }
-
-// mode: "reject" → 广告拦截
-{ name: "🛑 广告拦截", type: "select", proxies: ["REJECT", "DIRECT"] }
-```
-
-### 4.6 最终 proxy-groups 输出顺序
+### 5.3 自定义组（`definitions/proxy-groups/groupDefinitions.yaml`）
 
 ```yaml
-proxy-groups:
-  # 1. 代理选择（顶层入口）
-  - { name: "🚀 代理选择", type: select, proxies: ["🇭🇰 香港", ..., "🔧 手动选择", "⚡ 自动选择", "DIRECT"] }
-  # 2. 基础控制组
-  - { name: "🔧 手动选择", type: select, proxies: ["<全部节点>"] }
-  - { name: "⚡ 自动选择", type: url-test, proxies: ["<全部节点>"] }
-  # 3. 地区分组（仅非空）
-  - { name: "🇭🇰 香港", type: select, proxies: ["<香港节点>"] }
-  - { name: "🇯🇵 日本", type: select, proxies: ["<日本节点>"] }
-  # ...
-  # 4. 业务分流组
-  - { name: "🤖 AI 服务", type: select, proxies: ["🚀 代理选择", 地区组..., "🔧 手动选择", "⚡ 自动选择", "DIRECT"] }
-  # ...
-  # 5. 特殊组
-  - { name: "🛑 广告拦截", type: select, proxies: ["REJECT", "DIRECT"] }
-  - { name: "🔒 国内服务", type: select, proxies: ["DIRECT", "🚀 代理选择"] }
-  - { name: "🐟 漏网之鱼", type: select, proxies: [同业务组] }
+groupDefinitions:
+  ai_service:
+    name: "🤖 AI 服务"
+    type: "select"
+    category: "basic"
+    proxies:
+      - "@proxy-select"
+      - "@manual-select"
+      - "@auto-select"
+      - "DIRECT"
+      - "@chain-groups"
+      - "@region-groups"
 ```
 
-### 4.7 校验规则
+关键约束：
 
-**构建时校验（CI / tools/validate.js）**：
+- `proxies` 是有序数组，支持混合 `@-占位符`、`DIRECT` / `REJECT` 等 Mihomo 内置目标、以及具体节点/组名字面量。
+- `buildConfiguredGroup` 把除 `category` / `proxies` 外的所有字段原样 `cloneData` 复制到输出（因此 `url-test` 的 `url` / `interval` / `lazy`、`select` 的 `icon` 等字段都可直接在 YAML 声明）。
+- `category` 是纯文档字段，运行时忽略。
+- `name` 与 `type` 缺失会在构建阶段抛错。
 
-1. sources.yaml 中所有 source 的 `id` 全局唯一（否则 providers 会被覆盖）
-2. 正向引用：每条 source 的 `target_group` 必须在 GROUP_DEFINITIONS 中已注册
-3. 反向覆盖：GROUP_DEFINITIONS 中由 RULE-SET 驱动的组（除 fallback 外）必须在 sources.yaml 中至少被一条 source 引用——防止新增业务组后忘记添加规则源
-4. custom 目录下的 `.yaml` 文件 payload 语法合法
-5. 远程 URL 可达性检查（HEAD 请求，不可达时报警但不阻断构建——这是第三方依赖，用户运行时自行承担）
+早期设计里的 `mode: full/direct/reject` 三值枚举已被**声明式 proxies 数组 + 占位符展开**取代；任何分组的节点来源现在都由 `proxies` 显式列出。
 
-**运行时校验（覆写脚本 validate 函数）**：
+### 5.4 `buildProxyGroups` 输出顺序
 
-1. 空节点防护：`config.proxies` 为空则走各入口对应的降级路径（见 2.3）
-2. 空地区组不生成
-3. 引用完整性：所有 RULE-SET 引用的策略组名必须存在于 proxy-groups
-4. 业务组纯净性：业务分流组的 proxies 中不允许出现具体节点名
+`scripts/override/lib/proxy-groups.js:buildProxyGroups(proxies, groupDefinitions, extras)` 的返回数组严格遵循：
+
+```
+1. reserved 顺序的保留组（来自 placeholders.yaml:reserved）
+2. extras.chainGroups（链式代理落地组，有序）
+3. extras.transitGroups（链式代理中转组，有序）
+4. 其他自定义组：groupDefinitions 中既不在 reserved 也不是 fallback 的全部条目，遵循 YAML 顺序
+5. 区域组（按 regions.yaml 顺序，跳过无节点的区域）
+6. 兜底组（placeholders.fallback 指向的组）
+```
+
+`context` 对象包含：`allProxyNames`、`regionGroupNames`、`chainGroupNames`、`groupDefinitions`，用于占位符展开。
+
+### 5.5 组名唯一性
+
+函数末尾有一次遍历断言：所有最终组的 `name` 字段互不重复，避免把 chain/transit 的组名与用户自定义组名撞车导致 Mihomo 侧引用错乱。
+
+### 5.6 `getNamedProxies`
+
+`scripts/override/lib/proxy-groups.js` 导出的辅助函数，过滤掉 `name` 为空或非字符串的代理节点。`main.js` 和 `verify-main.js` 在调用 chain/transit/group 构建前都先走这一步。
 
 ---
 
-## 五、业务分组与规则注册表
+## 六、链式代理系统
 
-### 5.1 业务分组定义表（group-definitions.js）
+`proxy-config-hub` 支持在生成的配置中声明"落地节点经过中转节点出海"的链路；实现集中在 `scripts/override/lib/proxy-chains.js`。
 
-v1 只定义有实际规则源支撑的最小集合。`mode` 含义：
+### 6.1 概念
 
-- `"full"`：proxies = 地区组 + 代理选择 + 手动选择 + 自动选择 + DIRECT
-- `"direct"`：proxies = DIRECT + 代理选择
-- `"reject"`：proxies = REJECT + DIRECT
+- **chain_group（落地）**：依 `landing_pattern` 从订阅中挑出的落地节点。
+- **transit_group（中转）**：依 `transit_pattern` 从剩余节点中挑出的中转候选。
+- **entry 绑定**：每个 chain_group 通过 `entry` 字段引用某个 transit_group 的 `id`；运行时会把该 chain 内所有落地节点的 `dialer-proxy` 设为 transit_group 的 `name`。
+- **落地与中转互斥**：一旦节点被某 chain_group 捕获，即从 `remainingProxies` 中剔除，`transit_group` 不可能再包含它（§7.2 由 `validateOutput` 兜底断言）。
 
-实现中额外带有 `category` 字段，用于区分 `special` / `business` / `fallback` 三类分组并驱动最终输出顺序；该字段不参与 rule-provider 绑定，只服务于组装顺序。
+### 6.2 声明（`definitions/proxy-groups/chains.yaml`）
 
-```javascript
-// v1 只定义有实际规则源支撑的最小集合
-// 由 RULE-SET 驱动的组（非 fallback）必须在 sources.yaml 中至少有一条 source 指向它
-// fallback 组由最终 MATCH 规则自动引用，不受此约束
-const GROUP_DEFINITIONS = {
-  // 特殊分组
-  ad_block:       { name: "🛑 广告拦截",   mode: "reject", category: "special" },
-  private:        { name: "🏠 私有网络",   mode: "direct", category: "special" },
-  cn_service:     { name: "🔒 国内服务",   mode: "direct", category: "special" },
-  fallback:       { name: "🐟 漏网之鱼",   mode: "full", category: "fallback" },
+```yaml
+transit_group:
+  - id: transit
+    name: "🔀 中转"
+    transit_pattern: "Transit|中转|自建"  # 空字符串 = 取 remainingProxies 全部；非空 = 在 remainingProxies 上再做正则过滤
+    flags: i
+    type: select
 
-  // 业务分流分组（均为 mode: "full"，每组在 sources.yaml 中有 ≥1 条规则源）
-  //  常用服务
-  ai_service:     { name: "🤖 AI 服务",    mode: "full", category: "business" },
-  youtube:        { name: "📹 油管视频",    mode: "full", category: "business" },
-  google:         { name: "🔍 谷歌服务",    mode: "full", category: "business" },
-  microsoft:      { name: "Ⓜ️ 微软服务",   mode: "full", category: "business" },
-  apple:          { name: "🍏 苹果服务",    mode: "full", category: "business" },
-  //  社交通讯
-  telegram:       { name: "📲 电报消息",    mode: "full", category: "business" },
-  twitter:        { name: "🐦 推特/X",     mode: "full", category: "business" },
-  meta_social:    { name: "📘 Meta 系",    mode: "full", category: "business" },
-  discord:        { name: "🎙️ Discord",   mode: "full", category: "business" },
-  social_other:   { name: "💬 其他社交",    mode: "full", category: "business" },
-  //  流媒体
-  netflix:        { name: "🎬 奈飞",       mode: "full", category: "business" },
-  disney:         { name: "🏰 迪士尼+",    mode: "full", category: "business" },
-  //  游戏平台
-  steam:          { name: "🎮 Steam",     mode: "full", category: "business" },
-  game_pc:        { name: "🖥️ PC 游戏",   mode: "full", category: "business" },
-  //  技术服务
-  code_hosting:   { name: "🐱 代码托管",    mode: "full", category: "business" },
-  cloud:          { name: "☁️ 云服务",     mode: "full", category: "business" },
-  dev_tools:      { name: "🛠️ 开发工具",   mode: "full", category: "business" },
-  //  其他
-  education:      { name: "📚 教育学术",    mode: "full", category: "business" },
-  non_cn:         { name: "🌍 非中国",     mode: "full", category: "business" },
-};
-// v2+ 按需扩展：streaming_west, streaming_asia, game_console, storage, payment, crypto, news, shopping
+chain_group:
+  - id: landing
+    name: "🚪 落地"
+    landing_pattern: "Relay|落地|^(?=.*直连)(?=.*家宽)"  # 必填非空
+    flags: i
+    type: select
+    entry: transit  # 必须是 transit_group[*].id 之一
 ```
 
-> 如果后续发现 mode 三值模型不够用（如某个组需要特殊的 allowed_targets），升级为 `{ allowed_targets: [...], default_target: "..." }` 结构。v1 不做此抽象。
+### 6.3 `buildChainGroups(namedProxies, chainDefinitions)`
 
-### 5.2 规则源注册表（sources.yaml）
+- 每个 chain 的 `landing_pattern` 在模块内部 `compileChainPatterns` 编译为 `RegExp`；非法正则抛 `chain_group <id> 的 landing_pattern 非法正则`。
+- `chain.id` 全局唯一（由 `assertUniqueChainIds` 强制）。
+- 节点遍历采用 **first-match-wins**：匹配多个 chain 时归属首个，其余命中仅输出 WARN。
+- 匹配到 0 节点的 chain_group 被跳过并 WARN，不会出现在输出里。
+- 返回 `{ chainGroups, remainingProxies }`。`remainingProxies` 在节点顺序上保持原订阅顺序。
 
-sources.yaml 是**单一有序列表**，声明顺序即规则匹配顺序。不使用全局 order 号段。
+### 6.4 `buildTransitGroups(remainingProxies, transitDefinitions)`
 
-每条 source 的 schema：
+- `transit_pattern` 为空字符串（或非字符串）→ 成员 = `remainingProxies` 全部。
+- 非空 → 编译为 RegExp，按名称过滤。
+- 成员为空的 transit_group 被跳过并 WARN，**不进入 `idToName` 映射表**，其绑定的 chain 因此在 `applyProxyChains` 阶段也会跳过。
+- 返回 `{ groups, idToName }`，`idToName: Map<string, string>` 从 `transit.id` 映射到 `transit.name`，供 `applyProxyChains` 查询。
+
+### 6.5 `applyProxyChains(config, chainDefinitions, transitIdToName)`
+
+对每个 chain：
+
+1. 若 `transitIdToName.get(chain.entry)` 为空 → WARN 并跳过该 chain。
+2. 否则遍历 `config.proxies`：
+   - 若节点名命中 `landing_pattern` 且该节点尚无 `dialer-proxy`，写入 `proxy["dialer-proxy"] = transit.name`。
+   - 若节点已有 `dialer-proxy`，保留原值并 WARN（不覆盖用户/上游已设置的链路）。
+
+### 6.6 `chainsEffective` 与退化
+
+`main.js` 在调用完 `buildChainGroups` / `buildTransitGroups` 后计算：
+
+```js
+const chainsEffective = transitGroups.length > 0 && chainGroups.length > 0;
+```
+
+只有同时存在至少一个可用的 chain_group 与 transit_group 时才进入链式流程；任一为空都视为"本次订阅无法支撑链路"，退化为普通策略组生成（`extras.chainGroups`/`transitGroups` 都传空数组），此时 `@chain-groups` 占位符展开为空列表。
+
+### 6.7 模块加载期 `validateChainsSchema`
+
+`main.js` 顶层执行一次：
+
+```js
+validateChainsSchema(chainDefinitions, transitDefinitions);
+```
+
+约束：
+
+- `chainDefinitions` 空数组直接通过。
+- 非空时 `transitDefinitions` 必须是数组。
+- 每个 chain 必须有非空字符串 `entry`，且该 entry 必须等于某个 transit_group 的 `id`。
+
+这一层把"YAML 拼写错误（entry 写错）"与"运行时 transit 成员过滤为空"两类场景区分开——前者立即抛错，后者运行时 WARN 退化。
+
+### 6.8 防环与非空不变量
+
+`validateOutput` 在链式代理启用时（即 `chainDefinitions` 或 `transitDefinitions` 非空）额外执行：
+
+- **§7.2**：`transit_group` 的任一成员名字若命中**任一** chain_group 的 `landing_pattern`，立即抛错。保证"中转不含落地"，消除链路自回环。
+- **§7.3**：`chain_group.proxies` 数组必须非空（理论上 `buildChainGroups` 已过滤空组，本断言用于防止下游手改破坏该约束）。
+- **dialer-proxy 一致性**：任何 `proxies[i]["dialer-proxy"]` 必须是一个现存的 `proxy-group.name`。
+
+---
+
+## 七、规则装配
+
+### 7.1 数据源
+
+- `definitions/rules/inlineRules.yaml` —— 仅一个字段 `prependRules: string[] | null`，用于声明需要**前置插入**到规则列表最顶端的 Mihomo 规则。
+- `definitions/rules/ruleProviders.yaml` —— 对象字典，键为 provider ID，值为 provider 定义。
+
+### 7.2 provider 字段约定
 
 | 字段 | 必填 | 说明 |
 |------|------|------|
-| `id` | 是 | 全局唯一，同时用作 rule-provider key |
-| `source_kind` | 是 | `geosite` / `geoip` / `custom` / `provided` |
-| `behavior` | 是 | `domain` / `ipcidr` / `classical` |
-| `format` | 是 | `yaml` / `text` / `mrs`（mihomo 合法值，v1 全部 yaml） |
-| `url` | 是 | 完整 URL |
-| `target_group` | 是 | GROUP_DEFINITIONS 中的稳定 id |
-| `no_resolve` | 否 | 默认 false |
+| `type` | 是 | `http` / `file` 等，透传给 Mihomo |
+| `behavior` | 是 | `domain` / `ipcidr` / `classical`，透传 |
+| `url` | 是（http 时） | 远程规则 URL |
+| `path` | 是 | Mihomo 本地缓存路径 |
+| `interval` | 否 | 刷新间隔（秒） |
+| `format` | 是 | `yaml` / `text` / `mrs`（当前仓库全部用 `mrs`） |
+| `target-group` | 是（本仓库扩展字段） | `groupDefinitions` 中的稳定 ID；`assembleRuleSet` 读取后从输出中剔除 |
+| `no-resolve` | 否（本仓库扩展字段） | 布尔；为真时生成的 RULE-SET 规则带 `,no-resolve` 尾缀，同时从输出 provider 中剔除 |
 
-```yaml
-# rules/sources.yaml
-# 声明顺序 = 规则匹配顺序（从上到下，先匹配先生效）
-# 所有 URL 为完整路径
-# MetaCubeX geosite 基础路径: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/{name}.yaml
-# MetaCubeX geoip 基础路径:   https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/{name}.yaml
+**扩展字段 `target-group` / `no-resolve` 不会出现在最终 `rule-providers` 里**——`assembleRuleSet` 在构造输出 provider 对象时主动跳过这两个键。
 
-sources:
-  # ── 广告拦截 ──
-  - id: category-ads-all
-    source_kind: geosite
-    behavior: domain
-    format: yaml
-    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/category-ads-all.yaml"
-    target_group: ad_block
+### 7.3 prependRules 规范化（`normalizePrependRules`）
 
-  # ── AI 服务 ──
-  - id: category-ai-chat-!cn
-    source_kind: geosite
-    behavior: domain
-    format: yaml
-    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/category-ai-chat-!cn.yaml"
-    target_group: ai_service
-  - id: openai
-    source_kind: geosite
-    behavior: domain
-    format: yaml
-    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/openai.yaml"
-    target_group: ai_service
-  - id: anthropic
-    source_kind: geosite
-    behavior: domain
-    format: yaml
-    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/anthropic.yaml"
-    target_group: ai_service
-
-  # ── 视频 ──
-  - id: youtube
-    source_kind: geosite
-    behavior: domain
-    format: yaml
-    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/youtube.yaml"
-    target_group: youtube
-
-  # ── 教育 ──
-  - id: category-scholar-!cn
-    source_kind: geosite
-    behavior: domain
-    format: yaml
-    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/category-scholar-!cn.yaml"
-    target_group: education
-
-  # ── 云服务 ──
-  - id: aws
-    source_kind: geosite
-    behavior: domain
-    format: yaml
-    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/aws.yaml"
-    target_group: cloud
-  - id: azure
-    source_kind: geosite
-    behavior: domain
-    format: yaml
-    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/azure.yaml"
-    target_group: cloud
-  - id: cloudflare
-    source_kind: geosite
-    behavior: domain
-    format: yaml
-    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/cloudflare.yaml"
-    target_group: cloud
-
-  # ── 谷歌 ──
-  - id: google
-    source_kind: geosite
-    behavior: domain
-    format: yaml
-    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/google.yaml"
-    target_group: google
-  - id: google-ip
-    source_kind: geoip
-    behavior: ipcidr
-    format: yaml
-    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/google.yaml"
-    target_group: google
-    no_resolve: true
-
-  # ── 私有网络 ──
-  - id: private
-    source_kind: geosite
-    behavior: domain
-    format: yaml
-    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/private.yaml"
-    target_group: private
-  - id: private-ip
-    source_kind: geoip
-    behavior: ipcidr
-    format: yaml
-    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/private.yaml"
-    target_group: private
-    no_resolve: true
-
-  # ── 国内服务 ──
-  - id: geolocation-cn
-    source_kind: geosite
-    behavior: domain
-    format: yaml
-    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/geolocation-cn.yaml"
-    target_group: cn_service
-  - id: cn-ip
-    source_kind: geoip
-    behavior: ipcidr
-    format: yaml
-    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/cn.yaml"
-    target_group: cn_service
-    no_resolve: true
-
-  # ── 电报 ──
-  - id: telegram
-    source_kind: geosite
-    behavior: domain
-    format: yaml
-    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/telegram.yaml"
-    target_group: telegram
-  - id: telegram-ip
-    source_kind: geoip
-    behavior: ipcidr
-    format: yaml
-    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/telegram.yaml"
-    target_group: telegram
-    no_resolve: true
-
-  # ── 代码托管 ──
-  - id: github
-    source_kind: geosite
-    behavior: domain
-    format: yaml
-    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/github.yaml"
-    target_group: code_hosting
-
-  # ── 微软 ──
-  - id: microsoft
-    source_kind: geosite
-    behavior: domain
-    format: yaml
-    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/microsoft.yaml"
-    target_group: microsoft
-
-  # ── 苹果 ──
-  - id: apple
-    source_kind: geosite
-    behavior: domain
-    format: yaml
-    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/apple.yaml"
-    target_group: apple
-
-  # ── 推特 ──
-  - id: twitter
-    source_kind: geosite
-    behavior: domain
-    format: yaml
-    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/twitter.yaml"
-    target_group: twitter
-  - id: twitter-ip
-    source_kind: geoip
-    behavior: ipcidr
-    format: yaml
-    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/twitter.yaml"
-    target_group: twitter
-    no_resolve: true
-
-  # ── Meta 系 ──
-  - id: facebook
-    source_kind: geosite
-    behavior: domain
-    format: yaml
-    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/facebook.yaml"
-    target_group: meta_social
-  - id: instagram
-    source_kind: geosite
-    behavior: domain
-    format: yaml
-    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/instagram.yaml"
-    target_group: meta_social
-
-  # ── Discord ──
-  - id: discord
-    source_kind: geosite
-    behavior: domain
-    format: yaml
-    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/discord.yaml"
-    target_group: discord
-
-  # ── 其他社交 ──
-  - id: reddit
-    source_kind: geosite
-    behavior: domain
-    format: yaml
-    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/reddit.yaml"
-    target_group: social_other
-  - id: tiktok
-    source_kind: geosite
-    behavior: domain
-    format: yaml
-    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/tiktok.yaml"
-    target_group: social_other
-
-  # ── 流媒体 ──
-  - id: netflix
-    source_kind: geosite
-    behavior: domain
-    format: yaml
-    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/netflix.yaml"
-    target_group: netflix
-  - id: netflix-ip
-    source_kind: geoip
-    behavior: ipcidr
-    format: yaml
-    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/netflix.yaml"
-    target_group: netflix
-    no_resolve: true
-  - id: disney
-    source_kind: geosite
-    behavior: domain
-    format: yaml
-    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/disney.yaml"
-    target_group: disney
-
-  # ── 游戏 ──
-  - id: steam
-    source_kind: geosite
-    behavior: domain
-    format: yaml
-    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/steam.yaml"
-    target_group: steam
-  - id: epicgames
-    source_kind: geosite
-    behavior: domain
-    format: yaml
-    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/epicgames.yaml"
-    target_group: game_pc
-
-  # ── 开发工具 ──
-  - id: docker
-    source_kind: geosite
-    behavior: domain
-    format: yaml
-    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/docker.yaml"
-    target_group: dev_tools
-
-  # ── 非中国兜底 ──
-  - id: geolocation-!cn
-    source_kind: geosite
-    behavior: domain
-    format: yaml
-    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/geolocation-!cn.yaml"
-    target_group: non_cn
-
-  # ── 国内兜底（cn geosite 放在 non_cn 之后） ──
-  - id: cn
-    source_kind: geosite
-    behavior: domain
-    format: yaml
-    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/cn.yaml"
-    target_group: cn_service
-
-  # ── 自定义规则（用户维护，插在需要的位置） ──
-  - id: e-hentai
-    source_kind: custom
-    behavior: classical
-    format: yaml
-    url: "https://cdn.jsdelivr.net/gh/{OWNER}/proxy-config-hub@dist/assets/custom/e-hentai.yaml"
-    target_group: non_cn
-
-  # (完整列表见 clash-config-example.yaml 对应的所有服务)
-  # 最终 rules 以 MATCH,🐟 漏网之鱼 结尾（脚本自动追加）
+```
+rules = normalizePrependRules(inlineRules, groupDefinitions) 作为基础数组
+然后逐条 ruleProvider 追加 RULE-SET 规则
+最后追加一条 MATCH,<fallback.name>
 ```
 
-**排序说明**：
+规范化约束：
 
-- 声明顺序 = 规则匹配顺序，所见即所得
-- 新增规则直接插入 YAML 列表的对应位置即可，不需要分配号段
-- 同一 target_group 的多条 source 可以分散在列表各处（如 cn_service 的 geolocation-cn 在中部、cn 在末尾），由声明位置决定匹配先后
-- 如果两条 source 的位置有歧义，CI 不会报错（因为声明顺序是显式的），但维护者应自行确认顺序意图
+- `prependRules == null` → 返回空数组（容忍 YAML 空列表 / 省略字段）。
+- 否则必须是字符串数组；每条非空且非 `MATCH,*`。
+- `extractRuleTarget` 解析出目标组名：规则以 `,` 分割后倒数第一段；若倒数第一段是 `RULE_TRAILING_OPTIONS`（目前仅 `no-resolve`）中的值，则取倒数第二段。
+- 目标必须是 `BUILTIN_RULE_TARGETS`（`COMPATIBLE / DIRECT / DNS / PASS / REJECT / REJECT-DROP`）或 `groupDefinitions[*].name` 之一；否则抛 `Prepend rule references unknown target`。
 
-### 5.3 规则生成逻辑
+### 7.4 provider → RULE-SET
 
-```javascript
-// 文件扩展名映射（format 是 mihomo 字段，扩展名是实际文件名）
-const FORMAT_TO_EXT = { yaml: "yaml", text: "list", mrs: "mrs" };
-
-function buildRuleProviders(groupDefs) {
-  const providers = {};
-  const rules = [];
-  const seenIds = new Set();
-
-  // 遍历顺序 = 声明顺序 = 规则匹配顺序
-  for (const source of SOURCES_DATA) {
-    // 校验 id 唯一性
-    if (seenIds.has(source.id)) {
-      throw new Error(`Duplicate source id: ${source.id}`);
-    }
-    seenIds.add(source.id);
-
-    // 校验 target_group 已注册
-    const groupName = groupDefs[source.target_group]?.name;
-    if (!groupName) {
-      throw new Error(`Unknown target_group: ${source.target_group} (source: ${source.id})`);
-    }
-
-    // 注册 rule-provider（缓存路径使用真实文件扩展名）
-    const ext = FORMAT_TO_EXT[source.format] || source.format;
-    providers[source.id] = {
-      type: "http",
-      behavior: source.behavior,
-      url: source.url,
-      path: `./ruleset/${source.id}.${ext}`,
-      format: source.format,
-      interval: 86400
-    };
-
-    // 生成 rule（顺序由遍历顺序保证）
-    rules.push(source.no_resolve
-      ? `RULE-SET,${source.id},${groupName},no-resolve`
-      : `RULE-SET,${source.id},${groupName}`
-    );
-  }
-
-  // 追加 MATCH 兜底
-  rules.push(`MATCH,${groupDefs.fallback.name}`);
-  return { providers, rules };
+```js
+for (const [providerId, providerDefinition] of Object.entries(ruleProviders)) {
+  const targetGroup = groupDefinitions[providerDefinition["target-group"]];
+  rules.push(providerDefinition["no-resolve"]
+    ? `RULE-SET,${providerId},${targetGroup.name},no-resolve`
+    : `RULE-SET,${providerId},${targetGroup.name}`);
 }
 ```
+
+顺序 = `ruleProviders.yaml` 中的 YAML 对象键声明顺序，并等于运行时匹配顺序（先匹配先生效）。
+
+### 7.5 fallback MATCH
+
+函数返回前断言 `groupDefinitions[FALLBACK_GROUP_ID].name` 存在，失败抛错；随后追加 `MATCH,${fallback.name}`。
+
+### 7.6 规则格式选择
+
+当前仓库全部 `format: mrs`，URL 指向 MetaCubeX `meta-rules-dat` 的 `meta` 分支 `.mrs` 二进制文件。选择 mrs 的理由：
+
+- 加载速度明显快于 yaml 明文。
+- 规则体积更小，对缓存和带宽都更友好。
+- v1 不追求"规则可读性"——规则内容以上游为准，本仓库只决定如何组装。
+
+如果未来需要调试某条规则，可以把个别 provider 切回 `format: yaml` + 同路径的 `.yaml` 文件；字段其余保持不变。
 
 ---
 
-## 六、基础配置与 DNS
+## 八、运行时预设（`runtime-preset`）
 
-### 6.1 架构：按需选入口，对内模块化
+`scripts/override/lib/runtime-preset.js:applyRuntimePreset(config)` 就地修改传入的 config（返回同一引用）。处理规则：
 
-当前仓库公开主入口是 `main.js`；如果后续补齐轻量入口，它们也会复用同一套 runtime source pipeline。运行时固定值现在以 YAML 声明在 `definitions/mihomo-preset/` 下，构建后生成 `scripts/config/mihomo-preset/`，运行时只保留注入逻辑：
+| 分段 | 合并策略 |
+|------|----------|
+| `base` / `profile` / `geodata` | 无条件覆盖：所有字段逐键 `cloneData` 写入 |
+| `sniffer` | 无条件覆盖：`config.sniffer = cloneData(snifferConfig)` |
+| `dns` | 无条件覆盖：`config.dns = cloneData(dnsConfig)` |
+| `allow-lan` | 仅当 `config["allow-lan"] === undefined` 时注入 `false` |
+| `tun` | 仅当 `config.tun` falsy 时注入预设 |
 
-```
-definitions/mihomo-preset/
-├── base.yaml
-├── dns.yaml
-├── geodata.yaml
-├── profile.yaml
-├── sniffer.yaml
-└── tun.yaml
+**设计理由**：
 
-scripts/config/mihomo-preset/
-├── base.js
-├── dns.js
-├── geodata.js
-├── profile.js
-├── sniffer.js
-└── tun.js
+- DNS / sniffer / tun / geodata 的正确性对路由有决定性影响，用户部分覆盖极易导致泄漏或路由失效，因此这些分段采取"订阅工具自带什么，我直接覆盖"的策略。
+- `allow-lan` 与 `tun` 牵涉本地网络栈，用户如果已经在订阅工具里手动配置就应被保留。
 
-scripts/override/lib/
-├── utils.js               # 共享工具（cloneData）
-├── runtime-preset.js      # 注入运行时预设
-├── proxy-groups.js        # 地区识别、节点分类、策略组生成（区域/占位符从 YAML 加载）
-├── rule-assembly.js       # rule-providers + rules 组装（导出 extractRuleTarget）
-├── proxy-chains.js        # 链式代理（chains.yaml 驱动）：构建 chain_group / transit_group，并为落地节点注入 dialer-proxy
-└── validate-output.js     # 输出校验（引用 extractRuleTarget）
-```
-
-构建时由 `tools/yaml-to-js.js` 先把 YAML 编译为 `scripts/config/` 下的 JS 模块，再由 `build.js` 打包覆写入口，产出自包含脚本。
-
-设计上保留两个轻量替代入口：`routing-only.js` **只生成动态策略组和分流规则**，不碰 DNS / 端口 / sniffer / geodata 等运行时字段，适用于已有完整基础配置只想补上分组和规则的场景；`dns-leak-fix.js` **只注入 DNS 防泄漏配置**，不生成策略组和分流规则，适用于已有完整配置只想补 DNS 的场景。
-
-### 6.2 字段处理策略（按入口分级）
-
-| 策略 | 字段 | main.js | routing-only.js | dns-leak-fix.js |
-|------|------|---------|-----------------|-----------------|
-| **强制覆写** | proxy-groups, rule-providers, rules | ✅ | ✅ | — |
-| **强制覆写** | dns | ✅ | — | ✅ |
-| **强制覆写** | mixed-port, mode, log-level, unified-delay, tcp-concurrent, find-process-mode, profile, sniffer, geodata-mode, geo-auto-update, geodata-loader, geo-update-interval, geox-url | ✅ | — | — |
-| **保留上游** | proxies | ✅ | ✅ | ✅ |
-| **保留上游** | proxy-providers | ✅ | ✅ | ✅ |
-| **缺失时注入** | allow-lan (false), tun (enable: false) | ✅ | — | — |
-
-### 6.3 运行时源数据（definitions/mihomo-preset）
-
-运行时固定值已经拆成 6 份 YAML 源文件：
-
-```text
-definitions/mihomo-preset/
-├── base.yaml      # mixed-port / mode / log-level / tcp-concurrent / find-process-mode
-├── profile.yaml   # profile.store-selected / profile.store-fake-ip
-├── geodata.yaml   # geodata-mode / geo-auto-update / geodata-loader / geox-url
-├── dns.yaml       # 完整 DNS 防泄漏配置
-├── sniffer.yaml   # 协议嗅探配置
-└── tun.yaml       # 缺失时注入的默认 tun 配置
-```
-
-构建后这些 YAML 会被编译成 `scripts/config/mihomo-preset/*.js`，由 `applyRuntimePreset()` 统一消费。
-
-### 6.4 DNS 预设（definitions/mihomo-preset/dns.yaml）
-
-`dns.yaml` 是 DNS 防泄漏的声明式来源。当前结构示意如下：
-
-```yaml
-enable: true
-listen: "127.0.0.1:5335"
-enhanced-mode: fake-ip
-fake-ip-range: 198.18.0.1/16
-
-default-nameserver:
-  - 180.76.76.76
-  - 182.254.118.118
-  - 119.29.29.29
-  - 223.5.5.5
-
-nameserver:
-  - 180.76.76.76
-  - 119.29.29.29
-  - 180.184.1.1
-  - 223.5.5.5
-  - https://223.6.6.6/dns-query#h3=true
-  - https://dns.alidns.com/dns-query
-  - https://doh.pub/dns-query
-
-fallback:
-  - https://000000.dns.nextdns.io/dns-query#h3=true
-  - https://public.dns.iij.jp/dns-query
-  - https://101.101.101.101/dns-query
-  - https://208.67.220.220/dns-query
-  - tls://8.8.4.4
-  - tls://1.0.0.1:853
-  - https://cloudflare-dns.com/dns-query
-  - https://dns.google/dns-query
-
-fallback-filter:
-  geoip: true
-  geoip-code: CN
-```
-
-### 6.5 覆写脚本主函数（main.js）
-
-```javascript
-// main.js — full-profile 入口
-function main(config) {
-  // ── 先应用 runtime preset ──
-  applyRuntimePreset(config);
-
-  // ── 输入契约检查（无节点时仅跳过路由部分） ──
-  const proxies = config.proxies || [];
-  const namedProxies = proxies.filter(p => typeof p?.name === "string" && p.name.length > 0);
-  if (namedProxies.length === 0) {
-    console.log("[override] ERROR: config.proxies 为空，无法生成策略组和分流规则");
-    console.log("[override] 已应用 runtime preset，跳过 proxy-groups、rule-providers 和 rules 生成");
-    return config;
-  }
-
-  // ── 动态策略组生成 ──
-  const allProxyNames = namedProxies.map(p => p.name);
-  const regionMap = classifyProxies(namedProxies);
-  const regionGroups = buildRegionGroups(regionMap);
-  const regionGroupNames = regionGroups.map(g => g.name);
-  const controlGroups = buildControlGroups(allProxyNames);
-  const proxySelect = buildProxySelect(regionGroupNames);
-  const businessGroups = buildBusinessGroups(regionGroupNames, GROUP_DEFINITIONS);
-
-  config["proxy-groups"] = [proxySelect, ...controlGroups, ...regionGroups, ...businessGroups];
-
-  // ── 规则生成 ──
-  const { providers, rules } = buildRuleProviders(GROUP_DEFINITIONS);
-  config["rule-providers"] = providers;
-  config.rules = rules;
-
-  // ── 运行时校验 ──
-  validate(config);
-
-  return config;
-}
-
-// routing-only.js — 纯路由入口
-function main(config) {
-  // ── 输入契约检查（routing-only 不碰 DNS，原样返回） ──
-  const proxies = config.proxies || [];
-  const namedProxies = proxies.filter(p => typeof p?.name === "string" && p.name.length > 0);
-  if (namedProxies.length === 0) {
-    console.log("[override] ERROR: config.proxies 为空，无法生成策略组和分流规则");
-    console.log("[override] routing-only 入口不碰 DNS 和运行时字段，原样返回");
-    return config;  // 不改写任何字段
-  }
-
-  // ── 动态策略组生成（同 main.js） ──
-  const allProxyNames = namedProxies.map(p => p.name);
-  const regionMap = classifyProxies(namedProxies);
-  const regionGroups = buildRegionGroups(regionMap);
-  const regionGroupNames = regionGroups.map(g => g.name);
-  const controlGroups = buildControlGroups(allProxyNames);
-  const proxySelect = buildProxySelect(regionGroupNames);
-  const businessGroups = buildBusinessGroups(regionGroupNames, GROUP_DEFINITIONS);
-
-  config["proxy-groups"] = [proxySelect, ...controlGroups, ...regionGroups, ...businessGroups];
-
-  // ── 规则生成 ──
-  const { providers, rules } = buildRuleProviders(GROUP_DEFINITIONS);
-  config["rule-providers"] = providers;
-  config.rules = rules;
-
-  // ── 运行时校验 ──
-  validate(config);
-
-  return config;
-}
-```
+`cloneData` 在 `scripts/override/lib/utils.js`，实现为 `JSON.parse(JSON.stringify(...))`，是项目中唯一的深拷贝入口。由于 YAML 载荷必然是 JSON 可序列化的，该实现对所有 preset 数据有效。
 
 ---
 
-## 七、仓库目录结构
+## 九、覆写脚本主函数
+
+### 9.1 入口契约
+
+```js
+// dist/scripts/override/main.js 暴露：globalThis.main 与 module.exports.main
+function main(config = {}) { ... return workingConfig; }
+```
+
+输入：`{ proxies: Array<{ name: string, ... }>, ...任意其它 Mihomo 字段 }`。订阅工具会先帮我们解析完节点列表，`main` 接到的 `config` 至少包含 `proxies`。
+
+输出：原对象被就地扩充后返回（同一引用）。
+
+### 9.2 模块加载期
+
+- `validateChainsSchema(chainDefinitions, transitDefinitions)` 在 `main` 定义**之外**执行一次，让 YAML schema 错误在脚本加载时就抛出，而不是延迟到首次调用 `main`。
+
+### 9.3 运行时 8 步 pipeline
+
+| # | 操作 | 关键对象 |
+|---|------|----------|
+| 1 | `applyRuntimePreset(workingConfig)` | 写入 base/profile/geodata/sniffer/dns/(tun)/(allow-lan) |
+| 2 | `namedProxies = getNamedProxies(workingConfig.proxies)` | 若为空 → 打印错误日志并返回（跳过下列所有步骤） |
+| 3 | `{ chainGroups, remainingProxies } = buildChainGroups(namedProxies, chainDefinitions)` | 抽出落地节点 |
+| 4 | `{ groups: transitGroups, idToName: transitIdToName } = buildTransitGroups(remainingProxies, transitDefinitions)` | 抽出中转节点；计算 `chainsEffective` |
+| 5 | `workingConfig["proxy-groups"] = buildProxyGroups(remainingProxies, groupDefinitions, { chainGroups: chainsEffective ? chainGroups : [], transitGroups: chainsEffective ? transitGroups : [] })` | 生成策略组；`chainsEffective=false` 时 chain/transit 数组置空，让 `@chain-groups` 展开为空 |
+| 6 | `applyProxyChains(workingConfig, chainDefinitions, transitIdToName)`（仅 `chainsEffective` 时） | 注入 `dialer-proxy` |
+| 7 | `const { providers, rules } = assembleRuleSet(groupDefinitions, ruleProviders, inlineRulesConfig)` → 写回 `config["rule-providers"]` 与 `config.rules` | |
+| 8 | `validateOutput(workingConfig, groupDefinitions, { chainDefinitions, transitDefinitions })` | 生产环境下如果任一断言不过，`main` 直接抛错（fail-fast） |
+
+### 9.4 空节点兜底
+
+当订阅解析后 `namedProxies.length === 0`：
+
+```
+[override] ERROR: config.proxies 为空，无法生成策略组和分流规则
+[override] 已应用 runtime preset，跳过 proxy-groups、rule-providers 和 rules 生成
+```
+
+此时只保留第 1 步的结果，不生成 `proxy-groups` / `rule-providers` / `rules`。下游 Mihomo 会因为缺路由规则跑不起来，但至少 DNS/TUN 预设已注入——这让用户立刻看到"节点列表为空"而不是静默出错。
+
+---
+
+## 十、校验体系
+
+三层校验：
+
+### 10.1 构建时（`tools/yaml-to-js.js`）
+
+- **目录布局**：`validateCanonicalLayout` 拒绝 `definitions/` 下不认识的子目录。
+- **placeholders 模式**：`validatePlaceholdersSchema` 按 §3.2 列举的 5 项约束校验 `placeholders.yaml`。
+- **交叉引用**：加载 `groupDefinitions.yaml` 的 ID 集合后，验证 `reserved` / `fallback` / 每个 `kind=ref` 的 `target` 都在该集合中。
+- **历史目录清理**：`LEGACY_GENERATED_DIRS = ["runtime"]`，旧的 `scripts/config/runtime/` 目录每次构建都会被清掉，避免旧产物干扰。
+
+### 10.2 构建后（`tools/verify-main.js`）
+
+`npm run verify` 会先 `npm run build` 再跑 `tools/verify-main.js`。测试集合包含 30+ 用例，覆盖：
+
+- **单元**：`buildChainGroups` / `buildTransitGroups` / `applyProxyChains` / `validateChainsSchema` 的基本、边界、错误分支；`buildProxyGroups` 的 extras 注入顺序；`@chain-groups` 占位符展开；`remainingProxies` 从 `@all-nodes` 剔除落地节点。
+- **端到端**：
+  - `testBundlePositivePath` —— 加载 bundle，驱动 `main`，比对 rule-providers 剥离 `target-group`/`no-resolve` 后与生成配置一致；`rules = prependRules + RULE-SET[] + MATCH` 顺序与数量严格匹配；bundle 不得包含历史路径字符串。
+  - `testBundleChainsEndToEnd` —— 用 `chains.yaml` 的声明动态派生期望，验证 bundle 内的 chain/transit 组与 dialer-proxy 注入。
+  - `testRuntimeInjectionSemantics` / `testNoProxyFallback` —— 覆盖 §8 的条件注入与空节点兜底。
+- **构建管线**：`testBuildYamlModules*` 用临时工作区修改 `placeholders.yaml`（删字段、改 fallback、改 ref target），断言构建失败且错误信息定位。
+- **生成产物扫描**：`assertGeneratedFiles` 扫描 `definitions/*/*.yaml` 并断言对应的 `scripts/config/*/*.js` 存在；同时拒绝 `scripts/config/assets` 与 `scripts/config/runtime` 的产物泄漏。
+- **自定义资产**：`assertCustomAssetCopy` 比对 `definitions/assets/custom/_template.yaml` 与 `dist/assets/custom/_template.yaml` 逐字节一致。
+
+### 10.3 运行时（`scripts/override/lib/validate-output.js`）
+
+`validateOutput(config, groupDefinitions, chainsContext)` 在 `main` 每次返回前执行，断言集合：
+
+1. fallback 组必须在 `groupDefinitions` 中存在且有 `name`。
+2. `proxy-groups` 与 `rules` 都非空。
+3. `groupDefinitions` 中的每个 `name` 必须出现在最终 `proxy-groups` 中（防止因代码 bug 漏生成）。
+4. 每个组的 `proxies` 非空，且不得包含未展开的 `@` 占位符。
+5. 链式代理启用时：§7.2 与 §7.3（见 §6.8）。
+6. 所有 `rules[i]` 是字符串；`RULE-SET,...` 的 target 在 `proxy-groups.name` 集合中；`MATCH` 只能在末位且必须 `MATCH,<fallback.name>`。
+7. 所有 `proxies[i]["dialer-proxy"]`（若存在）必须指向一个现存的 `proxy-group.name`。
+
+---
+
+## 十一、仓库目录结构
+
+### 11.1 源树
 
 ```
 proxy-config-hub/
-│
-├── README.md                             # 仓库说明、快速上手、URL 引用指南
-│
-├── scripts/
-│   ├── override/                         # 覆写脚本（Mihomo 为主）
-│   │   ├── main.js                       # Full-profile 覆写入口
-│   │   └── lib/                          # runtime preset / proxy-groups / rule-assembly / validate-output
-│   │
-│   ├── sub-store/                        # 功能脚本（Sub-Store 专用）
-│   │   └── rename.js
-│   │
-│   └── config/
-│       ├── mihomo-preset/                # 从 definitions/mihomo-preset/ 生成
-│       ├── proxy-groups/                 # 从 definitions/proxy-groups/ 生成
-│       └── rules/                        # 从 definitions/rules/ 生成
+├── build.js
+├── package.json
+├── CLAUDE.md
 │
 ├── definitions/
-│   ├── mihomo-preset/                    # Mihomo 顶层键预设 YAML（base/dns/sniffer/tun/profile/geodata）
-│   ├── proxy-groups/                     # 策略组与链式代理构建数据 YAML（groupDefinitions/regions/placeholders/chains）
-│   ├── rules/                            # 活跃规则装配 YAML（inlineRules/ruleProviders）
+│   ├── mihomo-preset/
+│   │   ├── base.yaml
+│   │   ├── dns.yaml
+│   │   ├── geodata.yaml
+│   │   ├── profile.yaml
+│   │   ├── sniffer.yaml
+│   │   └── tun.yaml
+│   ├── proxy-groups/
+│   │   ├── chains.yaml
+│   │   ├── groupDefinitions.yaml
+│   │   ├── placeholders.yaml
+│   │   └── regions.yaml
+│   ├── rules/
+│   │   ├── inlineRules.yaml
+│   │   └── ruleProviders.yaml
 │   └── assets/
-│       └── custom/                       # 自定义规则模板/资源（仅复制到 dist）
+│       └── custom/
+│           └── _template.yaml            # 不编译，仅复制
 │
-├── templates/
-│   └── mihomo/
-│       └── config-example.yaml           # 覆写后的预期产物示例
+├── scripts/
+│   ├── override/
+│   │   ├── main.js
+│   │   └── lib/
+│   │       ├── proxy-chains.js           # 链式代理构建 + dialer-proxy 注入
+│   │       ├── proxy-groups.js           # 区域/保留/自定义组构建；占位符展开
+│   │       ├── rule-assembly.js          # prepend + RULE-SET + MATCH
+│   │       ├── runtime-preset.js         # base/profile/geodata/sniffer/dns/(tun)/(allow-lan)
+│   │       ├── utils.js                  # cloneData
+│   │       └── validate-output.js        # 运行时断言
+│   ├── sub-store/
+│   │   └── rename.js                     # Sub-Store 专用节点改名脚本
+│   └── config/                           # 全量由 yaml-to-js 生成，禁止手改
 │
 ├── tools/
 │   ├── lib/
-│   │   ├── fs-helpers.js                 # 共享文件系统工具
-│   │   ├── paths.js                      # 路径常量、命名空间配置、资产映射表
-│   │   └── bundle-runtime.js             # Bundle 加载/执行/模板处理
-│   ├── yaml-to-js.js                     # 将 definitions/ 编译为 scripts/config/
-│   ├── generate-example-config.js        # 生成完整示例配置
-│   ├── check-rule-overlap.js             # 规则重叠检测
-│   └── verify-main.js                    # 打包/运行时校验（动态发现产物）
+│   │   ├── bundle-runtime.js             # VM 加载 bundle 并执行 main（供 verify/example 用）
+│   │   ├── fs-helpers.js                 # pathExists / listEntries / copyDirectory / copyFile
+│   │   └── paths.js                      # REPO_ROOT / DEFINITIONS_DIR / COPY_ASSETS 等
+│   ├── check-rule-overlap.js             # 远程拉取规则做域/IP 重叠分析
+│   ├── generate-example-config.js        # npm run example:config
+│   ├── verify-main.js                    # npm run verify 的真正实现
+│   └── yaml-to-js.js                     # definitions → scripts/config
+│
+├── templates/
+│   └── mihomo/
+│       └── config-example.yaml           # verify-main 和 example:config 用作模板输入
+│
+├── docs/
+│   └── DESIGN.md                         # 本文件
 │
 └── .github/
     └── workflows/
-        └── build-dist.yml                # 构建 → 验证 → 推送 dist 分支
+        └── build.yaml                    # CI 工作流（注意是 .yaml）
 ```
 
-### 7.1 构建产物（dist 分支）
+### 11.2 发布目录（`dist/` 分支）
 
 ```
 dist/
 ├── scripts/
 │   ├── override/
-│   │   └── main.js                       # 已内联配置与依赖的自包含脚本
+│   │   └── main.js                       # esbuild IIFE bundle
 │   └── sub-store/
 │       └── rename.js
-└── assets/
-    └── custom/
-        └── _template.yaml
+├── assets/
+│   └── custom/
+│       └── _template.yaml                # 由 build.js 从 definitions/assets/custom/ 复制
+└── example-full-config.yaml              # 可选；由 npm run example:config 生成，非 CI 产物
 ```
 
-### 7.2 用户引用 URL
+### 11.3 用户引用 URL
 
 ```
-# 覆写脚本 — Full-profile（Mihomo Party / Clash Verge / Sub-Store）
+# 覆写脚本（Mihomo Party / Clash Verge Rev / Sub-Store）
 https://cdn.jsdelivr.net/gh/{OWNER}/proxy-config-hub@dist/scripts/override/main.js
 
-# 功能脚本（Sub-Store 节点操作）
+# Sub-Store 节点改名
 https://cdn.jsdelivr.net/gh/{OWNER}/proxy-config-hub@dist/scripts/sub-store/rename.js
 
 # 自定义规则集
-https://cdn.jsdelivr.net/gh/{OWNER}/proxy-config-hub@dist/assets/custom/<文件名>
+https://cdn.jsdelivr.net/gh/{OWNER}/proxy-config-hub@dist/assets/custom/<filename>
 ```
 
 ---
 
-## 八、CI/CD 流程
+## 十二、CI/CD
+
+`.github/workflows/build.yaml`：
 
 ```
-push to main
-  └─→ .github/workflows/build-dist.yml
-        ├─ validate:
-        │   ├─ npm run build
-        │   ├─ npm run verify
-        │   └─ 生成 scripts/config/mihomo-preset/*.js、proxy-groups/*.js 与 rules/*.js
-        ├─ bundle:
-        │   ├─ esbuild 打包 scripts/override/main.js
-        │   ├─ 复制 scripts/sub-store/*.js
-        │   └─ 复制 definitions/assets/custom/* → dist/assets/custom/
-        └─ deploy: 推送 dist 分支
+push to main / workflow_dispatch
+  └─ jobs.build (ubuntu-latest, Node 24)
+        ├─ npm ci
+        ├─ npm run build      # rules:build + esbuild
+        ├─ npm run verify     # 会重新执行一次 build（幂等），再跑 verify-main
+        ├─ peaceiris/actions-gh-pages@v4
+        │     publish_dir=dist, publish_branch=dist, force_orphan=true
+        └─ curl https://purge.jsdelivr.net/gh/<repo>@dist/<每个文件> （失败仅 WARN）
 ```
 
-**关于规则的运行时依赖**：rule-provider 中指向 MetaCubeX 的 URL 是运行时第三方依赖——mihomo 在运行时直接从该 URL 拉取规则。本仓库不对第三方 URL 的运行时可用性负责。如果需要完全收口交付面，未来可在 CI 中同步远程规则到本仓库 dist 分支，使所有 URL 都指向自己控制的 CDN。v1 不做此优化。
+注：`npm run verify` 的定义是 `npm run build && npm run verify:main`，所以 CI 里 `npm run build` + `npm run verify` 会跑两次 build；这不是性能问题（esbuild 很快），当前接受该冗余。
+
+`rule-provider` 引用的 MetaCubeX URL 是运行时第三方依赖；如果未来要完全自控交付面，可在 CI 中同步远程规则到自己的 CDN，并改写 `ruleProviders.yaml` 的 `url`。v1 不做此优化。
 
 ---
 
-## 九、自定义规则集模板
+## 十三、保留的设计决策与理由
+
+| 决策 | 理由 |
+|------|------|
+| 所有声明都放 `definitions/*.yaml`，禁止手改 `scripts/config/` | 避免 JS 常量与 YAML 文档互相漂移；新区域/新组只改 YAML |
+| 占位符用 `@`-前缀 + 统一 `placeholders.yaml` 表 | 把"引用保留组"与"引用运行时上下文"两类展开统一到同一查找表；新增不改代码 |
+| `buildProxyGroups` 接受 `{chainGroups, transitGroups}` 作为 extras | chain/transit 是运行时产物（依赖节点列表），不能放进 `groupDefinitions`，但需要按固定顺序插入到策略组输出里 |
+| `chainsEffective` 退化而不是抛错 | 订阅解析出来的节点不含 landing（或全是 landing）是常态；链路跑不起来时应该退化为普通配置而不是整体失败 |
+| `validateChainsSchema` 在模块加载期跑 | 区分"YAML 写错"（启动即崩）与"运行期成员过滤空"（WARN）两种场景 |
+| `validateOutput` 在 `main` 返回前兜底 | 即使未来某个 `buildXxx` 有 bug，坏掉的配置不会静默发布给用户 |
+| `format: mrs` 优先 | 加载速度 / 带宽占用都更优；调试时可按需切回 yaml |
+| runtime preset 中 DNS/sniffer 无条件覆盖，`allow-lan`/`tun` 条件注入 | DNS / sniffer 错配直接泄漏；`allow-lan`/`tun` 涉及本地网络栈，用户预设应被尊重 |
+| 声明顺序 = 规则匹配顺序 | `ruleProviders.yaml` 与 `inlineRules.yaml` 都按 YAML 顺序生效，无全局 order 字段 |
+| 脚本不联网 | 规则拉取全部交给 Mihomo 运行时；脚本自身是纯函数 |
+
+---
+
+## 附录 A：自定义规则集模板
+
+`definitions/assets/custom/_template.yaml` 被原样复制到 `dist/assets/custom/_template.yaml`：
 
 ```yaml
-# Source: definitions/assets/custom/_template.yaml
-# Published as: dist/assets/custom/_template.yaml
-#   (referenced via raw.githubusercontent.com/<owner>/<repo>/dist/assets/custom/<filename>)
-#
 # 文件名即规则集 ID，使用 classical behavior
 # 支持的规则类型：DOMAIN, DOMAIN-SUFFIX, DOMAIN-KEYWORD, IP-CIDR, IP-CIDR6
 #
@@ -1054,26 +673,15 @@ payload:
   - IP-CIDR,1.2.3.0/24,no-resolve
 ```
 
----
-
-## 十、v1 保留的设计决策与理由
-
-| 决策 | 理由 |
-|------|------|
-| 稳定 ID 层（GROUP_DEFINITIONS + target_group） | 避免策略组名漂移，支持重命名而不影响 sources.yaml |
-| 业务组不直接挂节点 | 新增/删除节点只影响地区组和控制组，业务组零维护 |
-| definitions/mihomo-preset + scripts/config/mihomo-preset | 运行时固定值声明化，编辑源数据而不是手改脚本常量 |
-| 三入口分级（main / routing-only / dns-leak-fix） | main.js 是 full-profile 一键搞定；routing-only.js 只管分组和规则不碰运行时模板；dns-leak-fix.js 最轻量只补 DNS。用户按需选一个 URL |
-| 声明顺序 = 规则顺序 | 所见即所得，不需要心算号段或 phase 映射 |
-| mode: full/direct/reject 三值 | v1 最小模型，覆盖所有已知场景；不够用时升级为 allowed_targets |
+在 `ruleProviders.yaml` 中引用时 `url` 指向 `https://cdn.jsdelivr.net/gh/<owner>/proxy-config-hub@dist/assets/custom/<filename>`，`format: yaml`（因为自定义模板是 yaml 明文），`behavior: classical`。
 
 ---
 
-## 十一、建议实施顺序
+## 附录 B：已知局限与演进方向
 
-1. **声明式源数据 + 核心模块**：先落地 `definitions/mihomo-preset/*.yaml`、`definitions/proxy-groups/*.yaml`、`definitions/rules/*.yaml`、`runtime-preset.js`、`proxy-groups.js` 和规则装配器，这是所有入口的共享基础
-2. **`rule-builder.js` + `validator.js`**：规则生成和校验逻辑，可独立单测
-3. **`main.js` 覆写入口**：先保证 full-profile 主链路稳定，再视需要拆分轻量入口
-4. **构建链**：`tools/yaml-to-js.js` + `build.js`，先编译声明式源数据，再打包发布脚本
-5. **CI/CD**：`build-dist.yml` 负责构建、验证和发布 dist 分支
-6. **功能脚本**（Sub-Store 节点操作）：当前为 `rename.js`，与覆写脚本独立维护
+- **区域识别依赖节点名**：纯 IP / 编号命名的节点会全部落入 `OTHER`。可考虑 v2 基于 rtt / GeoIP 探测，但脚本不联网的约束意味着需要订阅工具辅助。
+- **自动测速组节点数暴涨**：`auto_select` 当前 `proxies: ["@all-nodes"]`，上百节点会产生明显测速流量。可改为"每区域各自 url-test + 顶层 fallback"。
+- **单一入口 `main.js`**：原设计里的 `routing-only.js` / `dns-leak-fix.js` 尚未实现；如有需求，二者都可以复用 `lib/*` 模块，入口文件只决定跳过哪些阶段（前者跳过 runtime preset，后者只保留 dns）。
+- **Sub-Store 兼容性**：`module.exports = { main }` 兼容 Sub-Store 的 CommonJS loader，但未针对其特有运行环境（如 iOS JSC）做语法降级；若用户反馈负向后行断言失败，需要在 `regions.yaml` 用非负向断言重写正则。
+- **规则缺失回退**：目前假设上游 `meta-rules-dat` 总能覆盖所需规则。若某条上游规则被删除，需要在本仓库 `definitions/assets/custom/` 下补一个本地规则集，并在 `ruleProviders.yaml` 里把 URL 切到自己的 CDN。
+- **MATCH 前可扩展插入点**：`rules = prependRules + RULE-SET[] + MATCH` 三段已固定；如果需要"在 RULE-SET 之后、MATCH 之前"再插入自定义规则，需要扩展 `inlineRules.yaml` 为 `{ prependRules, appendRules }` 结构并在 `assembleRuleSet` 中增加第三段拼接。
