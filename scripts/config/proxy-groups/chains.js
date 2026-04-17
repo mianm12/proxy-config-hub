@@ -3,7 +3,7 @@ export default {
     {
       "id": "transit",
       "name": "🔀 中转",
-      "transit_pattern": "自建",
+      "transit_pattern": "Transit|中转|自建",
       "flags": "i",
       "type": "select"
     }
@@ -12,7 +12,7 @@ export default {
     {
       "id": "landing",
       "name": "🚪 落地",
-      "landing_pattern": "Relay|落地",
+      "landing_pattern": "Relay|落地|^(?=.*直连)(?=.*家宽)",
       "flags": "i",
       "type": "select",
       "entry": "transit"
