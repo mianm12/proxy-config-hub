@@ -187,5 +187,12 @@ export default [
     "icon": "🇧🇷",
     "pattern": "🇧🇷|巴西|Brazil",
     "flags": "i"
+  },
+  {
+    "id": "OTHER",
+    "name": "其他",
+    "icon": "🏳️",
+    "pattern": ".*",
+    "flags": ""
   }
 ];

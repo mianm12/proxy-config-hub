@@ -133,3 +133,10 @@
   icon: "🇧🇷"
   pattern: 🇧🇷|巴西|Brazil
   flags: i
+# 兜底区域：所有未命中前面具体国家正则的节点都会落入此组。
+# 由于采用 first-match-wins，OTHER 必须放在数组最后，且 pattern 用 .* 全匹配。
+- id: OTHER
+  name: 其他
+  icon: "🏳️"
+  pattern: ".*"
+  flags: ""
