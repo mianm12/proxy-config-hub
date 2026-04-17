@@ -651,8 +651,8 @@ function testBuildTransitGroupsDuplicateId() {
 }
 
 /**
- * 校验 buildTransitGroups:include_direct=true 且 type 非 url-test 时，
- * proxies 末尾追加字符串 "DIRECT";缺省 / false 时不追加。
+ * 校验 buildTransitGroups：include_direct=true 且 type 非 url-test 时，
+ * proxies 末尾追加字符串 "DIRECT"；缺省 / false 时不追加。
  * @returns {void}
  */
 function testBuildTransitGroupsAppendsDirectForSelect() {
@@ -690,7 +690,7 @@ function testBuildTransitGroupsAppendsDirectForSelect() {
 }
 
 /**
- * 校验 buildTransitGroups:include_direct=true 且 type=url-test 时，
+ * 校验 buildTransitGroups：include_direct=true 且 type=url-test 时，
  * 不追加 DIRECT 且输出 WARN 日志。
  * @returns {void}
  */
@@ -734,7 +734,7 @@ function testBuildTransitGroupsSkipsDirectForUrlTest() {
 }
 
 /**
- * 校验 buildTransitGroups:transit_pattern 过滤后成员为空时，
+ * 校验 buildTransitGroups：transit_pattern 过滤后成员为空时，
  * 即便 include_direct=true 也仍然跳过（DIRECT 不挽救空组）。
  * @returns {void}
  */
@@ -742,7 +742,9 @@ function testBuildTransitGroupsEmptyMembersSkippedEvenWithIncludeDirect() {
   const remaining = [{ name: "Sample-HK-01" }];
   const { groups, idToName } = buildTransitGroups(remaining, [
     {
-      id: "jp",
+      // 用 jp-direct 与 testBuildTransitGroupsEmptyMembersSkipped 的 id="jp" 区分，
+      // 避免两条 `transit_group jp 过滤后无可用节点` WARN 在同一次 verify 输出中重名难辨。
+      id: "jp-direct",
       name: "🇯🇵 T-JP",
       transit_pattern: "Japan",
       flags: "i",
@@ -752,7 +754,7 @@ function testBuildTransitGroupsEmptyMembersSkippedEvenWithIncludeDirect() {
   ]);
 
   assert.equal(groups.length, 0, "空成员 + include_direct=true 仍应跳过");
-  assert.equal(idToName.has("jp"), false, "被跳过的 transit 不进入 idToName");
+  assert.equal(idToName.has("jp-direct"), false, "被跳过的 transit 不进入 idToName");
 }
 
 /**
@@ -907,8 +909,8 @@ function testValidateChainsSchemaEmptyArraysAccepted() {
 }
 
 /**
- * 校验 validateChainsSchema:transit_group.include_direct 若存在必须为布尔。
- * undefined / true / false 通过;null / 字符串 / 数字等一律抛错。
+ * 校验 validateChainsSchema：transit_group.include_direct 若存在必须为布尔。
+ * undefined / true / false 通过；null / 字符串 / 数字等一律抛错。
  * @returns {void}
  */
 function testValidateChainsSchemaAcceptsBooleanIncludeDirect() {
@@ -954,7 +956,7 @@ function testValidateChainsSchemaAcceptsBooleanIncludeDirect() {
 }
 
 /**
- * 校验 validateChainsSchema:transit_group.include_direct 非布尔值(含 null / 字符串 / 数字)应抛错。
+ * 校验 validateChainsSchema：transit_group.include_direct 非布尔值（含 null / 字符串 / 数字）应抛错。
  * @returns {void}
  */
 function testValidateChainsSchemaRejectsNonBooleanIncludeDirect() {
@@ -995,9 +997,9 @@ function testValidateChainsSchemaRejectsNonBooleanIncludeDirect() {
 }
 
 /**
- * 回归校验:当 chainDefinitions 为空数组时,include_direct 的类型校验仍应生效。
- * 修复前 validateChainsSchema 在 chainDefinitions 为空时早返回,跳过了
- * include_direct 的布尔校验,导致 "true" / null / 1 等非法值静默通过。
+ * 回归校验：当 chainDefinitions 为空数组时，include_direct 的类型校验仍应生效。
+ * 修复前 validateChainsSchema 在 chainDefinitions 为空时早返回，跳过了
+ * include_direct 的布尔校验，导致 "true" / null / 1 等非法值静默通过。
  * @returns {void}
  */
 function testValidateChainsSchemaChecksIncludeDirectEvenWhenChainEmpty() {
@@ -1437,7 +1439,7 @@ function testValidateOutputRejectsEmptyChainGroup() {
 }
 
 /**
- * 校验 §7.2 的 DIRECT 字面量豁免:transit_group.proxies 含 “DIRECT” 时，
+ * 校验 §7.2 的 DIRECT 字面量豁免：transit_group.proxies 含 “DIRECT” 时，
  * 即使 landing_pattern 会命中 “DIRECT” 字符串，也不应抛错。
  * DIRECT 是 Mihomo 内置出口关键字，非订阅节点名，应被短路豁免。
  * @returns {void}
