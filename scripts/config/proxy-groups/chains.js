@@ -5,7 +5,8 @@ export default {
       "name": "🔀 中转",
       "transit_pattern": "Transit|中转|自建",
       "flags": "i",
-      "type": "select"
+      "type": "select",
+      "include_direct": true
     }
   ],
   "chain_group": [
