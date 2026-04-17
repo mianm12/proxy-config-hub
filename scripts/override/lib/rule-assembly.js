@@ -48,14 +48,14 @@ function extractRuleTarget(rule) {
  * 规范化并校验 prependRules，确保规则字符串与目标策略组引用合法。
  * Mihomo 规则的可选尾缀修饰项目前仅有 `no-resolve` 会出现在目标策略组之后，
  * 因此目标策略组应取倒数第一段，或在带 `no-resolve` 尾缀时取倒数第二段。
- * @param {{ prependRules?: string[] }} [inlineRules={}] 内联规则配置。
+ * @param {{ prependRules?: string[] | null }} [inlineRules={}] 内联规则配置；prependRules 可为 null（YAML 空列表）或省略。
  * @param {Record<string, { name?: string }>} [groupDefinitions={}] 已声明的策略组定义。
  * @returns {string[]} 规范化后的 prepend 规则数组。
  */
 function normalizePrependRules(inlineRules = {}, groupDefinitions = {}) {
   const { prependRules } = inlineRules;
 
-  if (prependRules === undefined) {
+  if (prependRules == null) {
     return [];
   }
 
