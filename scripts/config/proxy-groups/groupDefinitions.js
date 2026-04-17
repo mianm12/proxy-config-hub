@@ -80,19 +80,6 @@ export default {
         "@region-groups"
       ]
     },
-    "ssh_22": {
-      "name": "🔑 SSH",
-      "type": "select",
-      "category": "core",
-      "proxies": [
-        "DIRECT",
-        "@proxy-select",
-        "@manual-select",
-        "@auto-select",
-        "@chain-groups",
-        "@region-groups"
-      ]
-    },
     "fallback": {
       "name": "🐟 漏网之鱼",
       "type": "select",

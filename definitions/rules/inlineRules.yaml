@@ -1,5 +1,6 @@
 prependRules:
-  - AND,((PROCESS-NAME,ssh),(NETWORK,tcp)),🔑 SSH
-  - AND,((PROCESS-NAME,scp),(NETWORK,tcp)),🔑 SSH
-  - AND,((PROCESS-NAME,sftp),(NETWORK,tcp)),🔑 SSH
-  - DST-PORT,22,🔑 SSH
+  # 以下规则用于识别SSH流量，它们基于进程名称、网络协议以及目标端口。
+  # - AND,((PROCESS-NAME,ssh),(NETWORK,tcp)),🔑 SSH
+  # - AND,((PROCESS-NAME,scp),(NETWORK,tcp)),🔑 SSH
+  # - AND,((PROCESS-NAME,sftp),(NETWORK,tcp)),🔑 SSH
+  # - DST-PORT,22,🔑 SSH

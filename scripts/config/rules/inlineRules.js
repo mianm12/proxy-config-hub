@@ -1,8 +1,3 @@
 export default {
-  "prependRules": [
-    "AND,((PROCESS-NAME,ssh),(NETWORK,tcp)),🔑 SSH",
-    "AND,((PROCESS-NAME,scp),(NETWORK,tcp)),🔑 SSH",
-    "AND,((PROCESS-NAME,sftp),(NETWORK,tcp)),🔑 SSH",
-    "DST-PORT,22,🔑 SSH"
-  ]
+  "prependRules": null
 };
