@@ -50,6 +50,22 @@ function assertUniqueChainIds(chainDefinitions) {
  * @returns {void}  合法时无返回值；不合法时抛 Error。
  */
 function validateChainsSchema(chainDefinitions, transitDefinitions) {
+  // include_direct 属 transit 层独立 schema 校验,与 chain 拓扑无关,
+  // 所以必须在“chain 为空即跳过”的早返回之前执行。否则当 chain_group 为空
+  // 但 transit_group 声明了非法 include_direct（如字符串 "true" / null / 数字）时,
+  // 错误会被静默接受,违反 spec §4 “字段存在且非布尔 → 抛错” 的语义。
+  if (Array.isArray(transitDefinitions)) {
+    for (const transit of transitDefinitions) {
+      if (!transit || typeof transit !== "object") continue;
+      if (!Object.prototype.hasOwnProperty.call(transit, "include_direct")) continue;
+      if (typeof transit.include_direct !== "boolean") {
+        throw new Error(
+          `transit_group ${transit.id} 的 include_direct 必须是布尔`,
+        );
+      }
+    }
+  }
+
   if (!Array.isArray(chainDefinitions) || chainDefinitions.length === 0) {
     return;
   }
@@ -71,17 +87,6 @@ function validateChainsSchema(chainDefinitions, transitDefinitions) {
     if (!definedTransitIds.has(chain.entry)) {
       throw new Error(
         `chain_group ${chain.id} 的 entry=${chain.entry} 未在 transit_group 中定义`,
-      );
-    }
-  }
-
-  // transit_group.include_direct 若显式声明，必须是布尔;缺省(键不存在)视为未配置。
-  for (const transit of transitDefinitions) {
-    if (!transit || typeof transit !== "object") continue;
-    if (!Object.prototype.hasOwnProperty.call(transit, "include_direct")) continue;
-    if (typeof transit.include_direct !== "boolean") {
-      throw new Error(
-        `transit_group ${transit.id} 的 include_direct 必须是布尔`,
       );
     }
   }

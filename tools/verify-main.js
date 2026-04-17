@@ -995,6 +995,60 @@ function testValidateChainsSchemaRejectsNonBooleanIncludeDirect() {
 }
 
 /**
+ * 回归校验:当 chainDefinitions 为空数组时,include_direct 的类型校验仍应生效。
+ * 修复前 validateChainsSchema 在 chainDefinitions 为空时早返回,跳过了
+ * include_direct 的布尔校验,导致 "true" / null / 1 等非法值静默通过。
+ * @returns {void}
+ */
+function testValidateChainsSchemaChecksIncludeDirectEvenWhenChainEmpty() {
+  const invalidValues = [null, "true", 1, {}];
+
+  for (const invalid of invalidValues) {
+    assert.throws(
+      () =>
+        validateChainsSchema([], [
+          {
+            id: "transit",
+            name: "🔀 中转",
+            transit_pattern: "",
+            flags: "i",
+            type: "select",
+            include_direct: invalid,
+          },
+        ]),
+      (error) =>
+        error instanceof Error &&
+        error.message.includes("transit") &&
+        error.message.includes("include_direct") &&
+        error.message.includes("布尔"),
+      `chain=[] + include_direct=${JSON.stringify(invalid)} 应抛错`,
+    );
+  }
+
+  // 合法布尔值在 chain=[] 下仍应通过
+  validateChainsSchema([], [
+    {
+      id: "transit",
+      name: "🔀 中转",
+      transit_pattern: "",
+      flags: "i",
+      type: "select",
+      include_direct: true,
+    },
+  ]);
+  validateChainsSchema([], [
+    {
+      id: "transit",
+      name: "🔀 中转",
+      transit_pattern: "",
+      flags: "i",
+      type: "select",
+      include_direct: false,
+    },
+  ]);
+}
+
+/**
  * 校验 buildProxyGroups 的 extras 参数：chain_groups 和 transit_groups
  * 按约定位置（保留组之后、其他自定义组之前）插入。
  * @returns {void}
@@ -1597,6 +1651,7 @@ async function main() {
   testValidateChainsSchemaEmptyArraysAccepted();
   testValidateChainsSchemaAcceptsBooleanIncludeDirect();
   testValidateChainsSchemaRejectsNonBooleanIncludeDirect();
+  testValidateChainsSchemaChecksIncludeDirectEvenWhenChainEmpty();
   testBuildProxyGroupsInsertsChainAndTransit();
   testBuildProxyGroupsExtrasOptional();
   testChainGroupsPlaceholderExpansion();
