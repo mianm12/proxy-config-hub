@@ -12,6 +12,13 @@ import {
 } from "./lib/paths.js";
 
 /**
+ * 已废弃但仍可能残留在 scripts/config/ 下的历史目录名。
+ * 这些目录已不在 CANONICAL_NAMESPACES 中，但需在每次构建时清理，
+ * 防止旧版生成产物干扰新构建。新增/移除项时请同步更新。
+ */
+const LEGACY_GENERATED_DIRS = ["runtime"];
+
+/**
  * 递归收集指定目录下的所有 YAML 文件路径。
  * @param {string} dir - 待扫描的目录路径。
  * @returns {Promise<string[]>} YAML 文件的绝对路径列表。
@@ -130,13 +137,17 @@ async function buildYamlModules({
 } = {}) {
   const activeTree = await resolveSourceTree(cwd);
   const required = new Set(
-    requiredNamespaces ?? ["mihomo-preset", "proxy-groups", "rules"],
+    requiredNamespaces ?? CANONICAL_NAMESPACES.map((namespace) => namespace.name),
   );
 
-  // 清理本次会重建的命名空间产物，以及历史遗留的 runtime/ 目录。
+  // 清理本次会重建的命名空间产物（按 outputSubdir 派生），以及历史遗留目录。
+  const dirsToClean = [
+    ...CANONICAL_NAMESPACES.map((namespace) => namespace.outputSubdir),
+    ...LEGACY_GENERATED_DIRS,
+  ];
   await Promise.all(
-    ["mihomo-preset", "proxy-groups", "rules", "runtime"].map((namespaceName) =>
-      fs.rm(path.join(cwd, GENERATED_ROOT_NAME, namespaceName), {
+    dirsToClean.map((dirName) =>
+      fs.rm(path.join(cwd, GENERATED_ROOT_NAME, dirName), {
         recursive: true,
         force: true,
       }),
