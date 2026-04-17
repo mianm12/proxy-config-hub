@@ -74,6 +74,17 @@ function validateChainsSchema(chainDefinitions, transitDefinitions) {
       );
     }
   }
+
+  // transit_group.include_direct 若显式声明，必须是布尔;缺省(键不存在)视为未配置。
+  for (const transit of transitDefinitions) {
+    if (!transit || typeof transit !== "object") continue;
+    if (!Object.prototype.hasOwnProperty.call(transit, "include_direct")) continue;
+    if (typeof transit.include_direct !== "boolean") {
+      throw new Error(
+        `transit_group ${transit.id} 的 include_direct 必须是布尔`,
+      );
+    }
+  }
 }
 
 /**

@@ -802,6 +802,94 @@ function testValidateChainsSchemaEmptyArraysAccepted() {
 }
 
 /**
+ * 校验 validateChainsSchema:transit_group.include_direct 若存在必须为布尔。
+ * undefined / true / false 通过;null / 字符串 / 数字等一律抛错。
+ * @returns {void}
+ */
+function testValidateChainsSchemaAcceptsBooleanIncludeDirect() {
+  const chainDefinitions = [
+    {
+      id: "chain",
+      name: "🚪 落地",
+      landing_pattern: "自建",
+      flags: "i",
+      entry: "transit",
+      type: "select",
+    },
+  ];
+
+  // include_direct 缺省 → 通过
+  validateChainsSchema(chainDefinitions, [
+    { id: "transit", name: "🔀 中转", transit_pattern: "", flags: "i", type: "select" },
+  ]);
+
+  // include_direct: true → 通过
+  validateChainsSchema(chainDefinitions, [
+    {
+      id: "transit",
+      name: "🔀 中转",
+      transit_pattern: "",
+      flags: "i",
+      type: "select",
+      include_direct: true,
+    },
+  ]);
+
+  // include_direct: false → 通过
+  validateChainsSchema(chainDefinitions, [
+    {
+      id: "transit",
+      name: "🔀 中转",
+      transit_pattern: "",
+      flags: "i",
+      type: "select",
+      include_direct: false,
+    },
+  ]);
+}
+
+/**
+ * 校验 validateChainsSchema:transit_group.include_direct 非布尔值(含 null / 字符串 / 数字)应抛错。
+ * @returns {void}
+ */
+function testValidateChainsSchemaRejectsNonBooleanIncludeDirect() {
+  const chainDefinitions = [
+    {
+      id: "chain",
+      name: "🚪 落地",
+      landing_pattern: "自建",
+      flags: "i",
+      entry: "transit",
+      type: "select",
+    },
+  ];
+
+  const invalidValues = [null, "true", "false", 0, 1, {}, []];
+
+  for (const invalid of invalidValues) {
+    assert.throws(
+      () =>
+        validateChainsSchema(chainDefinitions, [
+          {
+            id: "transit",
+            name: "🔀 中转",
+            transit_pattern: "",
+            flags: "i",
+            type: "select",
+            include_direct: invalid,
+          },
+        ]),
+      (error) =>
+        error instanceof Error &&
+        error.message.includes("transit") &&
+        error.message.includes("include_direct") &&
+        error.message.includes("布尔"),
+      `include_direct=${JSON.stringify(invalid)} 应抛错且错误信息含 transit/include_direct/布尔`,
+    );
+  }
+}
+
+/**
  * 校验 buildProxyGroups 的 extras 参数：chain_groups 和 transit_groups
  * 按约定位置（保留组之后、其他自定义组之前）插入。
  * @returns {void}
@@ -1358,6 +1446,8 @@ async function main() {
   testValidateChainsSchemaRejectsUnknownEntry();
   testValidateChainsSchemaAcceptsValid();
   testValidateChainsSchemaEmptyArraysAccepted();
+  testValidateChainsSchemaAcceptsBooleanIncludeDirect();
+  testValidateChainsSchemaRejectsNonBooleanIncludeDirect();
   testBuildProxyGroupsInsertsChainAndTransit();
   testBuildProxyGroupsExtrasOptional();
   testChainGroupsPlaceholderExpansion();
