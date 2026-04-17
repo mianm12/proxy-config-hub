@@ -1,9 +1,21 @@
+# 保留组：构建顺序与逻辑由代码识别，按列出顺序排在 proxy-groups 最前
 reserved:
   - proxy_select
   - manual_select
   - auto_select
+
+# 兜底组：MATCH 规则与第六段 fallback 组的 ID 来源
 fallback: fallback
-mappings:
-  "@proxy-select": proxy_select
-  "@manual-select": manual_select
-  "@auto-select": auto_select
+
+# 占位符全集（用户可在 groupDefinitions.proxies 中引用）
+# kind=ref      → 引用某个已定义的保留组，展开为 [该组 name]
+#   target      → groupDefinitions 中的组 ID
+# kind=context  → 引用运行时计算的上下文集合，展开为 [...names]
+#   source      → 代码已知的枚举：allNodes / regionGroups / chainGroups
+placeholders:
+  "@proxy-select":  { kind: ref, target: proxy_select }
+  "@manual-select": { kind: ref, target: manual_select }
+  "@auto-select":   { kind: ref, target: auto_select }
+  "@all-nodes":     { kind: context, source: allNodes }
+  "@region-groups": { kind: context, source: regionGroups }
+  "@chain-groups":  { kind: context, source: chainGroups }

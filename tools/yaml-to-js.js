@@ -18,6 +18,65 @@ import {
  */
 const LEGACY_GENERATED_DIRS = ["runtime"];
 
+/** placeholders.yaml 中 entry.kind 的合法取值。 */
+const PLACEHOLDER_ALLOWED_KINDS = new Set(["ref", "context"]);
+
+/**
+ * placeholders.yaml 中 entry.kind=context 时 entry.source 的合法取值。
+ * 必须与 scripts/override/lib/proxy-groups.js 的 CONTEXT_SOURCES 保持同步。
+ */
+const PLACEHOLDER_ALLOWED_CONTEXT_SOURCES = new Set([
+  "allNodes",
+  "regionGroups",
+  "chainGroups",
+]);
+
+/**
+ * 校验 placeholders 字段结构合法性。
+ * 仅在被校验数据包含 placeholders 字段时生效，避免误伤其他 YAML。
+ * @param {unknown} data - YAML 解析后的对象。
+ * @param {string} inputFile - 用于错误定位的源文件路径。
+ * @returns {void}
+ */
+function validatePlaceholdersSchema(data, inputFile) {
+  if (!data || typeof data !== "object" || Array.isArray(data)) {
+    return;
+  }
+  const placeholders = data.placeholders;
+  if (placeholders === undefined) {
+    return;
+  }
+  if (!placeholders || typeof placeholders !== "object" || Array.isArray(placeholders)) {
+    throw new Error(`${inputFile}: placeholders 必须是对象`);
+  }
+
+  for (const [key, entry] of Object.entries(placeholders)) {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+      throw new Error(`${inputFile}: 占位符 ${key} 必须是对象`);
+    }
+
+    if (!PLACEHOLDER_ALLOWED_KINDS.has(entry.kind)) {
+      throw new Error(
+        `${inputFile}: 占位符 ${key} 的 kind 非法: ${entry.kind} (允许: ${[...PLACEHOLDER_ALLOWED_KINDS].join("/")})`,
+      );
+    }
+
+    if (entry.kind === "ref") {
+      if (typeof entry.target !== "string" || entry.target.length === 0) {
+        throw new Error(`${inputFile}: 占位符 ${key} (kind=ref) 缺少非空 target 字段`);
+      }
+    }
+
+    if (entry.kind === "context") {
+      if (!PLACEHOLDER_ALLOWED_CONTEXT_SOURCES.has(entry.source)) {
+        throw new Error(
+          `${inputFile}: 占位符 ${key} (kind=context) 的 source 非法: ${entry.source} (允许: ${[...PLACEHOLDER_ALLOWED_CONTEXT_SOURCES].join("/")})`,
+        );
+      }
+    }
+  }
+}
+
 /**
  * 递归收集指定目录下的所有 YAML 文件路径。
  * @param {string} dir - 待扫描的目录路径。
@@ -115,6 +174,8 @@ async function convertOne(inputFile, inputRoot, outputRoot) {
   const outputFile = path.join(outputRoot, relativePath.replace(/\.(ya?ml)$/i, ".js"));
   const text = await fs.readFile(inputFile, "utf8");
   const data = yaml.load(text);
+
+  validatePlaceholdersSchema(data, inputFile);
 
   await fs.mkdir(path.dirname(outputFile), { recursive: true });
   await fs.writeFile(outputFile, `export default ${JSON.stringify(data, null, 2)};\n`, "utf8");

@@ -20,7 +20,19 @@ function compileRegionPatterns(rawRegions) {
 const REGION_PATTERNS = compileRegionPatterns(regionsConfig);
 const RESERVED_GROUP_IDS = placeholdersConfig.reserved;
 const FALLBACK_GROUP_ID = placeholdersConfig.fallback;
-const PLACEHOLDER_GROUP_IDS = placeholdersConfig.mappings;
+const PLACEHOLDERS = placeholdersConfig.placeholders;
+
+/**
+ * 上下文占位符（kind=context）的运行时数据解析器表。
+ * key 与 placeholders.yaml 中 entry.source 的可选值一一对应；
+ * value 接收 expandGroupTarget 的 context，返回展开后的名称数组。
+ * 新增 source 类型时需同步更新此表与 yaml-to-js.js 的 schema 校验白名单。
+ */
+const CONTEXT_SOURCES = {
+  allNodes: (context) => [...context.allProxyNames],
+  regionGroups: (context) => [...context.regionGroupNames],
+  chainGroups: (context) => [...context.chainGroupNames],
+};
 
 /**
  * 过滤出具有有效名称的代理节点。
@@ -98,37 +110,39 @@ function buildRegionGroups(proxies) {
 
 /**
  * 展开 @-前缀的占位符目标为实际节点/组名列表。
- * 支持四类占位符:
- *   - @all-nodes: 展开为所有代理节点名称
- *   - @region-groups: 展开为所有已构建的区域组名称
- *   - @chain-groups: 展开为所有已构建的链式代理落地组名称
- *   - @proxy-select/@manual-select/@auto-select: 展开为对应保留组的 name
+ * 占位符全集声明在 placeholders.yaml 的 placeholders 字段，分两类:
+ *   - kind=ref      → 返回 [groupDefinitions[entry.target].name]
+ *   - kind=context  → 调用 CONTEXT_SOURCES[entry.source](context)
+ * 未在 PLACEHOLDERS 中声明但以 @ 开头的目标视为非法。
  * @param {string} target - 占位符或普通目标名称。
  * @param {{allProxyNames: string[], regionGroupNames: string[], chainGroupNames: string[], groupDefinitions: Record<string, {name: string}>}} context
  * @returns {string[]} 展开后的名称列表。
  */
 function expandGroupTarget(target, context) {
-  if (target === "@all-nodes") {
-    return [...context.allProxyNames];
-  }
+  const entry = PLACEHOLDERS[target];
 
-  if (target === "@region-groups") {
-    return [...context.regionGroupNames];
-  }
+  if (entry) {
+    if (entry.kind === "ref") {
+      const referencedDefinition = context.groupDefinitions[entry.target];
 
-  if (target === "@chain-groups") {
-    return [...context.chainGroupNames];
-  }
+      if (!referencedDefinition) {
+        throw new Error(`占位符 ${target} 引用了未定义的策略组: ${entry.target}`);
+      }
 
-  if (PLACEHOLDER_GROUP_IDS[target]) {
-    const referencedId = PLACEHOLDER_GROUP_IDS[target];
-    const referencedDefinition = context.groupDefinitions[referencedId];
-
-    if (!referencedDefinition) {
-      throw new Error(`占位符引用了未定义的策略组: ${target} -> ${referencedId}`);
+      return [referencedDefinition.name];
     }
 
-    return [referencedDefinition.name];
+    if (entry.kind === "context") {
+      const resolver = CONTEXT_SOURCES[entry.source];
+
+      if (!resolver) {
+        throw new Error(`占位符 ${target} 引用了未知的运行时上下文: ${entry.source}`);
+      }
+
+      return resolver(context);
+    }
+
+    throw new Error(`占位符 ${target} 的 kind 非法: ${entry.kind}`);
   }
 
   if (target.startsWith("@")) {
