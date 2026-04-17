@@ -651,6 +651,111 @@ function testBuildTransitGroupsDuplicateId() {
 }
 
 /**
+ * 校验 buildTransitGroups:include_direct=true 且 type 非 url-test 时，
+ * proxies 末尾追加字符串 "DIRECT";缺省 / false 时不追加。
+ * @returns {void}
+ */
+function testBuildTransitGroupsAppendsDirectForSelect() {
+  const remaining = [{ name: "Sample-HK-01" }, { name: "Sample-JP-01" }];
+
+  // include_direct 缺省 → 不追加
+  const { groups: groupsMissing } = buildTransitGroups(remaining, [
+    { id: "t1", name: "T1", transit_pattern: "", flags: "", type: "select" },
+  ]);
+  assert.deepEqual(
+    groupsMissing[0].proxies,
+    ["Sample-HK-01", "Sample-JP-01"],
+    "include_direct 缺省时 proxies 不应追加 DIRECT",
+  );
+
+  // include_direct: false → 不追加
+  const { groups: groupsFalse } = buildTransitGroups(remaining, [
+    { id: "t2", name: "T2", transit_pattern: "", flags: "", type: "select", include_direct: false },
+  ]);
+  assert.deepEqual(
+    groupsFalse[0].proxies,
+    ["Sample-HK-01", "Sample-JP-01"],
+    "include_direct=false 时 proxies 不应追加 DIRECT",
+  );
+
+  // include_direct: true + type=select → 末尾追加 DIRECT
+  const { groups: groupsTrue } = buildTransitGroups(remaining, [
+    { id: "t3", name: "T3", transit_pattern: "", flags: "", type: "select", include_direct: true },
+  ]);
+  assert.deepEqual(
+    groupsTrue[0].proxies,
+    ["Sample-HK-01", "Sample-JP-01", "DIRECT"],
+    "include_direct=true + type=select 时 proxies 末尾应为 'DIRECT'",
+  );
+}
+
+/**
+ * 校验 buildTransitGroups:include_direct=true 且 type=url-test 时，
+ * 不追加 DIRECT 且输出 WARN 日志。
+ * @returns {void}
+ */
+function testBuildTransitGroupsSkipsDirectForUrlTest() {
+  const remaining = [{ name: "Sample-HK-01" }, { name: "Sample-JP-01" }];
+  const originalLog = console.log;
+  const captured = [];
+  console.log = (message) => captured.push(String(message));
+
+  try {
+    const { groups } = buildTransitGroups(remaining, [
+      {
+        id: "auto-transit",
+        name: "T-URL",
+        transit_pattern: "",
+        flags: "",
+        type: "url-test",
+        include_direct: true,
+      },
+    ]);
+    assert.deepEqual(
+      groups[0].proxies,
+      ["Sample-HK-01", "Sample-JP-01"],
+      "type=url-test 时即便 include_direct=true 也不应追加 DIRECT",
+    );
+  } finally {
+    console.log = originalLog;
+  }
+
+  assert.ok(
+    captured.some(
+      (line) =>
+        line.includes("WARN") &&
+        line.includes("transit_group") &&
+        line.includes("auto-transit") &&
+        line.includes("url-test") &&
+        line.includes("include_direct"),
+    ),
+    `应输出 WARN 日志，实际捕获: ${JSON.stringify(captured)}`,
+  );
+}
+
+/**
+ * 校验 buildTransitGroups:transit_pattern 过滤后成员为空时，
+ * 即便 include_direct=true 也仍然跳过（DIRECT 不挽救空组）。
+ * @returns {void}
+ */
+function testBuildTransitGroupsEmptyMembersSkippedEvenWithIncludeDirect() {
+  const remaining = [{ name: "Sample-HK-01" }];
+  const { groups, idToName } = buildTransitGroups(remaining, [
+    {
+      id: "jp",
+      name: "🇯🇵 T-JP",
+      transit_pattern: "Japan",
+      flags: "i",
+      type: "select",
+      include_direct: true,
+    },
+  ]);
+
+  assert.equal(groups.length, 0, "空成员 + include_direct=true 仍应跳过");
+  assert.equal(idToName.has("jp"), false, "被跳过的 transit 不进入 idToName");
+}
+
+/**
  * 校验 applyProxyChains 为命中 landing_pattern 的节点注入 dialer-proxy = transit.name。
  * @returns {void}
  */
@@ -1440,6 +1545,9 @@ async function main() {
   testBuildTransitGroupsFiltered();
   testBuildTransitGroupsEmptyMembersSkipped();
   testBuildTransitGroupsDuplicateId();
+  testBuildTransitGroupsAppendsDirectForSelect();
+  testBuildTransitGroupsSkipsDirectForUrlTest();
+  testBuildTransitGroupsEmptyMembersSkippedEvenWithIncludeDirect();
   testApplyProxyChainsBasic();
   testApplyProxyChainsPreservesExisting();
   testApplyProxyChainsSkipsMissingTransit();

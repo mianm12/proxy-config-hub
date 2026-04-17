@@ -213,6 +213,8 @@ function buildTransitGroups(remainingProxies, transitDefinitions) {
       ? remainingProxies.filter((proxy) => compiledPattern.test(proxy.name))
       : [...remainingProxies];
 
+    // 空组判定优先于 include_direct；DIRECT 字面量不应被用于“挽救”本就没有节点的组，
+    // 否则下游规则可能错把全空的中转点当作可选出口，反而掩盖订阅异常。
     if (members.length === 0) {
       console.log(
         `[override] WARN: transit_group ${definition.id} 过滤后无可用节点，已跳过该组`,
@@ -220,10 +222,23 @@ function buildTransitGroups(remainingProxies, transitDefinitions) {
       continue;
     }
 
+    const memberNames = members.map((proxy) => proxy.name);
+    // include_direct 仅对“用户手动切换”类 type 有意义；url-test 会把 DIRECT 当成待测节点，
+    // 绝大多数情况下 DIRECT 延迟最低并被永久选中，使整个中转组退化为直连，故在此拦截并 WARN。
+    if (definition.include_direct === true) {
+      if (definition.type === "url-test") {
+        console.log(
+          `[override] WARN: transit_group ${definition.id} 为 url-test，忽略 include_direct=true`,
+        );
+      } else {
+        memberNames.push("DIRECT");
+      }
+    }
+
     groups.push({
       name: definition.name,
       type: definition.type,
-      proxies: members.map((proxy) => proxy.name),
+      proxies: memberNames,
     });
     idToName.set(definition.id, definition.name);
   }
