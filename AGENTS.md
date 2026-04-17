@@ -36,11 +36,11 @@ npm run audit:rule-overlap  # 检查规则提供方之间的 domain/IP 重叠（
 入口：`function main(config)`，接收一个已填充 `proxies` 的 Mihomo 配置对象，返回完整配置。流水线：
 
 1. **`applyRuntimePreset(config)`** —— 合并所有 runtime YAML 预设（DNS、sniffer、tun、geodata、profile、base）。
-2. **`buildProxyGroups(proxies, groupDefinitions)`** —— 依据 `groupDefinitions.yaml` 构建 proxy-groups，region 匹配与 placeholder 映射分别来自 `regions.yaml`、`placeholders.yaml`。
+2. **`buildProxyGroups(proxies, groupDefinitions)`** —— 依据 `groupDefinitions.yaml` 构建 proxy-groups，region 匹配与统一 placeholder 表分别来自 `regions.yaml`、`placeholders.yaml`。
 3. **`assembleRuleSet(groupDefinitions, ruleProviders, inlineRules)`** —— 先前置 inline rules，再将每个 rule provider 映射到目标策略组，最后追加兜底 `MATCH`。
 4. **`validateOutput(config)`** —— 装配完成后校验输出。
 
-共享模块位于 `scripts/override/lib/`。其中 `proxy-groups.js` 的 region 模式与 placeholder 映射从编译产物 `scripts/config/proxy-groups/regions.js`、`scripts/config/proxy-groups/placeholders.js` 加载，不硬编码。
+共享模块位于 `scripts/override/lib/`。其中 `proxy-groups.js` 的 region 模式与 placeholder 表从编译产物 `scripts/config/proxy-groups/regions.js`、`scripts/config/proxy-groups/placeholders.js` 加载，不硬编码。`expandGroupTarget` 通过统一 `placeholders` 表按 `kind` 分发。
 
 ### 数据模型
 
@@ -49,8 +49,8 @@ npm run audit:rule-overlap  # 检查规则提供方之间的 domain/IP 重叠（
 - `definitions/proxy-groups/` 存放 proxy-group / chain 构建数据（groupDefinitions、regions、placeholders、chains）。
 - `definitions/mihomo-preset/` 存放 Mihomo 顶层键预设（base、dns、sniffer、tun、profile、geodata）。
 - `definitions/assets/custom/` 为模板/发布资产，原样拷贝到 `dist/assets/custom/`，**不**参与活跃规则装配。
-- `definitions/proxy-groups/regions.yaml` 定义 region 匹配模式（id、name、icon、regex pattern、flags）；新增 region 只需追加条目，无需改 JS。
-- `definitions/proxy-groups/placeholders.yaml` 定义保留组 ID、兜底组 ID 与 `@` 前缀 placeholder 映射；新增 placeholder 只需追加条目，无需改 JS。
+- `definitions/proxy-groups/regions.yaml` 定义 region 匹配模式（id、name、icon、regex pattern、flags）；新增 region 只需追加条目，无需改 JS。数组**最后一项**必须是 OTHER 兜底（id=OTHER、pattern=`.*`），代码将其视为 region 兜底。
+- `definitions/proxy-groups/placeholders.yaml` 定义保留组 ID、兜底组 ID 与统一 `placeholders` 表。每条占位符 `kind: ref`（带 `target` 指向保留组 ID）或 `kind: context`（带 `source` 取 `allNodes` / `regionGroups` / `chainGroups`）。新增普通占位符只需追加条目；新增 context source 时还需同步更新 proxy-groups.js 的 `CONTEXT_SOURCES` 与 yaml-to-js.js 的 `PLACEHOLDER_ALLOWED_CONTEXT_SOURCES`。
 - 构建流程拒绝 `definitions/` 下出现未知的顶层子目录。
 - `tools/verify-main.js` 会动态扫描 `definitions/` 推导期望产物；新增 YAML 文件无需同步修改验证脚本。
 

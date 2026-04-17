@@ -42,13 +42,13 @@ No test framework — verification is done via `tools/verify-main.js` (bundle sa
 Entry point: `function main(config)` — receives a Mihomo config object with `proxies` populated, returns the fully configured object. Pipeline:
 
 1. **`applyRuntimePreset(config)`** — merges all runtime YAML presets (DNS, sniffer, tun, geodata, profile, base) onto config
-2. **`buildProxyGroups(proxies, groupDefinitions)`** — creates proxy-groups from `groupDefinitions.yaml`, with region patterns loaded from `regions.yaml` and placeholder mappings from `placeholders.yaml`
+2. **`buildProxyGroups(proxies, groupDefinitions)`** — creates proxy-groups from `groupDefinitions.yaml`, with region patterns loaded from `regions.yaml` and the unified placeholder table loaded from `placeholders.yaml`
 3. **`assembleRuleSet(groupDefinitions, ruleProviders, inlineRules)`** — prepends inline rules, maps each rule provider to its target group, then appends fallback `MATCH`
 4. **`validateOutput(config)`** — post-assembly validation (uses `extractRuleTarget` from rule-assembly for consistent rule parsing)
 
 Shared modules live in `scripts/override/lib/`:
 - **`utils.js`** — shared utilities (`cloneData`)
-- **`proxy-groups.js`** — region detection, proxy classification, group building. Region patterns and placeholder mappings are loaded from compiled YAML products (`scripts/config/proxy-groups/regions.js`, `scripts/config/proxy-groups/placeholders.js`), not hardcoded.
+- **`proxy-groups.js`** — region detection, proxy classification, group building. Region patterns and the placeholder table are loaded from compiled YAML products (`scripts/config/proxy-groups/regions.js`, `scripts/config/proxy-groups/placeholders.js`), not hardcoded. `expandGroupTarget` dispatches each placeholder via the unified `placeholders` table by `kind`.
 - **`rule-assembly.js`** — rule set assembly, exports `assembleRuleSet` and `extractRuleTarget`
 - **`runtime-preset.js`** — runtime preset application
 - **`validate-output.js`** — output validation
@@ -60,8 +60,8 @@ Shared modules live in `scripts/override/lib/`:
 - `definitions/proxy-groups/` holds proxy-group / chain construction data (groupDefinitions, regions, placeholders, chains).
 - `definitions/mihomo-preset/` holds Mihomo top-level key presets (base, dns, sniffer, tun, profile, geodata).
 - `definitions/assets/custom/` contains template/asset files copied verbatim to `dist/assets/custom/` — they are NOT part of the active assembly.
-- `definitions/proxy-groups/regions.yaml` defines region matching patterns (id, name, icon, regex pattern, flags). To add a new region, add an entry here — no JS code change needed.
-- `definitions/proxy-groups/placeholders.yaml` defines reserved group IDs, fallback group ID, and `@`-prefix placeholder mappings. To add a new placeholder, add an entry here — no JS code change needed.
+- `definitions/proxy-groups/regions.yaml` defines region matching patterns (id, name, icon, regex pattern, flags). To add a new region, add an entry here — no JS code change needed. The last entry must be the OTHER bucket (id=OTHER, pattern=`.*`) and is treated as the fallback region.
+- `definitions/proxy-groups/placeholders.yaml` defines reserved group IDs, fallback group ID, and the unified `placeholders` table. Each placeholder entry has `kind: ref` (with `target` pointing to a reserved group ID) or `kind: context` (with `source` in `allNodes` / `regionGroups` / `chainGroups`). To add a new placeholder, add an entry here — no JS code change needed unless introducing a new context source (which also requires updating `CONTEXT_SOURCES` in proxy-groups.js and `PLACEHOLDER_ALLOWED_CONTEXT_SOURCES` in yaml-to-js.js).
 - The build rejects unknown top-level entries under `definitions/`.
 - `tools/verify-main.js` dynamically scans `definitions/` to discover expected outputs — adding new YAML files requires no changes to verification code.
 
