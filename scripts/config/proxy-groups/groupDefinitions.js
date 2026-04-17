@@ -81,7 +81,7 @@ export default {
       ]
     },
     "ssh_22": {
-      "name": "🔑 SSH(22端口)",
+      "name": "🔑 SSH",
       "type": "select",
       "category": "core",
       "proxies": [
