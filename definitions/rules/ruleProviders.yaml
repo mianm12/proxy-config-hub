@@ -30,19 +30,11 @@ ruleProviders:
 
   # 专用业务规则
   ## AI 服务
-  "category-ai-chat-!cn":
-    type: http
-    behavior: domain
-    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/category-ai-chat-!cn.mrs"
-    path: "./ruleset/category-ai-chat-!cn.mrs"
-    interval: 86400
-    format: mrs
-    target-group: ai_service
   openai:
     type: http
     behavior: domain
-    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/openai.mrs"
-    path: "./ruleset/openai.mrs"
+    url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/openai.mrs
+    path: ./ruleset/openai.mrs
     interval: 86400
     format: mrs
     target-group: ai_service
@@ -51,6 +43,14 @@ ruleProviders:
     behavior: domain
     url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/anthropic.mrs
     path: ./ruleset/anthropic.mrs
+    interval: 86400
+    format: mrs
+    target-group: ai_service
+  "category-ai-chat-!cn":
+    type: http
+    behavior: domain
+    url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/category-ai-chat-!cn.mrs"
+    path: "./ruleset/category-ai-chat-!cn.mrs"
     interval: 86400
     format: mrs
     target-group: ai_service
@@ -527,19 +527,19 @@ ruleProviders:
     target-group: google
     no-resolve: true
   ## 苹果服务
-  apple:
-    type: http
-    behavior: domain
-    url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/apple.mrs
-    path: ./ruleset/apple.mrs
-    interval: 86400
-    format: mrs
-    target-group: apple
   icloud:
     type: http
     behavior: domain
     url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/icloud.mrs
     path: ./ruleset/icloud.mrs
+    interval: 86400
+    format: mrs
+    target-group: apple
+  apple:
+    type: http
+    behavior: domain
+    url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/apple.mrs
+    path: ./ruleset/apple.mrs
     interval: 86400
     format: mrs
     target-group: apple
@@ -710,15 +710,7 @@ ruleProviders:
     format: mrs
     target-group: cloud_service
     no-resolve: true
-  ## 微软服务
-  microsoft:
-    type: http
-    behavior: domain
-    url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/microsoft.mrs
-    path: ./ruleset/microsoft.mrs
-    interval: 86400
-    format: mrs
-    target-group: microsoft
+  ## 微软服务（必须在 azure 之后：microsoft.mrs 完全覆盖 azure.mrs 144/144，详见 audit:rule-overlap）
   onedrive:
     type: http
     behavior: domain
@@ -727,7 +719,15 @@ ruleProviders:
     interval: 86400
     format: mrs
     target-group: microsoft
-  ## 海淘购物
+  microsoft:
+    type: http
+    behavior: domain
+    url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/microsoft.mrs
+    path: ./ruleset/microsoft.mrs
+    interval: 86400
+    format: mrs
+    target-group: microsoft
+  ## 海淘购物（必须在 aws 之后：amazon.mrs 完全覆盖 aws.mrs 73/73，详见 audit:rule-overlap）
   amazon:
     type: http
     behavior: domain

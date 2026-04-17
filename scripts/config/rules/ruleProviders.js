@@ -28,15 +28,6 @@ export default {
       "target-group": "private",
       "no-resolve": true
     },
-    "category-ai-chat-!cn": {
-      "type": "http",
-      "behavior": "domain",
-      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/category-ai-chat-!cn.mrs",
-      "path": "./ruleset/category-ai-chat-!cn.mrs",
-      "interval": 86400,
-      "format": "mrs",
-      "target-group": "ai_service"
-    },
     "openai": {
       "type": "http",
       "behavior": "domain",
@@ -51,6 +42,15 @@ export default {
       "behavior": "domain",
       "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/anthropic.mrs",
       "path": "./ruleset/anthropic.mrs",
+      "interval": 86400,
+      "format": "mrs",
+      "target-group": "ai_service"
+    },
+    "category-ai-chat-!cn": {
+      "type": "http",
+      "behavior": "domain",
+      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/category-ai-chat-!cn.mrs",
+      "path": "./ruleset/category-ai-chat-!cn.mrs",
       "interval": 86400,
       "format": "mrs",
       "target-group": "ai_service"
@@ -564,20 +564,20 @@ export default {
       "target-group": "google",
       "no-resolve": true
     },
-    "apple": {
-      "type": "http",
-      "behavior": "domain",
-      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/apple.mrs",
-      "path": "./ruleset/apple.mrs",
-      "interval": 86400,
-      "format": "mrs",
-      "target-group": "apple"
-    },
     "icloud": {
       "type": "http",
       "behavior": "domain",
       "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/icloud.mrs",
       "path": "./ruleset/icloud.mrs",
+      "interval": 86400,
+      "format": "mrs",
+      "target-group": "apple"
+    },
+    "apple": {
+      "type": "http",
+      "behavior": "domain",
+      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/apple.mrs",
+      "path": "./ruleset/apple.mrs",
       "interval": 86400,
       "format": "mrs",
       "target-group": "apple"
@@ -763,20 +763,20 @@ export default {
       "target-group": "cloud_service",
       "no-resolve": true
     },
-    "microsoft": {
-      "type": "http",
-      "behavior": "domain",
-      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/microsoft.mrs",
-      "path": "./ruleset/microsoft.mrs",
-      "interval": 86400,
-      "format": "mrs",
-      "target-group": "microsoft"
-    },
     "onedrive": {
       "type": "http",
       "behavior": "domain",
       "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/onedrive.mrs",
       "path": "./ruleset/onedrive.mrs",
+      "interval": 86400,
+      "format": "mrs",
+      "target-group": "microsoft"
+    },
+    "microsoft": {
+      "type": "http",
+      "behavior": "domain",
+      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/microsoft.mrs",
+      "path": "./ruleset/microsoft.mrs",
       "interval": 86400,
       "format": "mrs",
       "target-group": "microsoft"
