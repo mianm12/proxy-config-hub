@@ -274,6 +274,8 @@ groupDefinitions:
 
 ### 6.2 声明（`definitions/proxy-groups/chains.yaml`）
 
+`transit_group[].type` 与 `groupDefinitions[*].type` 同源，均为 Mihomo 策略组类型（当前仓库中出现的取值为 `select` / `url-test`），本项目不做枚举限制。
+
 ```yaml
 transit_group:
   - id: transit
@@ -281,6 +283,7 @@ transit_group:
     transit_pattern: "Transit|中转|自建"  # 空字符串 = 取 remainingProxies 全部；非空 = 在 remainingProxies 上再做正则过滤
     flags: i
     type: select
+    include_direct: false   # 可选布尔；true 时在成员列表末尾追加 DIRECT（type=url-test 时忽略并 WARN）
 
 chain_group:
   - id: landing
@@ -304,6 +307,9 @@ chain_group:
 - `transit_pattern` 为空字符串（或非字符串）→ 成员 = `remainingProxies` 全部。
 - 非空 → 编译为 RegExp，按名称过滤。
 - 成员为空的 transit_group 被跳过并 WARN，**不进入 `idToName` 映射表**，其绑定的 chain 因此在 `applyProxyChains` 阶段也会跳过。
+- **`include_direct: true` + `type !== "url-test"`**：成员名数组末尾追加字符串 `"DIRECT"`，作为 Mihomo 面板上的手动直连候选。
+- **`include_direct: true` + `type === "url-test"`**：输出 `[override] WARN: transit_group <id> 为 url-test，忽略 include_direct=true`，不追加 DIRECT（避免 url-test 把 DIRECT 测成零延迟永久胜出）。
+- 无论 `include_direct` 是否为 true，**成员为空仍跳过该组**——DIRECT 不挽救空组。
 - 返回 `{ groups, idToName }`，`idToName: Map<string, string>` 从 `transit.id` 映射到 `transit.name`，供 `applyProxyChains` 查询。
 
 ### 6.5 `applyProxyChains(config, chainDefinitions, transitIdToName)`
@@ -345,7 +351,7 @@ validateChainsSchema(chainDefinitions, transitDefinitions);
 
 `validateOutput` 在链式代理启用时（即 `chainDefinitions` 或 `transitDefinitions` 非空）额外执行：
 
-- **§7.2**：`transit_group` 的任一成员名字若命中**任一** chain_group 的 `landing_pattern`，立即抛错。保证"中转不含落地"，消除链路自回环。
+- **§7.2**：`transit_group` 的任一成员名字若命中**任一** chain_group 的 `landing_pattern`，立即抛错。保证"中转不含落地"，消除链路自回环。实现上对字符串 `"DIRECT"` 做短路豁免——DIRECT 是 Mihomo 内置出口关键字而非订阅节点名，不适用落地 / 中转互斥判定。
 - **§7.3**：`chain_group.proxies` 数组必须非空（理论上 `buildChainGroups` 已过滤空组，本断言用于防止下游手改破坏该约束）。
 - **dialer-proxy 一致性**：任何 `proxies[i]["dialer-proxy"]` 必须是一个现存的 `proxy-group.name`。
 
@@ -685,3 +691,4 @@ payload:
 - **Sub-Store 兼容性**：`module.exports = { main }` 兼容 Sub-Store 的 CommonJS loader，但未针对其特有运行环境（如 iOS JSC）做语法降级；若用户反馈负向后行断言失败，需要在 `regions.yaml` 用非负向断言重写正则。
 - **规则缺失回退**：目前假设上游 `meta-rules-dat` 总能覆盖所需规则。若某条上游规则被删除，需要在本仓库 `definitions/assets/custom/` 下补一个本地规则集，并在 `ruleProviders.yaml` 里把 URL 切到自己的 CDN。
 - **MATCH 前可扩展插入点**：`rules = prependRules + RULE-SET[] + MATCH` 三段已固定；如果需要"在 RULE-SET 之后、MATCH 之前"再插入自定义规则，需要扩展 `inlineRules.yaml` 为 `{ prependRules, appendRules }` 结构并在 `assembleRuleSet` 中增加第三段拼接。
+- **中转组直连仅屏蔽 `url-test`**：`transit_group[].include_direct: true` 在 `type === "url-test"` 时 WARN 忽略；`fallback` / `load-balance` 等 Mihomo 其他策略组类型未纳入屏蔽名单。若未来需要"所有测速 / 权重算法组"统一屏蔽 DIRECT 追加，可在 `buildTransitGroups` 内扩展禁用名单。
