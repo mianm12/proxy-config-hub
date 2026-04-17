@@ -1383,6 +1383,47 @@ function testValidateOutputRejectsEmptyChainGroup() {
 }
 
 /**
+ * 校验 §7.2 的 DIRECT 字面量豁免:transit_group.proxies 含 “DIRECT” 时，
+ * 即使 landing_pattern 会命中 “DIRECT” 字符串，也不应抛错。
+ * DIRECT 是 Mihomo 内置出口关键字，非订阅节点名，应被短路豁免。
+ * @returns {void}
+ */
+function testValidateOutputAllowsDirectLiteralInTransit() {
+  const chainDefinitions = [
+    {
+      id: "chain",
+      name: "🚪 落地",
+      landing_pattern: "^DIRECT$", // 精准命中 DIRECT 字面量,用于验证短路豁免
+      flags: "",
+      entry: "transit",
+      type: "select",
+    },
+  ];
+  const transitDefinitions = [
+    { id: "transit", name: "🔀 中转", transit_pattern: "", flags: "i", type: "select" },
+  ];
+
+  const config = {
+    proxies: [{ name: "Sample-HK-01" }, { name: "自建-01" }],
+    "proxy-groups": [
+      // transit_group.proxies 含 DIRECT 字面量
+      { name: "🔀 中转", type: "select", proxies: ["Sample-HK-01", "DIRECT"] },
+      { name: "🚪 落地", type: "select", proxies: ["自建-01"] },
+    ],
+    rules: [`MATCH,${groupDefinitionsConfig.groupDefinitions[placeholdersConfig.fallback].name}`],
+  };
+  for (const def of Object.values(groupDefinitionsConfig.groupDefinitions)) {
+    config["proxy-groups"].push({ name: def.name, type: "select", proxies: ["Sample-HK-01"] });
+  }
+
+  // 不应抛错:DIRECT 字面量应被 §7.2 短路豁免
+  validateOutput(config, groupDefinitionsConfig.groupDefinitions, {
+    chainDefinitions,
+    transitDefinitions,
+  });
+}
+
+/**
  * 校验 placeholders.yaml 缺少必填 placeholders 字段时，buildYamlModules 应在构建阶段失败。
  * @returns {Promise<void>}
  */
@@ -1564,6 +1605,7 @@ async function main() {
   testValidateOutputRejectsDanglingDialerProxy();
   testValidateOutputRejectsTransitContainingLanding();
   testValidateOutputRejectsEmptyChainGroup();
+  testValidateOutputAllowsDirectLiteralInTransit();
   await testBuildYamlModulesRejectsMissingPlaceholdersField();
   await testBuildYamlModulesRejectsUnknownFallbackGroup();
   await testBuildYamlModulesRejectsUnknownPlaceholderRefTarget();

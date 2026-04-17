@@ -81,6 +81,10 @@ function validateOutput(config, groupDefinitions, chainsContext = {}) {
         const members = Array.isArray(group.proxies) ? group.proxies : [];
         for (const memberName of members) {
           if (typeof memberName !== "string") continue;
+          // DIRECT 是 Mihomo 内置出口关键字（全大写字面量），不是订阅节点名；
+          // 不参与落地 / 中转互斥判定，避免 include_direct=true 的 transit_group 在
+          // 贪婪 landing_pattern 下被误判为混入了落地节点。
+          if (memberName === "DIRECT") continue;
           for (const pattern of compiledLandingPatterns) {
             if (pattern.test(memberName)) {
               throw new Error(
