@@ -1,0 +1,17 @@
+# Source: definitions/assets/custom/_template.yaml
+# Published as: dist/assets/custom/_template.yaml
+#   (referenced via raw.githubusercontent.com/<owner>/<repo>/dist/assets/custom/<filename>)
+#
+# File name = rule-set id, behavior defaults to classical.
+# Supported rule types: DOMAIN, DOMAIN-SUFFIX, DOMAIN-KEYWORD, IP-CIDR, IP-CIDR6
+#
+# Usage:
+# 1. Copy this file and rename it, for example `my-service.yaml`
+# 2. Declare the new provider in `definitions/rules/ruleProviders.yaml`
+# 3. Set `target-group` to an existing id from definitions/proxy-groups/groupDefinitions.yaml
+# 4. Commit the change and let CI publish the dist artifact later
+
+payload:
+  - DOMAIN-SUFFIX,example.com
+  - DOMAIN,www.example.com
+  - IP-CIDR,1.2.3.0/24,no-resolve
