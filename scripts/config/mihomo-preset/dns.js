@@ -25,8 +25,6 @@ export default {
   ],
   "direct-nameserver-follow-policy": true,
   "fallback": [
-    "tls://8.8.4.4",
-    "tls://1.1.1.1",
     "https://cloudflare-dns.com/dns-query",
     "https://dns.google/dns-query"
   ],
@@ -35,8 +33,7 @@ export default {
     "geoip-code": "CN",
     "ipcidr": [
       "240.0.0.0/4",
-      "0.0.0.0/32",
-      "127.0.0.1/32"
+      "0.0.0.0/32"
     ],
     "domain": [
       "+.google.com",

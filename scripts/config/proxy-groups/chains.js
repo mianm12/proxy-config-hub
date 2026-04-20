@@ -6,7 +6,7 @@ export default {
       "transit_pattern": "Transit|中转|自建",
       "flags": "i",
       "type": "select",
-      "include_direct": true
+      "include_direct": false
     }
   ],
   "chain_group": [
