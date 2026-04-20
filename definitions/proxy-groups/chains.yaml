@@ -24,7 +24,7 @@ transit_group:
     transit_pattern: "Transit|中转|自建" # 空 = 所有非 landing 节点；非空则额外正则过滤
     flags: i
     type: select
-    include_direct: true # 可选，默认 false；是否包含直连节点作为中转候选项
+    include_direct: false # 可选，默认 false；是否包含直连节点作为中转候选项
 
 chain_group:
   - id: landing
