@@ -44,7 +44,7 @@ jobs:
             if ! curl -sf --max-time 10 --retry 2 \
               "https://purge.jsdelivr.net/gh/${{ github.repository }}@dist/${file}" > /dev/null; then
               echo "WARN: 清理失败: $file"
-              ((FAILED++))
+              FAILED=$((FAILED + 1))
             fi
           done
           echo "CDN 缓存清理完成（失败 $FAILED 个）"
