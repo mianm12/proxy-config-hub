@@ -15,24 +15,48 @@ default-nameserver:
 
 # 国内 DNS（仅用于解析国内域名，使用加密 DNS）
 nameserver:
-  # 阿里 DNS
+  # DOH
+  ## 阿里 DNS
   - https://dns.alidns.com/dns-query
-  # 腾讯 DNS
+  ## 腾讯 DNS
   - https://doh.pub/dns-query
+  # DOT
+  ## 阿里 DNS
+  - tls://dns.alidns.com:853
+  - tls://223.5.5.5:853
+  - tls://223.6.6.6:853
+  ## 腾讯 DNS
+  - tls://dot.pub:853
 
 # 代理节点域名解析
 proxy-server-nameserver:
-  # 阿里 DNS
+  # DOH
+  ## 阿里 DNS
   - https://dns.alidns.com/dns-query
-  # 腾讯 DNS
+  ## 腾讯 DNS
   - https://doh.pub/dns-query
+  # DOT
+  ## 阿里 DNS
+  - tls://dns.alidns.com:853
+  - tls://223.5.5.5:853
+  - tls://223.6.6.6:853
+  ## 腾讯 DNS
+  - tls://dot.pub:853
 
 # 直连流量使用国内加密 DNS，且继续遵循策略
 direct-nameserver:
-  # 阿里 DNS
+  # DOH
+  ## 阿里 DNS
   - https://dns.alidns.com/dns-query
-  # 腾讯 DNS
+  ## 腾讯 DNS
   - https://doh.pub/dns-query
+  # DOT
+  ## 阿里 DNS
+  - tls://dns.alidns.com:853
+  - tls://223.5.5.5:853
+  - tls://223.6.6.6:853
+  ## 腾讯 DNS
+  - tls://dot.pub:853
 direct-nameserver-follow-policy: true
 
 # 国外 DNS（仅用于解析被污染的国外域名）

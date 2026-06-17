@@ -13,15 +13,27 @@ export default {
   ],
   "nameserver": [
     "https://dns.alidns.com/dns-query",
-    "https://doh.pub/dns-query"
+    "https://doh.pub/dns-query",
+    "tls://dns.alidns.com:853",
+    "tls://223.5.5.5:853",
+    "tls://223.6.6.6:853",
+    "tls://dot.pub:853"
   ],
   "proxy-server-nameserver": [
     "https://dns.alidns.com/dns-query",
-    "https://doh.pub/dns-query"
+    "https://doh.pub/dns-query",
+    "tls://dns.alidns.com:853",
+    "tls://223.5.5.5:853",
+    "tls://223.6.6.6:853",
+    "tls://dot.pub:853"
   ],
   "direct-nameserver": [
     "https://dns.alidns.com/dns-query",
-    "https://doh.pub/dns-query"
+    "https://doh.pub/dns-query",
+    "tls://dns.alidns.com:853",
+    "tls://223.5.5.5:853",
+    "tls://223.6.6.6:853",
+    "tls://dot.pub:853"
   ],
   "direct-nameserver-follow-policy": true,
   "fallback": [
