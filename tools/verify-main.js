@@ -38,6 +38,15 @@ import {
   CANONICAL_NAMESPACES,
 } from "./lib/paths.js";
 
+const BUILTIN_RULE_TARGETS = new Set([
+  "COMPATIBLE",
+  "DIRECT",
+  "DNS",
+  "PASS",
+  "REJECT",
+  "REJECT-DROP",
+]);
+
 /**
  * 将值转换为稳定的 JSON 结构，便于断言时规避原型与引用差异。
  * @param {unknown} value 待规范化的任意值。
@@ -165,13 +174,15 @@ function buildExpectedRuleSnapshot(groupDefinitions, ruleProviders, prependRules
 
   for (const [providerId, providerDefinition] of Object.entries(ruleProviders)) {
     const targetGroupId = providerDefinition?.["target-group"];
-    const targetGroupName = groupDefinitions?.[targetGroupId]?.name;
+    const targetName = BUILTIN_RULE_TARGETS.has(targetGroupId)
+      ? targetGroupId
+      : groupDefinitions?.[targetGroupId]?.name;
 
     if (typeof targetGroupId !== "string" || targetGroupId.length === 0) {
       throw new Error(`rule-provider ${providerId} 缺少合法的 target-group`);
     }
 
-    if (typeof targetGroupName !== "string" || targetGroupName.length === 0) {
+    if (typeof targetName !== "string" || targetName.length === 0) {
       throw new Error(`rule-provider ${providerId} 引用了未定义的 target-group: ${targetGroupId}`);
     }
 
@@ -179,8 +190,8 @@ function buildExpectedRuleSnapshot(groupDefinitions, ruleProviders, prependRules
     expectedProviders[providerId] = stripProviderMetadata(providerDefinition);
     expectedRuleSetRules.push(
       providerDefinition["no-resolve"]
-        ? `RULE-SET,${providerId},${targetGroupName},no-resolve`
-        : `RULE-SET,${providerId},${targetGroupName}`,
+        ? `RULE-SET,${providerId},${targetName},no-resolve`
+        : `RULE-SET,${providerId},${targetName}`,
     );
   }
 
@@ -468,6 +479,65 @@ function testInlineRuleWithNoResolveTargetAccepted() {
   });
 
   assert.equal(rules[0], prependRule, "带 no-resolve 尾缀的合法 prepend 规则应原样保留在首位");
+}
+
+/**
+ * 校验 rule-provider 可直接指向 Mihomo 内置目标，便于对更细粒度规则强制直连/拒绝。
+ * @returns {void}
+ */
+function testRuleProviderBuiltinTargetAccepted() {
+  const providerId = "__builtin_direct_rule__";
+  const { rules } = assembleRuleSet(
+    groupDefinitionsConfig.groupDefinitions,
+    {
+      [providerId]: {
+        type: "http",
+        behavior: "domain",
+        url: "https://example.invalid/direct.mrs",
+        path: "./ruleset/direct.mrs",
+        interval: 86400,
+        format: "mrs",
+        "target-group": "DIRECT",
+      },
+    },
+    { prependRules: [] },
+  );
+
+  assert.equal(rules[0], `RULE-SET,${providerId},DIRECT`, "rule-provider 应支持直接指向 DIRECT");
+}
+
+/**
+ * 校验 Steam 国内下载规则强制直连，并且排在广义 Steam 规则之前。
+ * @returns {void}
+ */
+function testSteamCnDirectRulePrecedesSteamRule() {
+  const steamCnProviderId = "steam-cn";
+  const steamProviderId = "steam";
+  const providerIds = Object.keys(ruleProvidersConfig.ruleProviders);
+  const steamCnIndex = providerIds.indexOf(steamCnProviderId);
+  const steamIndex = providerIds.indexOf(steamProviderId);
+
+  assert.notEqual(steamCnIndex, -1, "应声明 steam-cn rule-provider");
+  assert.notEqual(steamIndex, -1, "应声明 steam rule-provider");
+  assert.ok(steamCnIndex < steamIndex, "steam-cn 应排在 steam 前面，避免被广义 Steam 规则吞掉");
+  assert.equal(
+    ruleProvidersConfig.ruleProviders[steamCnProviderId]["target-group"],
+    "DIRECT",
+    "steam-cn 应强制指向 DIRECT",
+  );
+
+  const { rules } = assembleRuleSet(
+    groupDefinitionsConfig.groupDefinitions,
+    ruleProvidersConfig.ruleProviders,
+    inlineRulesConfig,
+  );
+  const steamGroupName = groupDefinitionsConfig.groupDefinitions.steam.name;
+  const steamCnRuleIndex = rules.indexOf(`RULE-SET,${steamCnProviderId},DIRECT`);
+  const steamRuleIndex = rules.indexOf(`RULE-SET,${steamProviderId},${steamGroupName}`);
+
+  assert.notEqual(steamCnRuleIndex, -1, "应生成 steam-cn 直连规则");
+  assert.notEqual(steamRuleIndex, -1, "应生成 steam 分组规则");
+  assert.ok(steamCnRuleIndex < steamRuleIndex, "steam-cn 直连规则应先于 steam 分组规则生效");
 }
 
 /**
@@ -1480,6 +1550,25 @@ function testValidateOutputAllowsDirectLiteralInTransit() {
 }
 
 /**
+ * 校验 RULE-SET 可以指向 Mihomo 内置目标，供特定 provider 强制直连/拒绝。
+ * @returns {void}
+ */
+function testValidateOutputAllowsBuiltinRuleTarget() {
+  const fallbackName = groupDefinitionsConfig.groupDefinitions[placeholdersConfig.fallback].name;
+  const config = {
+    proxies: [{ name: "Sample-HK-01" }],
+    "proxy-groups": [],
+    rules: ["RULE-SET,builtin-direct,DIRECT", `MATCH,${fallbackName}`],
+  };
+
+  for (const def of Object.values(groupDefinitionsConfig.groupDefinitions)) {
+    config["proxy-groups"].push({ name: def.name, type: "select", proxies: ["Sample-HK-01"] });
+  }
+
+  validateOutput(config, groupDefinitionsConfig.groupDefinitions);
+}
+
+/**
  * 校验 placeholders.yaml 缺少必填 placeholders 字段时，buildYamlModules 应在构建阶段失败。
  * @returns {Promise<void>}
  */
@@ -1663,6 +1752,7 @@ async function main() {
   testValidateOutputRejectsTransitContainingLanding();
   testValidateOutputRejectsEmptyChainGroup();
   testValidateOutputAllowsDirectLiteralInTransit();
+  testValidateOutputAllowsBuiltinRuleTarget();
   await testBuildYamlModulesRejectsMissingPlaceholdersField();
   await testBuildYamlModulesRejectsUnknownFallbackGroup();
   await testBuildYamlModulesRejectsUnknownPlaceholderRefTarget();
@@ -1675,6 +1765,8 @@ async function main() {
   testNoProxyFallback();
   testInvalidInlineRuleTargetRejected();
   testInlineRuleWithNoResolveTargetAccepted();
+  testRuleProviderBuiltinTargetAccepted();
+  testSteamCnDirectRulePrecedesSteamRule();
   testExampleConfigSerialization();
   console.log("主 bundle 验证通过");
 }

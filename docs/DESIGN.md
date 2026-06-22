@@ -374,7 +374,7 @@ validateChainsSchema(chainDefinitions, transitDefinitions);
 | `path` | 是 | Mihomo 本地缓存路径 |
 | `interval` | 否 | 刷新间隔（秒） |
 | `format` | 是 | `yaml` / `text` / `mrs`（当前仓库全部用 `mrs`） |
-| `target-group` | 是（本仓库扩展字段） | `groupDefinitions` 中的稳定 ID；`assembleRuleSet` 读取后从输出中剔除 |
+| `target-group` | 是（本仓库扩展字段） | `groupDefinitions` 中的稳定 ID，或 Mihomo 内置目标（如 `DIRECT` / `REJECT`）；`assembleRuleSet` 读取后从输出中剔除 |
 | `no-resolve` | 否（本仓库扩展字段） | 布尔；为真时生成的 RULE-SET 规则带 `,no-resolve` 尾缀，同时从输出 provider 中剔除 |
 
 **扩展字段 `target-group` / `no-resolve` 不会出现在最终 `rule-providers` 里**——`assembleRuleSet` 在构造输出 provider 对象时主动跳过这两个键。
@@ -398,12 +398,18 @@ rules = normalizePrependRules(inlineRules, groupDefinitions) 作为基础数组
 
 ```js
 for (const [providerId, providerDefinition] of Object.entries(ruleProviders)) {
-  const targetGroup = groupDefinitions[providerDefinition["target-group"]];
+  const targetName = resolveProviderRuleTarget(
+    providerId,
+    providerDefinition["target-group"],
+    groupDefinitions,
+  );
   rules.push(providerDefinition["no-resolve"]
-    ? `RULE-SET,${providerId},${targetGroup.name},no-resolve`
-    : `RULE-SET,${providerId},${targetGroup.name}`);
+    ? `RULE-SET,${providerId},${targetName},no-resolve`
+    : `RULE-SET,${providerId},${targetName}`);
 }
 ```
+
+`resolveProviderRuleTarget` 先识别 `BUILTIN_RULE_TARGETS`，命中时直接使用该字面量；否则按 `groupDefinitions[target-group].name` 映射到真实策略组名。
 
 顺序 = `ruleProviders.yaml` 中的 YAML 对象键声明顺序，并等于运行时匹配顺序（先匹配先生效）。
 
@@ -670,7 +676,7 @@ push to main / workflow_dispatch
 # 添加步骤：
 # 1. 复制此文件并重命名（如 my-service.yaml）
 # 2. 在 definitions/rules/ruleProviders.yaml 中声明新的 provider
-# 3. 指定 target-group 为 definitions/proxy-groups/groupDefinitions.yaml 中已有的 id
+# 3. 指定 target-group 为已有策略组 id，或 DIRECT / REJECT 等 Mihomo 内置目标
 # 4. 提交后 CI 自动构建到 dist 分支
 
 payload:

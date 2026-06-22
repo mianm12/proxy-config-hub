@@ -11,6 +11,10 @@ const BUILTIN_RULE_TARGETS = new Set([
 
 const RULE_TRAILING_OPTIONS = new Set(["no-resolve"]);
 
+function isBuiltinRuleTarget(target) {
+  return BUILTIN_RULE_TARGETS.has(target);
+}
+
 /**
  * 兜底策略组 ID。来源于 placeholders.yaml 的 fallback 字段，
  * 用于 MATCH 规则与缺失校验，避免在多个文件中硬编码字面量。
@@ -93,17 +97,31 @@ function normalizePrependRules(inlineRules = {}, groupDefinitions = {}) {
   });
 }
 
+function resolveProviderRuleTarget(providerId, targetGroupId, groupDefinitions) {
+  if (isBuiltinRuleTarget(targetGroupId)) {
+    return targetGroupId;
+  }
+
+  const targetGroup = groupDefinitions[targetGroupId];
+
+  if (!targetGroup) {
+    throw new Error(`Unknown target-group for ${providerId}: ${targetGroupId}`);
+  }
+
+  if (typeof targetGroup.name !== "string" || targetGroup.name.length === 0) {
+    throw new Error(`Missing target-group name for ${providerId}: ${targetGroupId}`);
+  }
+
+  return targetGroup.name;
+}
+
 function assembleRuleSet(groupDefinitions, ruleProviders, inlineRules) {
   const providers = {};
   const rules = normalizePrependRules(inlineRules, groupDefinitions);
 
   for (const [providerId, providerDefinition] of Object.entries(ruleProviders)) {
     const targetGroupId = providerDefinition["target-group"];
-    const targetGroup = groupDefinitions[targetGroupId];
-
-    if (!targetGroup) {
-      throw new Error(`Unknown target-group for ${providerId}: ${targetGroupId}`);
-    }
+    const targetName = resolveProviderRuleTarget(providerId, targetGroupId, groupDefinitions);
 
     const provider = {};
     for (const [key, value] of Object.entries(providerDefinition)) {
@@ -117,8 +135,8 @@ function assembleRuleSet(groupDefinitions, ruleProviders, inlineRules) {
     providers[providerId] = provider;
     rules.push(
       providerDefinition["no-resolve"]
-        ? `RULE-SET,${providerId},${targetGroup.name},no-resolve`
-        : `RULE-SET,${providerId},${targetGroup.name}`,
+        ? `RULE-SET,${providerId},${targetName},no-resolve`
+        : `RULE-SET,${providerId},${targetName}`,
     );
   }
 
@@ -130,4 +148,4 @@ function assembleRuleSet(groupDefinitions, ruleProviders, inlineRules) {
   return { providers, rules };
 }
 
-export { assembleRuleSet, extractRuleTarget };
+export { assembleRuleSet, extractRuleTarget, isBuiltinRuleTarget };

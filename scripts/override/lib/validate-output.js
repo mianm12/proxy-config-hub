@@ -1,5 +1,5 @@
 import placeholdersConfig from "../../config/proxy-groups/placeholders.js";
-import { extractRuleTarget } from "./rule-assembly.js";
+import { extractRuleTarget, isBuiltinRuleTarget } from "./rule-assembly.js";
 
 /**
  * 兜底策略组 ID。来源于 placeholders.yaml 的 fallback 字段，
@@ -126,7 +126,7 @@ function validateOutput(config, groupDefinitions, chainsContext = {}) {
     if (rule.startsWith("RULE-SET,")) {
       const targetGroupName = extractRuleTarget(rule);
 
-      if (!proxyGroupNames.has(targetGroupName)) {
+      if (!proxyGroupNames.has(targetGroupName) && !isBuiltinRuleTarget(targetGroupName)) {
         throw new Error(`RULE-SET 引用了不存在的策略组: ${targetGroupName}`);
       }
 

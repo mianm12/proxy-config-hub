@@ -410,6 +410,15 @@ export default {
       "format": "mrs",
       "target-group": "asia_streaming"
     },
+    "steam-cn": {
+      "type": "http",
+      "behavior": "domain",
+      "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/steam@cn.mrs",
+      "path": "./ruleset/steam-cn.mrs",
+      "interval": 86400,
+      "format": "mrs",
+      "target-group": "DIRECT"
+    },
     "steam": {
       "type": "http",
       "behavior": "domain",
