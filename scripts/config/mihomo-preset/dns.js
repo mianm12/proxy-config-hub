@@ -79,21 +79,6 @@ export default {
     "*.msftncsi.com",
     "+.market.xiaomi.com",
     "+.music.163.com",
-    "*.126.net",
-    "+.steamchina.com",
-    "+.steamcontent.com",
-    "+.steamserver.net",
-    "csgo.wmsj.cn",
-    "dl.steam.clngaa.com",
-    "dl.steam.ksyna.com",
-    "dota2.wmsj.cn",
-    "st.dl.bscstorage.net",
-    "st.dl.eccdnx.com",
-    "st.dl.pinyuncloud.com",
-    "steampipe.steamcontent.tnkjmec.com",
-    "steampowered.com.8686c.com",
-    "steamstatic.com.8686c.com",
-    "wmsjsteam.com",
-    "xz.pphimalayanrt.com"
+    "*.126.net"
   ]
 };
