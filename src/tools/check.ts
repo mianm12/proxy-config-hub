@@ -29,4 +29,4 @@ for (const step of steps) {
   }
 }
 
-console.log("\n[check:v2] Phase 1 检查通过");
+console.log("\n[check:v2] v2 统一检查通过");

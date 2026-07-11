@@ -31,10 +31,14 @@ interface LoadedYaml<T> {
   readonly data: T;
 }
 
+interface LoadedRuntimeYaml extends LoadedYaml<RawRuntimeConfig> {
+  readonly manifestIndex: number;
+}
+
 interface RawProject {
   readonly configRoot: string;
   readonly manifest: LoadedYaml<RawManifest>;
-  readonly runtime: readonly LoadedYaml<RawRuntimeConfig>[];
+  readonly runtime: readonly LoadedRuntimeYaml[];
   readonly nodeCatalog: LoadedYaml<RawNodeCatalog>;
   readonly routingRegions: LoadedYaml<RawRoutingRegions>;
   readonly chains: LoadedYaml<RawChains>;
@@ -66,7 +70,7 @@ function loadRawProject(configRoot: string): RawProject {
       return [];
     }
     const file = resolveManifestReference(item.source, ["runtime", index, "source"]);
-    return [loadTypedYaml(file, runtimeConfigSchema)];
+    return [{ ...loadTypedYaml(file, runtimeConfigSchema), manifestIndex: index }];
   });
 
   const nodeCatalog = loadTypedYaml(
@@ -121,4 +125,4 @@ function loadRawProject(configRoot: string): RawProject {
 }
 
 export { loadRawProject };
-export type { LoadedYaml, RawProject };
+export type { LoadedRuntimeYaml, LoadedYaml, RawProject };
