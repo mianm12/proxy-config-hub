@@ -1,0 +1,18 @@
+# 用于生成和验证发布示例的脱敏输入。
+# 文档保留地址不会连接真实服务，协议字段保持 Mihomo 语法合法。
+
+proxies:
+  - name: 自建-🇸🇬-Transit-01
+    type: socks5
+    server: 192.0.2.20
+    port: 1080
+
+  - name: Relay-🇺🇸-Landing-01
+    type: socks5
+    server: 192.0.2.21
+    port: 1080
+
+  - name: 普通-🇭🇰-01
+    type: socks5
+    server: 192.0.2.22
+    port: 1080

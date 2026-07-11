@@ -36,7 +36,10 @@ function readJson(file: string): unknown {
 function loadTemplateConfig(): z.infer<typeof configSchema> {
   const template = configSchema.parse(
     parse(
-      fs.readFileSync(path.resolve(process.cwd(), "templates/mihomo/config-example.yaml"), "utf8"),
+      fs.readFileSync(
+        path.resolve(process.cwd(), "tests/fixtures/override/full-example-input.yaml"),
+        "utf8",
+      ),
     ),
   );
   return { proxies: template.proxies };

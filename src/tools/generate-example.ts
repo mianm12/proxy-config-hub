@@ -12,7 +12,7 @@ const templateSchema = z.looseObject({ proxies: z.array(z.unknown()).min(1) });
 
 function generateExample(): string {
   const template = templateSchema.parse(
-    parse(fs.readFileSync(path.join(REPO_ROOT, "templates/mihomo/config-example.yaml"), "utf8")),
+    parse(fs.readFileSync(path.join(REPO_ROOT, "templates/mihomo/config-input.yaml"), "utf8")),
   );
   const input = { proxies: template.proxies };
   const output = compileOverride(input, compileProject(CONFIG_ROOT)).config;

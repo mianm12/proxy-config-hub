@@ -163,7 +163,7 @@ describe("v2 raw schemas", () => {
     expect(renameProfilesSchema.safeParse(validProfile).success).toBe(true);
     expect(
       renameProfilesSchema.safeParse({
-        profiles: { pokemon: { ...validProfile.profiles.pokemon, blkey: "IPLC" } },
+        profiles: { pokemon: { ...validProfile.profiles.pokemon, unsupported: true } },
       }).success,
     ).toBe(false);
   });

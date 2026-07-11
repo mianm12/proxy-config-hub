@@ -39,12 +39,12 @@ describe("rename arguments", () => {
     );
   });
 
-  it("拒绝缺失、未知或携带旧参数的 profile", () => {
+  it("拒绝缺失、未知或携带额外参数的 profile", () => {
     expectArgumentError(() => resolveRenameProfile({}, [PROFILE]));
     expectArgumentError(() => resolveRenameProfile({ profile: "missing" }, [PROFILE]));
     expectArgumentError(() => resolveRenameProfile({ clear: true }, [PROFILE]));
     expectArgumentError(() =>
-      resolveRenameProfile({ profile: "pokemon", blkey: "IPLC" }, [PROFILE]),
+      resolveRenameProfile({ profile: "pokemon", unsupported: true }, [PROFILE]),
     );
   });
 });
