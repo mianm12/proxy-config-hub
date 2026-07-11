@@ -1,0 +1,12 @@
+{
+  "cases": [
+    {
+      "name": "未知地区进入 OTHER",
+      "config": {
+        "proxies": [
+          { "name": "Mars-Alpha-01", "type": "socks5", "server": "192.0.2.10", "port": 1080 }
+        ]
+      }
+    }
+  ]
+}

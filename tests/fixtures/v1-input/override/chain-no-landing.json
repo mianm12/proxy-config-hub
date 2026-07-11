@@ -1,0 +1,13 @@
+{
+  "cases": [
+    {
+      "name": "没有落地节点时链路退化",
+      "config": {
+        "proxies": [
+          { "name": "自建-🇸🇬-Transit-01", "type": "socks5", "server": "192.0.2.30", "port": 1080 },
+          { "name": "普通-🇭🇰-01", "type": "socks5", "server": "192.0.2.31", "port": 1080 }
+        ]
+      }
+    }
+  ]
+}

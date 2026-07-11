@@ -10,6 +10,8 @@
     "rules:build": "node tools/yaml-to-js.js",
     "build": "npm run rules:build && node build.js",
     "example:config": "npm run build && node tools/generate-example-config.js",
+    "baseline:v1:update": "npm run build && node tools/v2/v1-baseline.js --update",
+    "baseline:v1:check": "npm run build && node tools/v2/v1-baseline.js",
     "verify:main": "node tools/verify-main.js",
     "verify": "npm run build && npm run verify:main"
   },

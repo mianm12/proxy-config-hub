@@ -1,0 +1,27 @@
+{
+  "cases": [
+    {
+      "name": "空代理数组",
+      "config": { "proxies": [] }
+    },
+    {
+      "name": "全部节点名无效",
+      "config": {
+        "proxies": [
+          { "name": "", "type": "socks5", "server": "192.0.2.11", "port": 1080 },
+          { "name": null, "type": "socks5", "server": "192.0.2.12", "port": 1080 },
+          { "name": 42, "type": "socks5", "server": "192.0.2.13", "port": 1080 }
+        ]
+      }
+    },
+    {
+      "name": "有效与无效节点名混合",
+      "config": {
+        "proxies": [
+          { "name": "", "type": "socks5", "server": "192.0.2.14", "port": 1080 },
+          { "name": "香港-Valid-01", "type": "socks5", "server": "192.0.2.15", "port": 1080 }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "cases": [
+    {
+      "name": "同时命中多个地区时保持 first-match-wins",
+      "config": {
+        "proxies": [
+          { "name": "香港 Japan 混合信号-01", "type": "socks5", "server": "192.0.2.70", "port": 1080 },
+          { "name": "India Indonesia 混合信号-01", "type": "socks5", "server": "192.0.2.71", "port": 1080 }
+        ]
+      }
+    }
+  ]
+}

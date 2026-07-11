@@ -1,0 +1,19 @@
+{
+  "cases": [
+    {
+      "name": "保留落地节点已有 dialer-proxy",
+      "config": {
+        "proxies": [
+          { "name": "自建-🇸🇬-Transit-01", "type": "socks5", "server": "192.0.2.50", "port": 1080 },
+          {
+            "name": "Relay-🇺🇸-Landing-01",
+            "type": "socks5",
+            "server": "192.0.2.51",
+            "port": 1080,
+            "dialer-proxy": "🔧 手动选择"
+          }
+        ]
+      }
+    }
+  ]
+}

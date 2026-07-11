@@ -1,0 +1,19 @@
+{
+  "cases": [
+    {
+      "name": "宿主字段与已有 runtime 字段透传",
+      "config": {
+        "profile-name": "fixture-profile",
+        "allow-lan": false,
+        "tun": { "enable": true, "stack": "gvisor" },
+        "experimental": { "fixture-flag": true },
+        "proxy-providers": {
+          "fixture-provider": { "type": "http", "url": "https://example.invalid/subscription" }
+        },
+        "proxies": [
+          { "name": "香港-Host-01", "type": "socks5", "server": "192.0.2.60", "port": 1080 }
+        ]
+      }
+    }
+  ]
+}

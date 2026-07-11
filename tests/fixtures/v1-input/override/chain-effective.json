@@ -1,0 +1,14 @@
+{
+  "cases": [
+    {
+      "name": "一跳中转与落地同时存在",
+      "config": {
+        "proxies": [
+          { "name": "自建-🇸🇬-Transit-01", "type": "socks5", "server": "192.0.2.20", "port": 1080 },
+          { "name": "Relay-🇺🇸-Landing-01", "type": "socks5", "server": "192.0.2.21", "port": 1080 },
+          { "name": "普通-🇭🇰-01", "type": "socks5", "server": "192.0.2.22", "port": 1080 }
+        ]
+      }
+    }
+  ]
+}

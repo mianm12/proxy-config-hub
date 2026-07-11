@@ -34,6 +34,21 @@ const DEFAULT_EXAMPLE_OUTPUT_PATH = resolve("dist", "example-full-config.yaml");
 /** rule-providers YAML 源文件路径 */
 const RULE_PROVIDERS_YAML_PATH = resolve("definitions", "rules", "ruleProviders.yaml");
 
+/** v1 基线输入 fixture 根目录 */
+const V1_FIXTURE_INPUT_DIR = resolve("tests", "fixtures", "v1-input");
+
+/** v1 override golden 根目录 */
+const V1_GOLDEN_OUTPUT_DIR = resolve("tests", "golden", "v1-output");
+
+/** v1 rename golden 根目录 */
+const V1_GOLDEN_RENAME_DIR = resolve("tests", "golden", "v1-rename");
+
+/** v1 行为清单 golden 路径 */
+const V1_GOLDEN_INVENTORY_PATH = resolve("tests", "golden", "v1-inventory.json");
+
+/** v1 Sub-Store rename 源码路径 */
+const V1_RENAME_SCRIPT_PATH = resolve("scripts", "sub-store", "rename.js");
+
 /**
  * 资产复制映射表。构建时遍历此表将源目录复制到目标目录。
  * 新增需要复制的资产只需在此处添加一行。
@@ -85,6 +100,11 @@ export {
   TEMPLATE_PATH,
   DEFAULT_EXAMPLE_OUTPUT_PATH,
   RULE_PROVIDERS_YAML_PATH,
+  V1_FIXTURE_INPUT_DIR,
+  V1_GOLDEN_OUTPUT_DIR,
+  V1_GOLDEN_RENAME_DIR,
+  V1_GOLDEN_INVENTORY_PATH,
+  V1_RENAME_SCRIPT_PATH,
   COPY_ASSETS,
   CANONICAL_NAMESPACES,
   CANONICAL_ROOT_NAME,

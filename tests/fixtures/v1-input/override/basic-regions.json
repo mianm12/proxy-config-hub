@@ -1,0 +1,19 @@
+{
+  "cases": [
+    {
+      "name": "中文、英文、代码与旗帜地区识别",
+      "config": {
+        "proxies": [
+          { "name": "香港-中文-01", "type": "socks5", "server": "192.0.2.1", "port": 1080 },
+          { "name": "🇸🇬-Flag-01", "type": "socks5", "server": "192.0.2.2", "port": 1080 },
+          { "name": "Tokyo Japan 01", "type": "socks5", "server": "192.0.2.3", "port": 1080 },
+          { "name": "Node-US-01", "type": "socks5", "server": "192.0.2.4", "port": 1080 },
+          { "name": "Taiwan-01", "type": "socks5", "server": "192.0.2.5", "port": 1080 },
+          { "name": "India-01", "type": "socks5", "server": "192.0.2.6", "port": 1080 },
+          { "name": "Indonesia-01", "type": "socks5", "server": "192.0.2.7", "port": 1080 },
+          { "name": "United Kingdom-01", "type": "socks5", "server": "192.0.2.8", "port": 1080 }
+        ]
+      }
+    }
+  ]
+}
