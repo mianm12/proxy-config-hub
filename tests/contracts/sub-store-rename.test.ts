@@ -84,6 +84,27 @@ describe("Sub-Store rename bundle", () => {
     ).toEqual(golden.proxies);
   });
 
+  it("命名 profile 在宿主 bundle 中跳过订阅流量信息", async () => {
+    const runtime = loadOperator({ profile: "pokemon" });
+    const result = await runtime.operator(
+      [
+        { name: "剩余流量：4.26 GB" },
+        { name: "🇭🇰【亚洲】香港01丨直连" },
+        { name: "🇭🇰【亚洲】香港02丨直连" },
+      ],
+      "ClashMeta",
+      {},
+    );
+
+    expect(result.map(({ name }) => name)).toEqual([
+      "宝可梦-🇭🇰-香港-直连 01",
+      "宝可梦-🇭🇰-香港-直连 02",
+    ]);
+    expect(runtime.logs.some((line) => line.includes("RENAME_SUBSCRIPTION_METADATA_SKIPPED"))).toBe(
+      true,
+    );
+  });
+
   it("产物不包含构建期依赖、Node API、绝对路径或额外文件", () => {
     const bundle = fs.readFileSync(RENAME_BUNDLE, "utf8");
 

@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import type { RegionIr } from "../../../src/compiler/ir/project-ir.ts";
-import { extractMultiplier, extractTags, parseNodeName } from "../../../src/domain/node/index.ts";
+import {
+  extractMultiplier,
+  extractTags,
+  isSubscriptionMetadataName,
+  parseNodeName,
+} from "../../../src/domain/node/index.ts";
 
 function region(
   id: string,
@@ -68,5 +73,17 @@ describe("node-domain", () => {
       { configured: "IPLC", value: "IPLC" },
       { configured: "REALITY", value: "reality" },
     ]);
+  });
+
+  it("只把强流量和有效期信号识别为订阅信息", () => {
+    expect(isSubscriptionMetadataName("剩余流量：4.26 GB")).toBe(true);
+    expect(isSubscriptionMetadataName("套餐到期：2026-08-01")).toBe(true);
+    expect(isSubscriptionMetadataName("下次流量重置：2026-08-01")).toBe(true);
+    expect(isSubscriptionMetadataName("Traffic: 4.26 GB")).toBe(true);
+    expect(isSubscriptionMetadataName("Expiration date: 2026-08-01")).toBe(true);
+
+    expect(isSubscriptionMetadataName("英国 GB 01")).toBe(false);
+    expect(isSubscriptionMetadataName("香港 测试 01")).toBe(false);
+    expect(isSubscriptionMetadataName("US Traffic Premium 01")).toBe(false);
   });
 });

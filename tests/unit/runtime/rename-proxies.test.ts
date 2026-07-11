@@ -12,6 +12,15 @@ const HK: RegionIr = {
   aliases: [],
   cities: [],
 };
+const US: RegionIr = {
+  id: "US",
+  name: "美国",
+  emoji: "🇺🇸",
+  codes: ["US", "USA"],
+  names: { zh: ["美国"], en: ["United States"] },
+  aliases: [],
+  cities: [],
+};
 const PROFILE: RenameProfileIr = {
   id: "fixture",
   prefix: "节点",
@@ -21,6 +30,18 @@ const PROFILE: RenameProfileIr = {
   preserveMultiplier: false,
   collapseSingle: true,
   preserveTags: [],
+};
+const POKEMON_PROFILE: RenameProfileIr = {
+  ...PROFILE,
+  id: "pokemon",
+  prefix: "宝可梦",
+  preserveTags: ["直连"],
+};
+const SELF_HOSTED_PROFILE: RenameProfileIr = {
+  ...PROFILE,
+  id: "self_hosted",
+  prefix: "自建",
+  preserveTags: ["XHTTP", "REALITY", "DMIT", "proWee", "ebCorona"],
 };
 
 describe("renameProxies", () => {
@@ -43,6 +64,48 @@ describe("renameProxies", () => {
     expect(result.diagnostics.map(({ code }) => code)).toEqual([
       "RENAME_UNKNOWN_REGION",
       "RENAME_INVALID_NAME",
+    ]);
+  });
+
+  it("跳过订阅信息节点并保持真实 Pokemon 节点排序", () => {
+    const result = renameProxies(
+      [
+        { name: "剩余流量：4.26 GB" },
+        { name: "🇭🇰【亚洲】香港01丨直连" },
+        { name: "🇭🇰【亚洲】香港02丨直连" },
+      ],
+      POKEMON_PROFILE,
+      [HK],
+    );
+
+    expect(result.proxies.map(({ name }) => name)).toEqual([
+      "宝可梦-🇭🇰-香港-直连 01",
+      "宝可梦-🇭🇰-香港-直连 02",
+    ]);
+    expect(result.diagnostics).toContainEqual(
+      expect.objectContaining({
+        code: "RENAME_SUBSCRIPTION_METADATA_SKIPPED",
+        severity: "warning",
+        context: { index: 0, name: "剩余流量：4.26 GB" },
+      }),
+    );
+  });
+
+  it("按 self_hosted profile 保留真实自建节点标签", () => {
+    const result = renameProxies(
+      [
+        { name: "VLESS + REALITY + Vision-US-DMIT-proWee" },
+        { name: "VLESS-XHTTP-Reality-US-DMIT-proWee" },
+        { name: "VLESS + REALITY + Vision-US-DMIT-ebCorona" },
+      ],
+      SELF_HOSTED_PROFILE,
+      [US],
+    );
+
+    expect(result.proxies.map(({ name }) => name)).toEqual([
+      "自建-🇺🇸-美国-REALITY-DMIT-proWee",
+      "自建-🇺🇸-美国-XHTTP-Reality-DMIT-proWee",
+      "自建-🇺🇸-美国-REALITY-DMIT-ebCorona",
     ]);
   });
 });

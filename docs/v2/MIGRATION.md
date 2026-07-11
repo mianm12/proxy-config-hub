@@ -211,6 +211,7 @@ CFG_SECRET_LIKE_URL
 - `profile` 成为主接口。
 - 迁移期标签匹配可大小写不敏感，但输出保留输入拼写，确保现有节点名等价。
 - `noCache` 保持为 Sub-Store URL 行为，不进入领域配置。
+- 订阅流量/有效期元数据在 node-domain 统一识别并跳过，不依赖地区解析偶然失败。
 
 ### 7.4 rename adapter
 

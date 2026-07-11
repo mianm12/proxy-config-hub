@@ -1,6 +1,11 @@
 import type { RenameProfileIr } from "../../compiler/ir/project-ir.ts";
 import type { Diagnostic } from "../../domain/diagnostics/diagnostic.ts";
-import { parseNodeName, type ProxyNode, type RegionDefinition } from "../../domain/node/index.ts";
+import {
+  isSubscriptionMetadataName,
+  parseNodeName,
+  type ProxyNode,
+  type RegionDefinition,
+} from "../../domain/node/index.ts";
 import type { RenameResult } from "./types.ts";
 
 interface RenameCandidate {
@@ -43,6 +48,16 @@ function renameProxies(
         severity: "warning",
         message: "节点缺少非空字符串 name，已跳过",
         context: { index },
+      });
+      return;
+    }
+
+    if (isSubscriptionMetadataName(proxy.name)) {
+      diagnostics.push({
+        code: "RENAME_SUBSCRIPTION_METADATA_SKIPPED",
+        severity: "warning",
+        message: `订阅信息节点已跳过: ${proxy.name}`,
+        context: { index, name: proxy.name },
       });
       return;
     }

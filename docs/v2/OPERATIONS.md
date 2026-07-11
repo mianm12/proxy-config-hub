@@ -101,6 +101,22 @@ https://www.quietus.icu/proxy-config-hub/v2/manifest.json
 
 三种 override 宿主必须引用同一份 `override.js`，rename 单独引用 `rename.js`。首期不把 QuickJS 真实执行加入正式门槛。
 
+### 5.1 Sub-Store 操作位置
+
+Mihomo 配置覆写和节点重命名是两条不同调用链：
+
+- Mihomo 配置的“脚本操作”加载 `override.js`，入口是 `main(config)`。
+- 节点列表的“脚本操作”加载 `rename.js#profile=<id>#noCache`，入口是 `operator(proxies, targetPlatform, context)`。
+
+节点重命名不要选择 Sub-Store 内置“重命名操作”。如果结果以协议类型开头（例如 `hysteria2香港`、`vless美国`），说明当前没有运行 v2 `rename.js`；v2 命名 profile 的结果会以配置的 `宝可梦-` 或 `自建-` 开头。
+
+当前 staging 复测链接：
+
+```text
+https://www.quietus.icu/proxy-config-hub/v2/rename.js#profile=pokemon#noCache
+https://www.quietus.icu/proxy-config-hub/v2/rename.js#profile=self_hosted#noCache
+```
+
 ## 6. 尚未执行的切换
 
 以下操作必须另行确认后执行：

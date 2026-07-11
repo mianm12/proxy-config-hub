@@ -698,6 +698,8 @@ profiles:
 
 标签匹配默认大小写不敏感，因此 `REALITY/reality/Reality` 无需重复。迁移期默认保留输入中实际匹配到的拼写，以维持现有输出；以后可以为单个标签显式声明规范输出拼写。
 
+重命名前会跳过订阅服务混入节点列表的强元数据项，例如“剩余流量”“已用/总流量”“套餐/订阅到期”和“下次流量重置”。判定只使用这些强组合信号；普通 `GB` 地区代码、含“测试”的节点名或单独出现的英文 `Traffic` 不会被过滤。被跳过的项产生 `RENAME_SUBSCRIPTION_METADATA_SKIPPED` warning，便于在宿主日志中追踪。
+
 新主接口：
 
 ```text
@@ -706,6 +708,13 @@ rename.js#profile=self_hosted
 ```
 
 `#noCache` 是 Sub-Store 资源缓存控制，不进入 rename profile。
+
+在 Sub-Store 中，`rename.js` 必须作为节点列表的“脚本操作”远程链接加载，不能放入内置“重命名操作”；后者有独立的命名规则，不会调用本 bundle 的 `operator`。例如：
+
+```text
+https://www.quietus.icu/proxy-config-hub/v2/rename.js#profile=pokemon#noCache
+https://www.quietus.icu/proxy-config-hub/v2/rename.js#profile=self_hosted#noCache
+```
 
 迁移期兼容当前 `bl`、`blkey`、`fgf`、`flag`、`name`、`nf`、`one` 等参数。解析优先级：
 
