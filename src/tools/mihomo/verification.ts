@@ -82,13 +82,13 @@ function loadMihomoVerificationReceipt(
   try {
     receipt = receiptSchema.parse(JSON.parse(fs.readFileSync(receiptPath, "utf8")) as unknown);
   } catch (error) {
-    throw new Error("缺少有效的 Mihomo 验证回执，请先执行 npm run check:v2", { cause: error });
+    throw new Error("缺少有效的 Mihomo 验证回执，请先执行 npm run check", { cause: error });
   }
   if (receipt.lockVersion !== loadMihomoLock().version) {
-    throw new Error("Mihomo 验证回执的锁定版本已过期，请重新执行 npm run check:v2");
+    throw new Error("Mihomo 验证回执的锁定版本已过期，请重新执行 npm run check");
   }
   if (receipt.configSha256 !== sha256File(config)) {
-    throw new Error("发布示例与 Mihomo 验证回执不一致，请重新执行 npm run check:v2");
+    throw new Error("发布示例与 Mihomo 验证回执不一致，请重新执行 npm run check");
   }
   return receipt;
 }

@@ -111,5 +111,5 @@ const project = compileProject(CONFIG_ROOT);
 const overrideCount = compareOverride(project);
 const renameCount = compareRename(project);
 console.log(
-  `v1/v2 结构化输出等价：override ${String(overrideCount)} cases，rename ${String(renameCount)} cases`,
+  `历史 golden 结构化回归通过：override ${String(overrideCount)} cases，rename ${String(renameCount)} cases`,
 );

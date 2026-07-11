@@ -2,7 +2,7 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "noEmit": false,
-    "outDir": ".cache/build-v2",
+    "outDir": ".cache/build",
     "rootDir": "src",
     "declaration": true,
     "declarationMap": true,

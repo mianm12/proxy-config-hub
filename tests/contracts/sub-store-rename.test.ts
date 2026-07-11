@@ -4,7 +4,7 @@ import vm from "node:vm";
 import { beforeAll, describe, expect, it } from "vitest";
 import { z } from "zod";
 
-import { buildV2 } from "../../src/build/build-v2.ts";
+import { buildBundles } from "../../src/build/build-bundles.ts";
 import { RENAME_BUNDLE, REPO_ROOT } from "../../src/build/paths.ts";
 
 const fixtureSchema = z.object({
@@ -50,7 +50,7 @@ function loadOperator(argumentsValue: Readonly<Record<string, unknown>>): {
 }
 
 describe("Sub-Store rename bundle", () => {
-  beforeAll(async () => buildV2());
+  beforeAll(async () => buildBundles());
 
   for (const fixtureName of ["rename-pokemon", "rename-self-hosted"] as const) {
     it(`${fixtureName} legacy 参数契约与 v1 golden 等价`, async () => {

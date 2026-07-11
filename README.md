@@ -1,155 +1,107 @@
 # proxy-config-hub
 
-Mihomo 覆写脚本与声明式 YAML 规则配置的统一仓库。
+个人使用的 Mihomo（Clash.Meta）配置编译与发布仓库。人工配置使用 YAML，严格 TypeScript 负责编译、语义校验、运行时装配与发布。
 
-> `rewrite/v2` 正在并行实现 v2。当前稳定远程 URL 与 `main` 发布流程仍指向 v1；v2 已部署 Pages staging 供三个宿主实测，但尚未切换公开通道。
+项目生成两个独立的单文件产物：
 
-## v2 并行实现
+- `dist/v2/override.js`：供 Mihomo Party、Clash Verge Rev 和 Sub-Store Mihomo 配置覆写共用。
+- `dist/v2/rename.js`：供 Sub-Store 节点列表脚本操作使用。
 
-v2 以 `config/**/*.yaml` 作为人工配置源，TypeScript 负责编译、语义校验与运行时装配。它生成两份互相独立、共享窄 node-domain 的单文件产物：
+## 远程使用
 
-- `dist/v2/override.js`：Mihomo Party、Clash Verge Rev、Sub-Store Mihomo 配置覆写共用。
-- `dist/v2/rename.js`：Sub-Store 节点重命名 operator。
+稳定 Pages 地址：
 
-本地完整门槛：
+```text
+https://www.quietus.icu/proxy-config-hub/v2/override.js
+https://www.quietus.icu/proxy-config-hub/v2/rename.js
+https://www.quietus.icu/proxy-config-hub/v2/manifest.json
+```
+
+Sub-Store 节点重命名必须选择“脚本操作”，不要选择内置“重命名操作”：
+
+```text
+https://www.quietus.icu/proxy-config-hub/v2/rename.js#profile=pokemon#noCache
+https://www.quietus.icu/proxy-config-hub/v2/rename.js#profile=self_hosted#noCache
+```
+
+Pages 是持续更新通道；GitHub Release 是按版本固定、可用于回滚的不可变通道。公开 manifest 包含当前 commit、Mihomo 版本、artifact URL 与 SHA-256。
+
+## 本地验证
+
+要求 Node.js >= 24 与 npm：
 
 ```bash
 npm ci
 npm run tools:setup
-npm run check:v2
+npm run check
 ```
 
-`tools:setup` 按 `MIHOMO_BIN`、`PATH`、项目缓存的顺序解析 Mihomo；缓存缺失时下载 `tooling/mihomo.lock.json` 锁定的官方资产并校验 SHA-256。Ubuntu Docker、CI 与本地使用同一套 npm 命令，详见 [v2 运维说明](docs/v2/OPERATIONS.md)。
+`tools:setup` 按以下优先级解析 Mihomo：
 
-v2 staging（仅测试，尚非稳定通道）：
+1. `MIHOMO_BIN` 显式路径。
+2. `PATH` 中已有的 `mihomo`。
+3. 项目缓存中由 `tooling/mihomo.lock.json` 锁定版本和 checksum 的官方二进制。
 
-- Override：<https://www.quietus.icu/proxy-config-hub/v2/override.js>
-- Sub-Store rename：<https://www.quietus.icu/proxy-config-hub/v2/rename.js>
-- Manifest：<https://www.quietus.icu/proxy-config-hub/v2/manifest.json>
-
-## 远程使用
-
-构建产物自动发布到 `dist` 分支，可通过以下方式引用。
-
-### Mihomo 覆写脚本
-
-GitHub Raw（推荐，更新即时生效）：
-
-```
-https://raw.githubusercontent.com/mianm12/proxy-config-hub/dist/scripts/override/main.js
-```
-
-jsdelivr CDN（有缓存，CI 自动 purge，但可能有数秒传播延迟）：
-
-```
-https://cdn.jsdelivr.net/gh/mianm12/proxy-config-hub@dist/scripts/override/main.js
-```
-
-在 Sub-Store 中作为脚本操作使用，填入上述任一链接即可。
-
-### Sub-Store 节点重命名脚本
-
-```
-https://raw.githubusercontent.com/mianm12/proxy-config-hub/dist/scripts/sub-store/rename.js
-```
-
-在 Sub-Store 的脚本操作中添加，支持 `#` 传参，具体用法见脚本头部注释。
-
-### 自定义规则资源
-
-```
-https://raw.githubusercontent.com/mianm12/proxy-config-hub/dist/assets/custom/<文件名>
-```
-
-## 本地开发
-
-环境要求：Node.js >= 24，包管理器 npm。
+Ubuntu Docker 可直接运行：
 
 ```bash
-npm ci          # 安装依赖
-npm run build   # 编译 YAML + 打包
-npm run verify  # 运行验证
+docker run --rm \
+  -v "$PWD:/workspace" \
+  -w /workspace \
+  node:24-bookworm \
+  bash -lc 'npm ci && npm run tools:setup && npm run check'
 ```
 
-### npm scripts
+## 常用命令
 
-| 命令 | 说明 |
-|------|------|
-| `npm run rules:build` | 将 `definitions/` 下的声明式 YAML 编译为 `scripts/config/` 下的 JS 模块 |
-| `npm run build` | 执行 `rules:build`，用 esbuild 打包覆写入口，复制自定义规则和 Sub-Store 脚本到 `dist/` |
-| `npm run example:config` | 构建后生成完整示例配置到 `dist/example-full-config.yaml`；支持 `-- <路径>` 或 `-- -` 输出到 stdout |
-| `npm run verify` | 运行打包验证 |
-| `npm run audit:rule-overlap` | 检测规则集之间的域名/IP 重叠与遮蔽关系（需联网拉取规则文件） |
-| `npm run build:v2` | 编译 v2 配置并生成双应用 bundle |
-| `npm run test:v2` | 运行 v2 单元、集成、golden 与宿主契约测试 |
-| `npm run compare:v1-v2` | 比较 v1/v2 代表性结构化输出 |
-| `npm run tools:setup` | 按固定优先级准备锁定的 Mihomo 工具 |
-| `npm run check:v2` | 执行 v2 全部门槛并再次验证 v1 |
-| `npm run build:publication` | 生成 v2 Pages/Release dry-run 资产 |
-| `npm run build:site` | 使用同一发布构建器生成 Pages artifact 内容 |
-| `npm run verify:publication` | 校验 manifest、版本与全部发布 checksum |
+| 命令 | 作用 |
+|---|---|
+| `npm run config:check` | 编译并校验全部 YAML、引用与顺序约束 |
+| `npm run build` | 生成 override 与 rename bundle |
+| `npm run test` | 运行单元、集成、golden 与宿主契约测试 |
+| `npm run verify:golden` | 校验冻结的历史可观察行为 |
+| `npm run verify:mihomo` | 用锁定的官方 Mihomo 校验完整脱敏配置 |
+| `npm run check` | 本地与 CI 共用的完整确定性门槛 |
+| `npm run audit:rules` | 联网检查 provider 可用性、重叠与遮蔽 |
+| `npm run build:publication` | 构建 Pages/Release 发布资产 |
+| `npm run verify:publication` | 校验 manifest、版本和全部 checksum |
+
+## 架构
+
+```text
+config/**/*.yaml
+  → YAML loader + Zod raw schema
+  → semantic validators
+  → Project IR
+  → override / rename runtime
+  → esbuild 单文件 IIFE
+  → dist/v2/
+```
+
+- `config/`：唯一人工业务配置源，由 `config/manifest.yaml` 显式装配。
+- `src/compiler/`：YAML 加载、raw schema、语义校验与规范化 Project IR。
+- `src/domain/`：不依赖宿主、文件系统或 Node API 的共享领域逻辑。
+- `src/runtime/`：override 与 rename 的纯运行时装配。
+- `src/apps/`：宿主入口适配器。
+- `src/tools/`、`src/build/`：本地/CI 工具和 bundle/发布构建。
+- `public/rules/`：原样发布的自定义规则资产。
+- `tests/`：脱敏 fixtures、历史 golden、领域测试和四种宿主契约。
+
+配置模块、人类可读语法、链路模型和 provider 扩展方式见 [配置设计](docs/v2/CONFIGURATION.md)。
 
 ## CI/CD
 
-推送到 `main` 分支时，GitHub Actions 自动：
+- 普通 push/PR：运行 `npm run tools:setup` 与 `npm run check`。
+- `main` 成功：构建 GitHub Pages artifact 并部署 `/v2/` 稳定通道。
+- `v2.*.*` tag：完整验证后创建 GitHub Release 并上传不可变资产。
+- 每周/手动：运行远程 provider 审计，不阻塞普通发布。
 
-1. 安装依赖并构建
-2. 运行验证
-3. 将 `dist/` 发布到 `dist` 分支
-4. 清除 jsdelivr CDN 缓存
+`dist/` 和工具缓存不会提交到 Git；Pages 使用 Actions artifact，不使用 `dist` 或 `gh-pages` 发布分支。
 
-以上仍是 v1 稳定通道。v2 另有独立 CI、Pages artifact dry-run、tag Release 和 weekly rule audit 工作流；Pages dry-run 不执行部署。
+## 文档
 
-## 仓库结构
-
-```text
-definitions/
-  mihomo-preset/   直接合并到 Mihomo 顶层键的预设 YAML（base/dns/sniffer/tun/profile/geodata）
-  proxy-groups/    策略组与链式代理构建数据 YAML（groupDefinitions/regions/placeholders/chains）
-  rules/           分流规则装配 YAML（inlineRules/ruleProviders）
-  assets/          仅复制到 dist 的资产，不参与脚本装配
-    custom/        自定义规则模板
-
-scripts/
-  config/
-    mihomo-preset/  从 definitions/mihomo-preset/ 生成的 JS 模块
-    proxy-groups/   从 definitions/proxy-groups/ 生成的 JS 模块
-    rules/          从 definitions/rules/ 生成的 JS 模块
-  override/
-    main.js     Mihomo 覆写单入口
-    lib/        运行时预设、代理分组、规则装配、输出验证等辅助模块
-  sub-store/
-    rename.js   Sub-Store 节点重命名脚本
-
-dist/               构建产物（发布到 dist 分支）
-  scripts/
-    override/
-      main.js       自包含的 IIFE bundle，暴露 globalThis.main
-    sub-store/
-      rename.js     原样复制的 Sub-Store 脚本
-  assets/
-    custom/         复制的自定义规则资源
-
-tools/
-  yaml-to-js.js             YAML 源文件编译器
-  check-rule-overlap.js     规则重叠审计工具
-  generate-example-config.js  示例配置生成器
-  verify-main.js            打包/运行时验证
-
-templates/
-  mihomo/       脱敏示例输出和参考固定值
-```
-
-## 源数据模型
-
-- `definitions/` 是唯一的声明式 YAML 源目录；`scripts/config/` 是生成产物，不应手动编辑
-- `definitions/mihomo-preset/` 中每个 YAML 对应一个 Mihomo 顶层键（或顶层键集合）的预设
-- `definitions/proxy-groups/` 决定最终 `proxy-groups:` 数组与（对 chains 而言）`proxies:` 中 landing 节点的 `dialer-proxy` 字段
-- `definitions/rules/` 决定最终 `rules:` 与 `rule-providers:`
-- `definitions/assets/` 仅按 `tools/lib/paths.js:COPY_ASSETS` 原样复制到 `dist/assets/`，不参与脚本装配
-
-## 相关文档
-
-- 当前 v1 设计文档与历史上下文：[DESIGN.md](docs/DESIGN.md)
-- v2 重构设计：[架构](docs/v2/ARCHITECTURE.md) / [配置模型](docs/v2/CONFIGURATION.md) / [迁移计划](docs/v2/MIGRATION.md) / [运维说明](docs/v2/OPERATIONS.md)
-- 脱敏 Mihomo 示例配置：[templates/mihomo/config-example.yaml](templates/mihomo/config-example.yaml)
+- [架构设计](docs/v2/ARCHITECTURE.md)
+- [配置设计](docs/v2/CONFIGURATION.md)
+- [迁移与验收记录](docs/v2/MIGRATION.md)
+- [运维说明](docs/v2/OPERATIONS.md)
+- [设计入口](docs/DESIGN.md)

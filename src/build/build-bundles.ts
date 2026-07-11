@@ -57,7 +57,7 @@ function runtimeDataPlugin(project: ReturnType<typeof compileProject>): esbuild.
   };
 }
 
-async function buildV2(): Promise<void> {
+async function buildBundles(): Promise<void> {
   const project = compileProject(CONFIG_ROOT);
   fs.rmSync(DIST_V2_ROOT, { force: true, recursive: true });
   fs.mkdirSync(DIST_V2_ROOT, { recursive: true });
@@ -108,4 +108,4 @@ if (typeof globalThis !== "undefined" && __proxyConfigHubRename && typeof __prox
   reportBundleSize();
 }
 
-export { buildV2 };
+export { buildBundles };

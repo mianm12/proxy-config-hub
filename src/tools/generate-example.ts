@@ -13,7 +13,7 @@ const fixtureSchema = z.object({
     .array(z.object({ config: z.looseObject({ proxies: z.array(z.unknown()).min(1) }) }))
     .min(1),
 });
-function generateExampleV2(): string {
+function generateExample(): string {
   const fixture = fixtureSchema.parse(
     JSON.parse(
       fs.readFileSync(
@@ -32,6 +32,6 @@ function generateExampleV2(): string {
   return target;
 }
 
-if (import.meta.main) console.log(`v2 完整脱敏示例已生成：${generateExampleV2()}`);
+if (import.meta.main) console.log(`完整脱敏示例已生成：${generateExample()}`);
 
-export { generateExampleV2 };
+export { generateExample };

@@ -1,6 +1,8 @@
 # proxy-config-hub v2 迁移计划
 
 > 目标：在保持代表性输入语义等价的前提下并行建立 v2，达到验收门槛后一次切换；不长期维护 v1/v2 双轨。
+>
+> 状态：删除前门槛全部通过，v2 源码切换已执行；等待 `main` 与 `v2.0.0` 的远程验证。
 
 ## 1. 迁移原则
 
@@ -436,24 +438,24 @@ Pages 发布 source 选择 GitHub Actions。`v2` 是 artifact 内目录，不是
 - [x] Release dry-run 资产与 manifest/checksum 正确。
 - [x] 文档中的配置示例与真实 schema 一致。
 
-### 12.1 当前切换前审计结论
+### 12.1 已冻结的切换前审计结论
 
-截至当前 `rewrite/v2` staging：
+最终切换前的 `rewrite/v2` staging 证据：
 
 - 本地与 GitHub Actions 的完整 `check:v2`、Pages artifact/deployment、远程 manifest checksum 和 bundle 契约均已实际通过。
 - `npm run audit:rules` 已联网读取当前 93 个 provider；未发现完整遮蔽，部分重叠继续由独立审计报告呈现，不进入普通构建门槛。
-- v1 默认命令、源码与发布 workflow 仍保留；`dist/`、工具缓存和发布产物未被 Git 跟踪。
+- 切换前 v1 默认命令、源码与发布 workflow 仍完整保留；`dist/`、工具缓存和发布产物未被 Git 跟踪。
 - Sub-Store 与 Mihomo Party 已实际加载 staging `override.js` 成功；此前提交的完整覆写结果来自 Sub-Store。
 - Clash Verge Rev 尚未安装，因此没有实机结果；用户明确接受现有 `main(config, profileName)` 契约测试作为本次切换验收依据。
-- 删除前门槛已全部获得验收，但第 13 节仍是独立的破坏性切换，必须再次获得明确授权后执行。
+- 删除前门槛全部获得验收后，用户分别授权了源码切换、`main` 稳定通道和 `v2.0.0` Release。
 
 ## 13. 最终切换
 
-建议切换提交只做以下范围：
+源码切换提交执行以下范围：
 
-1. 将 v2 scripts 提升为默认 `build/test/check`。
-2. 将 Pages/Release workflow 指向 v2 dist。
-3. 删除 v1：
+1. [x] 将 v2 scripts 提升为默认 `build/test/check`。
+2. [x] 将 Pages/Release workflow 指向 v2 `dist/v2/`。
+3. [x] 删除 v1：
    - `definitions/mihomo-preset/`
    - `definitions/proxy-groups/`
    - `definitions/rules/`
@@ -462,9 +464,12 @@ Pages 发布 source 选择 GitHub Actions。`v2` 是 artifact 内目录，不是
    - 旧 `tools/yaml-to-js.js`
    - 旧 `tools/verify-main.js`
    - 被新工具替代的旧 helpers
-4. 将 `definitions/assets/custom/` 内容迁入 `public/rules/` 后删除旧路径。
-5. 更新 README、AGENTS.md、设计文档和命令说明。
-6. 生成第一个 v2 Release tag。
+4. [x] 将 `definitions/assets/custom/` 内容迁入 `public/rules/` 后删除旧路径。
+5. [x] 将复用的规则审计工具迁入严格 TypeScript，删除 JS + 手写声明双重来源。
+6. [x] 更新 README、AGENTS.md、CLAUDE.md、设计文档和命令说明。
+7. [x] 在无 v1 文件的工作树中通过 `npm run check`、发布 dry-run 与联网规则审计。
+8. [ ] 推送并验证 `rewrite/v2`，再 fast-forward `main` 并验证稳定 Pages。
+9. [ ] 创建 `v2.0.0` tag，验证 GitHub Release 与不可变资产。
 
 删除前再次确认 Git 状态，禁止覆盖迁移期间用户的其他改动。
 

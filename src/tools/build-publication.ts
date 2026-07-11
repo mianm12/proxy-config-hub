@@ -5,7 +5,7 @@ import path from "node:path";
 
 import { z } from "zod";
 
-import { buildV2 } from "../build/build-v2.ts";
+import { buildBundles } from "../build/build-bundles.ts";
 import { CONFIG_ROOT, DIST_V2_ROOT, REPO_ROOT } from "../build/paths.ts";
 import {
   CORE_PUBLICATION_ARTIFACTS,
@@ -14,7 +14,7 @@ import {
 import { artifactPublicUrl, resolvePublicBaseUrl } from "../build/publication-url.ts";
 import { compileProject } from "../compiler/compile-project.ts";
 import { SCHEMA_VERSION } from "../version.ts";
-import { generateExampleV2 } from "./generate-example-v2.ts";
+import { generateExample } from "./generate-example.ts";
 import { loadMihomoVerificationReceipt } from "./mihomo/verification.ts";
 
 const packageSchema = z.object({ version: z.string().regex(/^\d+\.\d+\.\d+$/) });
@@ -114,13 +114,13 @@ function listPublicationFiles(directory: string, prefix: string): readonly strin
 }
 
 async function buildPublication(): Promise<void> {
-  await buildV2();
-  generateExampleV2();
+  await buildBundles();
+  generateExample();
   const exampleConfig = path.join(DIST_V2_ROOT, "example-full-config.yaml");
   const mihomoVerification = loadMihomoVerificationReceipt(exampleConfig);
 
   const rulesDirectory = path.join(DIST_V2_ROOT, "rules");
-  copyRuleAssets(path.join(REPO_ROOT, "definitions", "assets", "custom"), rulesDirectory);
+  copyRuleAssets(path.join(REPO_ROOT, "public", "rules"), rulesDirectory);
   const ruleArtifacts = listPublicationFiles(rulesDirectory, "rules");
   const rulesArchive = path.join(DIST_V2_ROOT, "rules.tar.gz");
   createRulesArchive(

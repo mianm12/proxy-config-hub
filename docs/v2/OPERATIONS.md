@@ -1,6 +1,6 @@
 # proxy-config-hub v2 运维说明
 
-本文覆盖 v2 的本地、Ubuntu Docker、CI、Pages dry-run 与 Release 操作。当前 `rewrite/v2` 仍处于并行迁移期，v1 公开通道未切换。
+本文覆盖当前 v2 的本地、Ubuntu Docker、CI、Pages 与 Release 操作。v1 可执行构建链已删除，历史 fixtures/golden 只作为回归证据保留。
 
 ## 1. 本地完整验证
 
@@ -9,10 +9,10 @@
 ```bash
 npm ci
 npm run tools:setup
-npm run check:v2
+npm run check
 ```
 
-`check:v2` 依次执行格式、lint、类型、YAML schema/语义编译、双 bundle、全部测试、v1/v2 golden 对比、真实 Mihomo 配置检查、v1 verify 与 v1 基线防漂移。
+`check` 依次执行格式、lint、类型、YAML schema/语义编译、双 bundle、全部测试、历史 golden 回归和真实 Mihomo 配置检查。
 
 `npm run tools:setup` 使用固定优先级：
 
@@ -37,14 +37,14 @@ docker run --rm \
   -v "$PWD:/workspace" \
   -w /workspace \
   node:24-bookworm \
-  bash -lc 'npm ci && npm run tools:setup && npm run check:v2'
+  bash -lc 'npm ci && npm run tools:setup && npm run check'
 ```
 
 如需复用下载缓存，可额外挂载宿主目录到 `/workspace/.cache`。容器架构为 linux-x64 或 linux-arm64 时，会选择对应的锁定官方资产。
 
 ## 3. 构建与发布 dry-run
 
-发布构建要求当前 `example-full-config.yaml` 已通过真实 Mihomo 校验；`npm run check:v2` 会原子写入与示例摘要、实际 Mihomo 版本和锁文件版本绑定的本地验证回执。配置、锁文件或示例变化后直接发布会失败，必须重新执行完整门槛。
+发布构建要求当前 `example-full-config.yaml` 已通过真实 Mihomo 校验；`npm run check` 会原子写入与示例摘要、实际 Mihomo 版本和锁文件版本绑定的本地验证回执。配置、锁文件或示例变化后直接发布会失败，必须重新执行完整门槛。
 
 ```bash
 npm run build:publication
@@ -71,18 +71,16 @@ rules.tar.gz
 
 ## 4. GitHub Actions
 
-- `ci-v2.yaml`：PR、`rewrite/v2` 与 `main` 执行 `tools:setup + check:v2`；迁移分支 push 成功后调用 reusable Pages dry-run job。只有仓库变量 `ENABLE_V2_PAGES_DEPLOY=true` 时，才在 artifact 成功后部署 staging。
-- `pages-v2-dry-run.yaml`：支持 reusable 调用；进入默认分支后也可手动执行。它运行 `tools:setup + check:v2`，再通过官方 `upload-pages-artifact` 生成可部署的 Pages artifact，不调用 `deploy-pages`。
-- `release-v2.yaml`：只有推送 `v2.*.*` tag 才执行完整校验并创建 GitHub Release。
+- `ci.yaml`：所有 push/PR 执行 `tools:setup + check`；push 还生成 Pages artifact，只有 `main` 部署稳定 Pages。
+- `pages.yaml`：reusable Pages 构建，运行完整检查并通过官方 `upload-pages-artifact` 上传 `dist/`。
+- `release.yaml`：只有推送 `v2.*.*` tag 才执行完整校验并创建 GitHub Release。
 - `rule-audit.yaml`：每周及手动执行远程 provider 可用性和重叠审计，不阻塞普通发布。
 
 tag 必须精确等于 `v<package.json version>`。当前首个版本为 `v2.0.0`；创建并推送 tag 代表人工发布授权。
 
-GitHub 只允许手动 dispatch 默认分支上已登记的 workflow。并行迁移期不修改 `main`，因此由 `ci-v2.yaml` 在 `rewrite/v2` 检查成功后调用 reusable workflow；首次切换后仍保留手动入口。
+Pages 部署使用 `github-pages` environment、`pages: write` 与 OIDC `id-token: write`，并按 `pages-production` concurrency group 串行执行。非 `main` push 只生成可审阅 artifact，不创建 deployment。
 
-staging 部署使用 `github-pages` environment、`pages: write` 与 OIDC `id-token: write`，且按 `pages-v2-staging` concurrency group 串行执行。开关关闭时仍生成 dry-run artifact，但不会创建 deployment。
-
-当前 staging URL：
+稳定 URL：
 
 ```text
 https://www.quietus.icu/proxy-config-hub/v2/override.js
@@ -90,7 +88,7 @@ https://www.quietus.icu/proxy-config-hub/v2/rename.js
 https://www.quietus.icu/proxy-config-hub/v2/manifest.json
 ```
 
-这些 URL 已通过 HTTPS、CORS、MIME、manifest checksum 与远程 bundle 契约验证。Sub-Store 与 Mihomo Party 已实机加载成功；Clash Verge Rev 尚未安装，用户明确接受其 `main(config, profileName)` 契约测试替代本次实机加载。最终稳定通道仍需完成第 6 节的独立切换授权。
+这些 URL 已通过 HTTPS、CORS、MIME、manifest checksum 与远程 bundle 契约验证。Sub-Store 与 Mihomo Party 已实机加载成功；Clash Verge Rev 尚未安装，用户明确接受其 `main(config, profileName)` 契约测试替代本次实机加载。
 
 ## 5. 宿主契约
 
@@ -110,21 +108,17 @@ Mihomo 配置覆写和节点重命名是两条不同调用链：
 
 节点重命名不要选择 Sub-Store 内置“重命名操作”。如果结果以协议类型开头（例如 `hysteria2香港`、`vless美国`），说明当前没有运行 v2 `rename.js`；v2 命名 profile 的结果会以配置的 `宝可梦-` 或 `自建-` 开头。
 
-当前 staging 复测链接：
+当前链接：
 
 ```text
 https://www.quietus.icu/proxy-config-hub/v2/rename.js#profile=pokemon#noCache
 https://www.quietus.icu/proxy-config-hub/v2/rename.js#profile=self_hosted#noCache
 ```
 
-## 6. 最终切换状态
+## 6. 当前发布状态
+
+默认 npm 命令、Pages workflow 和源码目录均已切换到 v2；v1 构建链已删除。`main` 是 Pages 稳定发布源，`v2.*.*` tag 是不可变 Release 授权。
 
 宿主验收已经完成：Sub-Store 与 Mihomo Party 实机成功，Clash Verge Rev 由用户接受契约测试作为替代验收。
-
-以下操作仍必须另行确认后执行：
-
-1. 将 v2 npm scripts 提升为默认命令并替换现有 v1 `main` 发布工作流。
-2. 删除 `definitions/`、`scripts/config/`、`scripts/override/` 与旧验证工具。
-3. 创建或推送 `v2.0.0` tag、发布 GitHub Release。
 
 自定义域名仍可后续决定；业务配置不依赖域名。

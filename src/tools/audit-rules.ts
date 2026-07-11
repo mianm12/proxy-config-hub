@@ -2,16 +2,89 @@ import net from "node:net";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import yaml from "js-yaml";
+import { parse } from "yaml";
 
-import { CONFIG_ROOT } from "../src/build/paths.ts";
-import { compileProject } from "../src/compiler/compile-project.ts";
+import { CONFIG_ROOT } from "../build/paths.ts";
+import { compileProject } from "../compiler/compile-project.ts";
 
 const AUDIT_CONCURRENCY = 8;
 const AUDIT_TIMEOUT_MS = 30_000;
 
-function loadRuleProviders() {
-  return compileProject(CONFIG_ROOT).providers.flatMap((provider, index) => {
+type ProviderBehavior = "domain" | "ipcidr" | "classical";
+type ProviderFormat = "yaml" | "text" | "mrs";
+
+interface AuditProvider {
+  readonly id: string;
+  readonly index: number;
+  readonly url: string;
+  readonly behavior: ProviderBehavior;
+  readonly format: ProviderFormat;
+  readonly "target-group": string;
+}
+
+interface AuditSource {
+  readonly url: string;
+  readonly format: ProviderFormat;
+  readonly opaque: boolean;
+}
+
+interface TextEntry {
+  readonly kind: "domain" | "suffix" | "classical";
+  readonly value: string;
+  readonly raw: string;
+  readonly key: string;
+}
+
+interface CidrEntry {
+  readonly kind: "cidr";
+  readonly version: 4 | 6;
+  readonly prefix: number;
+  readonly network: bigint;
+  readonly raw: string;
+  readonly key: string;
+}
+
+type NormalizedAuditEntry = TextEntry | CidrEntry;
+
+interface FetchedProvider extends AuditProvider {
+  readonly sourceUrl: string;
+  readonly opaque: boolean;
+  readonly payload: readonly unknown[];
+  readonly entries: readonly NormalizedAuditEntry[];
+}
+
+interface CoveredEntry {
+  readonly entry: string;
+  readonly matchedBy: string;
+}
+
+interface Overlap {
+  readonly left: string;
+  readonly leftGroup: string;
+  readonly right: string;
+  readonly rightGroup: string;
+  readonly behavior: ProviderBehavior;
+  readonly coveredCount: number;
+  readonly totalCount: number;
+  readonly coveredEntries: readonly CoveredEntry[];
+}
+
+interface AuditReport {
+  readonly fullShadowPairs: readonly Overlap[];
+  readonly partialOverlapPairs: readonly Overlap[];
+  readonly opaqueProviders: readonly string[];
+}
+
+interface ReportOptions {
+  readonly summaryOnly?: boolean;
+}
+
+function isRecord(value: unknown): value is Readonly<Record<string, unknown>> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function loadRuleProviders(): readonly AuditProvider[] {
+  return compileProject(CONFIG_ROOT).providers.flatMap<AuditProvider>((provider, index) => {
     const { config } = provider;
     return config.type === "http" && config.url !== undefined
       ? [
@@ -22,11 +95,7 @@ function loadRuleProviders() {
             behavior: config.behavior,
             format:
               config.format ??
-              (config.url.endsWith(".mrs")
-                ? "mrs"
-                : config.url.endsWith(".txt")
-                  ? "text"
-                  : "yaml"),
+              (config.url.endsWith(".mrs") ? "mrs" : config.url.endsWith(".txt") ? "text" : "yaml"),
             "target-group": provider.target,
           },
         ]
@@ -34,7 +103,7 @@ function loadRuleProviders() {
   });
 }
 
-function resolveAuditSource(provider) {
+function resolveAuditSource(provider: Pick<AuditProvider, "url" | "format">): AuditSource {
   const parsed = new URL(provider.url);
   const isMetaRulesMrs =
     provider.format === "mrs" &&
@@ -47,12 +116,14 @@ function resolveAuditSource(provider) {
     : { url: provider.url, format: provider.format, opaque: provider.format === "mrs" };
 }
 
-async function fetchRuleSet(provider) {
+async function fetchRuleSet(provider: AuditProvider): Promise<FetchedProvider> {
   const source = resolveAuditSource(provider);
   const response = await fetch(source.url, { signal: AbortSignal.timeout(AUDIT_TIMEOUT_MS) });
 
   if (!response.ok) {
-    throw new Error(`Failed to fetch ${provider.id}: ${response.status} ${response.statusText}`);
+    throw new Error(
+      `Failed to fetch ${provider.id}: ${String(response.status)} ${response.statusText}`,
+    );
   }
 
   const content = await response.text();
@@ -70,7 +141,11 @@ async function fetchRuleSet(provider) {
   };
 }
 
-function parseRulePayload(providerId, content, source) {
+function parseRulePayload(
+  providerId: string,
+  content: string,
+  source: AuditSource,
+): readonly unknown[] {
   if (source.opaque) {
     return [];
   }
@@ -81,14 +156,14 @@ function parseRulePayload(providerId, content, source) {
       .filter((line) => line && !line.startsWith("#"));
   }
 
-  const document = yaml.load(content);
-  if (!document || typeof document !== "object" || !Array.isArray(document.payload)) {
+  const document: unknown = parse(content);
+  if (!isRecord(document) || !Array.isArray(document["payload"])) {
     throw new Error(`Rule payload must be an array: ${providerId}`);
   }
-  return document.payload;
+  return document["payload"];
 }
 
-function normalizeEntry(behavior, value) {
+function normalizeEntry(behavior: ProviderBehavior, value: unknown): NormalizedAuditEntry {
   if (behavior === "domain") {
     return normalizeDomainEntry(value);
   }
@@ -97,14 +172,10 @@ function normalizeEntry(behavior, value) {
     return normalizeCidrEntry(value);
   }
 
-  if (behavior === "classical") {
-    return normalizeClassicalEntry(value);
-  }
-
-  throw new Error(`Unsupported behavior: ${behavior}`);
+  return normalizeClassicalEntry(value);
 }
 
-function normalizeClassicalEntry(value) {
+function normalizeClassicalEntry(value: unknown): NormalizedAuditEntry {
   const raw = String(value).trim();
   if (!raw) throw new Error("Empty classical entry");
   const [type, body] = raw.split(",", 2);
@@ -129,7 +200,7 @@ function normalizeClassicalEntry(value) {
   };
 }
 
-function normalizeDomainEntry(value) {
+function normalizeDomainEntry(value: unknown): TextEntry {
   const raw = String(value).trim().toLowerCase();
 
   if (!raw) {
@@ -153,7 +224,7 @@ function normalizeDomainEntry(value) {
   };
 }
 
-function normalizeCidrEntry(value) {
+function normalizeCidrEntry(value: unknown): CidrEntry {
   const raw = String(value).trim().toLowerCase();
 
   if (!raw) {
@@ -161,9 +232,10 @@ function normalizeCidrEntry(value) {
   }
 
   const [address, prefixRaw] = raw.split("/");
+  if (address === undefined) throw new Error(`Invalid IP/CIDR entry: ${raw}`);
   const version = net.isIP(address);
 
-  if (!version) {
+  if (version !== 4 && version !== 6) {
     throw new Error(`Invalid IP/CIDR entry: ${raw}`);
   }
 
@@ -184,11 +256,11 @@ function normalizeCidrEntry(value) {
     prefix,
     network,
     raw,
-    key: `cidr:${version}:${network.toString(16)}/${prefix}`,
+    key: `cidr:${String(version)}:${network.toString(16)}/${String(prefix)}`,
   };
 }
 
-function parseIpv4(address) {
+function parseIpv4(address: string): bigint {
   const parts = address.split(".");
 
   if (parts.length !== 4) {
@@ -206,7 +278,7 @@ function parseIpv4(address) {
   }, 0n);
 }
 
-function expandEmbeddedIpv4(address) {
+function expandEmbeddedIpv4(address: string): string {
   const lastColonIndex = address.lastIndexOf(":");
 
   if (lastColonIndex === -1) {
@@ -227,7 +299,7 @@ function expandEmbeddedIpv4(address) {
  * @param {string} address - IPv6 地址字符串。
  * @returns {string[]} 8 个十六进制段的数组。
  */
-function expandIpv6Segments(address) {
+function expandIpv6Segments(address: string): readonly string[] {
   const segments = address.split("::");
 
   if (segments.length > 2) {
@@ -245,7 +317,7 @@ function expandIpv6Segments(address) {
     throw new Error(`IPv6 地址格式无效（总段数超过 8）: ${address}`);
   }
 
-  const middle = Array(8 - left.length - right.length).fill("0");
+  const middle: string[] = Array.from({ length: 8 - left.length - right.length }, () => "0");
   return [...left, ...middle, ...right];
 }
 
@@ -255,7 +327,7 @@ function expandIpv6Segments(address) {
  * @param {string} address - 原始地址（用于错误信息）。
  * @returns {bigint} 128 位整数表示。
  */
-function ipv6SegmentsToBigInt(parts, address) {
+function ipv6SegmentsToBigInt(parts: readonly string[], address: string): bigint {
   if (parts.length !== 8) {
     throw new Error(`IPv6 地址格式无效（展开后段数不为 8）: ${address}`);
   }
@@ -276,7 +348,7 @@ function ipv6SegmentsToBigInt(parts, address) {
  * @param {string} address - IPv6 地址字符串。
  * @returns {bigint} 128 位整数表示。
  */
-function parseIpv6(address) {
+function parseIpv6(address: string): bigint {
   let normalized = address;
 
   if (normalized.includes(".")) {
@@ -287,18 +359,22 @@ function parseIpv6(address) {
   return ipv6SegmentsToBigInt(parts, address);
 }
 
-function entryCovers(leftEntry, rightEntry) {
+function entryCovers(leftEntry: NormalizedAuditEntry, rightEntry: NormalizedAuditEntry): boolean {
   if (leftEntry.kind === "domain") {
     return rightEntry.kind === "domain" && leftEntry.value === rightEntry.value;
   }
 
   if (leftEntry.kind === "suffix") {
     if (rightEntry.kind === "domain") {
-      return rightEntry.value === leftEntry.value || rightEntry.value.endsWith(`.${leftEntry.value}`);
+      return (
+        rightEntry.value === leftEntry.value || rightEntry.value.endsWith(`.${leftEntry.value}`)
+      );
     }
 
     if (rightEntry.kind === "suffix") {
-      return rightEntry.value === leftEntry.value || rightEntry.value.endsWith(`.${leftEntry.value}`);
+      return (
+        rightEntry.value === leftEntry.value || rightEntry.value.endsWith(`.${leftEntry.value}`)
+      );
     }
 
     return false;
@@ -315,18 +391,21 @@ function entryCovers(leftEntry, rightEntry) {
   return false;
 }
 
-function cidrCovers(leftEntry, rightEntry) {
+function cidrCovers(leftEntry: CidrEntry, rightEntry: CidrEntry): boolean {
   if (leftEntry.version !== rightEntry.version || leftEntry.prefix > rightEntry.prefix) {
     return false;
   }
 
   const bits = leftEntry.version === 4 ? 32 : 128;
   const shift = BigInt(bits - leftEntry.prefix);
-  return (rightEntry.network >> shift) === (leftEntry.network >> shift);
+  return rightEntry.network >> shift === leftEntry.network >> shift;
 }
 
-function findCoveredEntries(leftProvider, rightProvider) {
-  const coveredEntries = [];
+function findCoveredEntries(
+  leftProvider: FetchedProvider,
+  rightProvider: FetchedProvider,
+): readonly CoveredEntry[] {
+  const coveredEntries: CoveredEntry[] = [];
 
   for (const rightEntry of rightProvider.entries) {
     const matchedBy = leftProvider.entries.find((leftEntry) => entryCovers(leftEntry, rightEntry));
@@ -342,16 +421,18 @@ function findCoveredEntries(leftProvider, rightProvider) {
   return coveredEntries;
 }
 
-function summarizeOverlap(providers) {
-  const fullShadowPairs = [];
-  const partialOverlapPairs = [];
+function summarizeOverlap(providers: readonly FetchedProvider[]): AuditReport {
+  const fullShadowPairs: Overlap[] = [];
+  const partialOverlapPairs: Overlap[] = [];
   const opaqueProviders = providers.filter(({ opaque }) => opaque).map(({ id }) => id);
 
   for (let rightIndex = 0; rightIndex < providers.length; rightIndex += 1) {
     const rightProvider = providers[rightIndex];
+    if (rightProvider === undefined) throw new Error("规则审计 provider 索引越界");
 
     for (let leftIndex = 0; leftIndex < rightIndex; leftIndex += 1) {
       const leftProvider = providers[leftIndex];
+      if (leftProvider === undefined) throw new Error("规则审计 provider 索引越界");
 
       if (leftProvider.behavior !== rightProvider.behavior) {
         continue;
@@ -363,7 +444,7 @@ function summarizeOverlap(providers) {
         continue;
       }
 
-      const overlap = {
+      const overlap: Overlap = {
         left: leftProvider.id,
         leftGroup: leftProvider["target-group"],
         right: rightProvider.id,
@@ -388,7 +469,7 @@ function summarizeOverlap(providers) {
   return { fullShadowPairs, partialOverlapPairs, opaqueProviders };
 }
 
-function compareOverlap(left, right) {
+function compareOverlap(left: Overlap, right: Overlap): number {
   const leftSeverity = Number(left.leftGroup !== left.rightGroup);
   const rightSeverity = Number(right.leftGroup !== right.rightGroup);
 
@@ -403,18 +484,20 @@ function compareOverlap(left, right) {
   return left.right.localeCompare(right.right);
 }
 
-function formatOverlapLine(overlap) {
+function formatOverlapLine(overlap: Overlap): string {
   const relation = overlap.leftGroup === overlap.rightGroup ? "same-group" : "cross-group";
   return [
     `${overlap.left}(${overlap.leftGroup}) -> ${overlap.right}(${overlap.rightGroup})`,
     `[${relation}]`,
-    `${overlap.coveredCount}/${overlap.totalCount}`,
+    `${String(overlap.coveredCount)}/${String(overlap.totalCount)}`,
   ].join(" ");
 }
 
-function printReport(report, options = {}) {
+function printReport(report: AuditReport, options: ReportOptions = {}): void {
   const { summaryOnly = false } = options;
-  const crossGroupFullShadowPairs = report.fullShadowPairs.filter((overlap) => overlap.leftGroup !== overlap.rightGroup);
+  const crossGroupFullShadowPairs = report.fullShadowPairs.filter(
+    (overlap) => overlap.leftGroup !== overlap.rightGroup,
+  );
 
   if (summaryOnly) {
     console.log("# Cross-Group Full Shadow Pairs");
@@ -427,9 +510,11 @@ function printReport(report, options = {}) {
     }
 
     console.log("");
-    console.log(`# Same-Group Full Shadow Pairs: ${report.fullShadowPairs.length - crossGroupFullShadowPairs.length}`);
-    console.log(`# Partial Overlap Pairs: ${report.partialOverlapPairs.length}`);
-    console.log(`# Opaque MRS Providers (URL only): ${report.opaqueProviders.length}`);
+    console.log(
+      `# Same-Group Full Shadow Pairs: ${String(report.fullShadowPairs.length - crossGroupFullShadowPairs.length)}`,
+    );
+    console.log(`# Partial Overlap Pairs: ${String(report.partialOverlapPairs.length)}`);
+    console.log(`# Opaque MRS Providers (URL only): ${String(report.opaqueProviders.length)}`);
     if (report.opaqueProviders.length) console.log(report.opaqueProviders.join(", "));
     return;
   }
@@ -464,30 +549,40 @@ function printReport(report, options = {}) {
   console.log(report.opaqueProviders.length ? report.opaqueProviders.join("\n") : "(none)");
 }
 
-async function main(options = {}) {
+async function main(options: ReportOptions = {}): Promise<AuditReport> {
   const { summaryOnly = false } = options;
   const providers = loadRuleProviders();
-  const fetchedProviders = new Array(providers.length);
+  const fetchedProviders = new Array<FetchedProvider | undefined>(providers.length);
   let nextIndex = 0;
-  const workers = Array.from({ length: Math.min(AUDIT_CONCURRENCY, providers.length) }, async () => {
-    while (nextIndex < providers.length) {
-      const index = nextIndex;
-      nextIndex += 1;
-      fetchedProviders[index] = await fetchRuleSet(providers[index]);
-    }
-  });
+  const workers = Array.from(
+    { length: Math.min(AUDIT_CONCURRENCY, providers.length) },
+    async () => {
+      while (nextIndex < providers.length) {
+        const index = nextIndex;
+        nextIndex += 1;
+        const provider = providers[index];
+        if (provider === undefined) throw new Error("规则审计 provider 索引越界");
+        fetchedProviders[index] = await fetchRuleSet(provider);
+      }
+    },
+  );
   await Promise.all(workers);
-  const report = summarizeOverlap(fetchedProviders);
+  const completedProviders = fetchedProviders.map((provider) => {
+    if (provider === undefined) throw new Error("规则审计 provider 下载未完成");
+    return provider;
+  });
+  const report = summarizeOverlap(completedProviders);
   printReport(report, { summaryOnly });
   return report;
 }
 
-const isDirectRun = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+const isDirectRun =
+  process.argv[1] !== undefined && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 
 if (isDirectRun) {
   const summaryOnly = process.argv.includes("--summary");
-  main({ summaryOnly }).catch((error) => {
-    console.error("规则重叠检查失败:", error.message || error);
+  main({ summaryOnly }).catch((error: unknown) => {
+    console.error("规则重叠检查失败:", error instanceof Error ? error.message : String(error));
     process.exit(1);
   });
 }

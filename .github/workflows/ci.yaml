@@ -1,9 +1,9 @@
-name: V2 CI
+name: CI
 
 on:
   pull_request:
   push:
-    branches: [main, rewrite/v2]
+    branches: ["**"]
   workflow_dispatch:
 
 permissions:
@@ -32,16 +32,16 @@ jobs:
 
       - run: npm ci
       - run: npm run tools:setup
-      - run: npm run check:v2
+      - run: npm run check
 
-  pages-dry-run:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/rewrite/v2'
+  pages-artifact:
+    if: github.event_name == 'push'
     needs: check
-    uses: ./.github/workflows/pages-v2-dry-run.yaml
+    uses: ./.github/workflows/pages.yaml
 
   pages-deploy:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/rewrite/v2' && vars.ENABLE_V2_PAGES_DEPLOY == 'true'
-    needs: pages-dry-run
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: pages-artifact
     permissions:
       pages: write
       id-token: write
@@ -49,10 +49,10 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     concurrency:
-      group: pages-v2-staging
+      group: pages-production
       cancel-in-progress: false
     runs-on: ubuntu-latest
     steps:
-      - name: Deploy Pages staging
+      - name: Deploy Pages
         id: deployment
         uses: actions/deploy-pages@v4

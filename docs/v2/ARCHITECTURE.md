@@ -1,6 +1,6 @@
 # proxy-config-hub v2 架构设计
 
-> 状态：并行实现与宿主验收已完成，待最终切换授权
+> 状态：v2 源码切换完成，待 `main` 稳定通道与首个 Release 验证
 >
 > 范围：架构与边界设计；实现与切换状态以 `MIGRATION.md` 为准
 
@@ -628,9 +628,10 @@ npm run audit:rules
 format:check
 → lint
 → typecheck
-→ tests
+→ config schema/semantic validation
 → build
-→ bundle contracts
+→ tests and bundle contracts
+→ historical golden verification
 → Mihomo config validation
 ```
 

@@ -45,7 +45,7 @@ function reportBundleSize(): void {
   for (const comparison of compareBundleSizes(baseline, actual)) {
     if (!comparison.grew) continue;
     console.warn(
-      `[build:v2] bundle size 回归: ${comparison.name} ${String(comparison.baseline)} → ${String(comparison.actual)} bytes`,
+      `[build] bundle size 回归: ${comparison.name} ${String(comparison.baseline)} → ${String(comparison.actual)} bytes`,
     );
   }
 }

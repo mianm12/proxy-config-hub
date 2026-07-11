@@ -5,17 +5,15 @@ const steps = [
   "format:check",
   "lint",
   "typecheck",
-  "config:v2:check",
-  "build:v2",
-  "test:v2",
-  "compare:v1-v2",
+  "config:check",
+  "build",
+  "test",
+  "verify:golden",
   "verify:mihomo",
-  "verify",
-  "baseline:v1:check",
 ] as const;
 
 for (const step of steps) {
-  console.log(`\n[check:v2] npm run ${step}`);
+  console.log(`\n[check] npm run ${step}`);
   const result = spawnSync(npmExecutable, ["run", step], {
     cwd: process.cwd(),
     env: process.env,
@@ -31,4 +29,4 @@ for (const step of steps) {
   }
 }
 
-console.log("\n[check:v2] v2 统一检查通过");
+console.log("\n[check] 统一检查通过");

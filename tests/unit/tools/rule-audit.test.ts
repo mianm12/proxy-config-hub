@@ -4,7 +4,7 @@ import {
   normalizeEntry,
   parseRulePayload,
   resolveAuditSource,
-} from "../../../tools/check-rule-overlap.js";
+} from "../../../src/tools/audit-rules.ts";
 
 describe("远程规则审计", () => {
   it("只为 MetaCubeX 标准 MRS 使用同仓库 YAML 可审计源", () => {

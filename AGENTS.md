@@ -1,85 +1,91 @@
 # AGENTS.md
 
-本文件为 Codex / 通用 Agent 工具在本仓库内的项目级指令。与 `CLAUDE.md` 内容等价，供不同 Agent 运行时读取。
+本文件为 Codex / 通用 Agent 工具在本仓库内的项目级指令。与 `CLAUDE.md` 内容等价。
 
 ## 项目概览
 
-Mihomo（Clash.Meta）override 脚本与声明式 YAML 规则配置中枢。主要产物是一个单文件 IIFE bundle `dist/scripts/override/main.js`：接收裸的代理订阅，输出包含 DNS、策略组、路由规则的完整 Mihomo 配置。另外也发布一个 Sub-Store 重命名脚本。
+个人使用的 Mihomo 配置编译与发布仓库。`config/**/*.yaml` 是唯一人工业务配置源，严格 TypeScript 负责编译、语义校验和运行时装配。
 
-语言约定：本仓库的 commit message、注释、文档、控制台输出统一使用**简体中文**，请遵循该约定。
+主要产物：
 
-## v2 并行迁移
+- `dist/v2/override.js`：Mihomo Party、Clash Verge Rev、Sub-Store Mihomo 配置覆写共享。
+- `dist/v2/rename.js`：Sub-Store 节点脚本操作。
 
-`rewrite/v2` 分支同时保留可用的 v1 与新的 v2：
-
-- `definitions/`、`scripts/override/`、`scripts/config/` 和默认 `npm run build/verify` 仍属于 v1，不得在最终切换确认前删除。
-- `config/` 是 v2 唯一人工配置源；`src/` 是严格 TypeScript 实现；`tests/` 使用 Vitest。
-- v2 生成 `dist/v2/override.js` 与 `dist/v2/rename.js`，禁止手改生成产物。
-- 修改 v2 后至少执行 `npm run check:v2`；首次准备 Mihomo 时先执行 `npm run tools:setup`。
-- v1/v2 等价由 `npm run compare:v1-v2` 与 v1 baseline 共同保护。
-- 部署 Pages、删除 v1、创建或推送 `v2.*.*` tag 前必须再次确认。
-
-v2 设计与当前状态以 `docs/v2/ARCHITECTURE.md`、`CONFIGURATION.md`、`MIGRATION.md`、`OPERATIONS.md` 为准。
+commit message、注释、文档与控制台输出统一使用简体中文。
 
 ## 常用命令
 
 ```bash
-npm ci                      # 安装依赖（要求 Node.js >= 24）
-npm run rules:build         # 编译 definitions/ YAML → scripts/config/ JS 模块
-npm run build               # rules:build + esbuild 打包 + 复制静态资源到 dist/
-npm run verify              # 构建后运行 verify:main
-npm run example:config      # 构建后生成 dist/example-full-config.yaml
-npm run audit:rule-overlap  # 检查规则提供方之间的 domain/IP 重叠（会拉取远程）
-npm run tools:setup         # 按固定优先级准备锁定的 Mihomo
-npm run check:v2            # v2 完整门槛，并再次验证 v1
-npm run build:publication   # v2 Pages/Release dry-run 资产
+npm ci
+npm run tools:setup         # 解析或下载锁定的官方 Mihomo
+npm run check               # 本地与 CI 的完整门槛
+npm run build               # 生成双 bundle
+npm run test                # Vitest 全量测试
+npm run config:check        # YAML schema 与语义校验
+npm run verify:golden       # 历史可观察行为回归
+npm run verify:mihomo       # 官方 Mihomo 配置校验
+npm run audit:rules         # 联网 provider 审计
+npm run build:publication   # Pages/Release 资产
+npm run verify:publication  # manifest/checksum 校验
 ```
 
-仓库无测试框架；验证通过 `tools/verify-main.js`（bundle 健全性）完成。
+修改代码或配置后至少运行 `npm run check`。发布构建前必须先有与当前示例、锁文件和 Mihomo 版本匹配的验证回执。
 
-## 架构
+## 架构边界
 
-### 构建流水线
+- `config/`：唯一手写配置源；`manifest.yaml` 显式列出所有模块。
+- `src/compiler/`：YAML loader、Zod raw schema、语义验证与 Project IR。
+- `src/domain/`：纯领域逻辑；不得导入 compiler、apps、tools 或 Node API。
+- `src/runtime/`：只通过 type import 消费 Project IR；不得依赖 apps、tools 或 Node API。
+- `src/apps/`：override/rename 宿主适配器；两个应用不得互相依赖。
+- `src/build/`、`src/tools/`：bundle、官方工具解析、发布与 CI 编排。
+- `public/rules/`：发布时原样复制的自定义规则资产。
+- `tests/fixtures/v1-input/` 与 `tests/golden/v1-*`：迁移前冻结的历史行为证据，名称保留但不包含可执行 v1 实现。
 
-1. **`tools/yaml-to-js.js`** 将 `definitions/` 下的三个命名空间 YAML 编译为 `scripts/config/` 下的 JS 模块：
-   - `definitions/mihomo-preset/*.yaml` → `scripts/config/mihomo-preset/*.js`（base、dns、sniffer、tun、profile、geodata）
-   - `definitions/proxy-groups/*.yaml` → `scripts/config/proxy-groups/*.js`（groupDefinitions、regions、placeholders、chains）
-   - `definitions/rules/*.yaml` → `scripts/config/rules/*.js`（inlineRules、ruleProviders）
-2. **`build.js`** 通过 esbuild 将 `scripts/override/main.js` 打包为 `dist/scripts/override/main.js`（IIFE，暴露 `globalThis.main`），随后按 `tools/lib/paths.js:COPY_ASSETS` 将静态资源拷贝到 `dist/`。
+构建产物位于 `dist/v2/`，禁止手改，也不得提交到 Git。
 
-### Override 脚本（`scripts/override/main.js`）
+## 核心数据流
 
-入口：`function main(config)`，接收一个已填充 `proxies` 的 Mihomo 配置对象，返回完整配置。流水线：
+```text
+config manifest
+→ YAML 1.2 loader / raw schema
+→ semantic validators
+→ Project IR
+→ override 或 rename runtime
+→ host adapter
+→ esbuild 单文件 IIFE
+```
 
-1. **`applyRuntimePreset(config)`** —— 合并所有 runtime YAML 预设（DNS、sniffer、tun、geodata、profile、base）。
-2. **`buildProxyGroups(proxies, groupDefinitions)`** —— 依据 `groupDefinitions.yaml` 构建 proxy-groups，region 匹配与统一 placeholder 表分别来自 `regions.yaml`、`placeholders.yaml`。
-3. **`assembleRuleSet(groupDefinitions, ruleProviders, inlineRules)`** —— 先前置 inline rules，再将每个 rule provider 映射到目标策略组，最后追加兜底 `MATCH`。
-4. **`validateOutput(config)`** —— 装配完成后校验输出。
+Override 运行时阶段：宿主输入校验、节点解析、链路拓扑、动态/配置策略组、providers/rules、runtime plan、输出校验。
 
-共享模块位于 `scripts/override/lib/`。其中 `proxy-groups.js` 的 region 模式与 placeholder 表从编译产物 `scripts/config/proxy-groups/regions.js`、`scripts/config/proxy-groups/placeholders.js` 加载，不硬编码。`expandGroupTarget` 通过统一 `placeholders` 表按 `kind` 分发。
-
-### 数据模型
-
-- **`definitions/`** 是所有声明式配置的唯一来源。**禁止手动编辑** `scripts/config/`，该目录为生成产物。
-- `definitions/rules/` 是活跃规则装配入口（inlineRules + ruleProviders）。
-- `definitions/proxy-groups/` 存放 proxy-group / chain 构建数据（groupDefinitions、regions、placeholders、chains）。
-- `definitions/mihomo-preset/` 存放 Mihomo 顶层键预设（base、dns、sniffer、tun、profile、geodata）。
-- `definitions/assets/custom/` 为模板/发布资产，原样拷贝到 `dist/assets/custom/`，**不**参与活跃规则装配。
-- `definitions/proxy-groups/regions.yaml` 定义 region 匹配模式（id、name、icon、regex pattern、flags）；新增 region 只需追加条目，无需改 JS。数组**最后一项**必须是 OTHER 兜底（id=OTHER、pattern=`.*`），代码将其视为 region 兜底。
-- `definitions/proxy-groups/placeholders.yaml` 定义保留组 ID、兜底组 ID 与统一 `placeholders` 表。每条占位符 `kind: ref`（带 `target` 指向保留组 ID）或 `kind: context`（带 `source` 取 `allNodes` / `regionGroups` / `chainGroups`）。新增普通占位符只需追加条目；新增 context source 时还需同步更新 proxy-groups.js 的 `CONTEXT_SOURCES` 与 yaml-to-js.js 的 `PLACEHOLDER_ALLOWED_CONTEXT_SOURCES`。
-- 构建流程拒绝 `definitions/` 下出现未知的顶层子目录。
-- `tools/verify-main.js` 会动态扫描 `definitions/` 推导期望产物；新增 YAML 文件无需同步修改验证脚本。
-
-### CI/CD
-
-推送到 `main` → GitHub Actions 执行构建、验证、将 `dist/` 部署到 `dist` 分支、清理 jsDelivr CDN 缓存。
+Rename 使用命名 profile；Sub-Store 的 `$arguments` 只在 adapter 解析，不进入 node-domain。
 
 ## 关键约定
 
-- 全栈 ESM（`package.json` 中 `"type": "module"`），bundle 目标为 ES2020。
-- Override 脚本使用了 ES2018 特性（负向后行断言），兼容 V8/Node，但**不**兼容 iOS 的 JavaScriptCore。
-- Rule providers 引用远程 rule-set URL；group definitions 声明 proxy-group 结构。两者均由 YAML 声明、经编译生成 JS。
-- Runtime 预设 YAML 文件与 Mihomo 顶层配置键一一对应（dns、sniffer、tun 等）。
-- 所有路径常量集中在 `tools/lib/paths.js`，各 tool 脚本不得硬编码路径。
-- 文件系统工具通过 `tools/lib/fs-helpers.js` 共享，不得在各脚本中重复实现 `pathExists` / `copyDirectory` 等。
-- 设计文档位于 `docs/DESIGN.md`。
+- 全栈 ESM，TypeScript strict，bundle 目标 ES2020。
+- 人写配置保持 YAML；不把配置迁移为 TypeScript 常量。
+- 标准 provider 简写和完整自定义 provider 并存。
+- runtime 只支持显式 `overlay/replace/if-absent`，不实现通用 deep merge。
+- 一跳中转模型为 `客户端 → 中转 → 落地 → 目标`；IR 保留未来多跳拓扑边界。
+- 显式管理 Mihomo 字段，其他宿主字段默认透传。
+- QuickJS 实机执行暂不属于正式门槛。
+- 原始代理订阅只在内存处理，不写日志、快照或发布资产；fixtures 必须脱敏。
+- Mihomo 解析优先级固定为 `MIHOMO_BIN` → `PATH` → 锁定 checksum 的项目缓存。
+- 联网规则审计独立运行，不进入普通 `check`。
+
+## CI/CD
+
+- push/PR：统一执行 `npm run tools:setup && npm run check`。
+- `main`：检查成功后通过 GitHub Pages artifact 部署 `/v2/`。
+- `v2.*.*` tag：完整检查后创建不可变 GitHub Release。
+- weekly/manual：远程 provider 可用性与重叠审计。
+
+不使用 `dist`、`gh-pages` 或 `v2` 分支发布本项目产物。
+
+## 权威文档
+
+- `docs/v2/ARCHITECTURE.md`
+- `docs/v2/CONFIGURATION.md`
+- `docs/v2/MIGRATION.md`
+- `docs/v2/OPERATIONS.md`
+- `docs/DESIGN.md`

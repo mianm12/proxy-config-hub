@@ -4,7 +4,7 @@ import vm from "node:vm";
 import { beforeAll, describe, expect, it } from "vitest";
 import { z } from "zod";
 
-import { buildV2 } from "../../src/build/build-v2.ts";
+import { buildBundles } from "../../src/build/build-bundles.ts";
 import { OVERRIDE_BUNDLE, REPO_ROOT } from "../../src/build/paths.ts";
 
 const fixtureSchema = z.object({
@@ -53,7 +53,7 @@ function normalize(value: unknown): unknown {
 }
 
 describe("override 三宿主契约", () => {
-  beforeAll(async () => buildV2());
+  beforeAll(async () => buildBundles());
 
   const fixture = fixtureSchema.parse(
     readJson(`${REPO_ROOT}/tests/fixtures/v1-input/override/chain-effective.json`),

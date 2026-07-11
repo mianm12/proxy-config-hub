@@ -1,17 +1,17 @@
-name: V2 Pages Dry Run
+name: Release
 
 on:
-  workflow_call:
-  workflow_dispatch:
+  push:
+    tags: ["v2.*.*"]
 
 permissions:
-  contents: read
+  contents: write
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
-  artifact:
+  release:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -27,11 +27,19 @@ jobs:
           key: ${{ runner.os }}-${{ runner.arch }}-mihomo-${{ hashFiles('tooling/mihomo.lock.json', 'config/runtime/*.yaml') }}
       - run: npm ci
       - run: npm run tools:setup
-      - run: npm run check:v2
-      - run: npm run build:site
+      - run: npm run check
+      - run: npm run build:publication
         env:
           PUBLIC_BASE_URL: ${{ vars.PUBLIC_BASE_URL }}
       - run: npm run verify:publication
-      - uses: actions/upload-pages-artifact@v4
+      - uses: softprops/action-gh-release@v3
         with:
-          path: dist/
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          files: |
+            dist/v2/override.js
+            dist/v2/rename.js
+            dist/v2/example-full-config.yaml
+            dist/v2/manifest.json
+            dist/v2/checksums.txt
+            dist/v2/rules.tar.gz

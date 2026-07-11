@@ -1,4 +1,4 @@
-import { buildV2 } from "../build/build-v2.ts";
+import { buildBundles } from "../build/build-bundles.ts";
 
-await buildV2();
-console.log("v2 bundle 构建完成");
+await buildBundles();
+console.log("bundle 构建完成");

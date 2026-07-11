@@ -1,101 +1,69 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file is equivalent to `AGENTS.md` and provides repository guidance for Claude Code.
 
-## Project Overview
+## Project
 
-Mihomo (Clash.Meta) override script and declarative YAML rule configuration hub. The main output is a single IIFE bundle (`dist/scripts/override/main.js`) that takes a bare proxy subscription and produces a complete Mihomo config with DNS, proxy groups, and routing rules. A Sub-Store rename script is also published.
+This is a personal Mihomo configuration compiler and publication repository. Human-authored configuration lives only in `config/**/*.yaml`; strict TypeScript compiles and validates it.
 
-Language: Chinese (Simplified) is used in commit messages, comments, docs, and console output throughout this repo. Follow this convention.
+Artifacts:
 
-## V2 Parallel Migration
+- `dist/v2/override.js` for Mihomo Party, Clash Verge Rev, and Sub-Store Mihomo config override.
+- `dist/v2/rename.js` for the Sub-Store node script operator.
 
-The `rewrite/v2` branch keeps the working v1 implementation alongside v2:
-
-- `definitions/`, `scripts/override/`, `scripts/config/`, and the default `npm run build/verify` remain v1 until the final switch is explicitly approved.
-- `config/` is the only human-authored v2 configuration source; `src/` is strict TypeScript; `tests/` uses Vitest.
-- V2 produces `dist/v2/override.js` and `dist/v2/rename.js`; never edit generated artifacts.
-- Run `npm run check:v2` after v2 changes and `npm run tools:setup` before the first real Mihomo validation.
-- `npm run compare:v1-v2` and the v1 baseline protect observable compatibility.
-- Confirm before deploying Pages, deleting v1, or creating/pushing a `v2.*.*` tag.
-
-Use `docs/v2/ARCHITECTURE.md`, `CONFIGURATION.md`, `MIGRATION.md`, and `OPERATIONS.md` as the v2 authority.
+Use Simplified Chinese for commit messages, comments, documentation, and console output.
 
 ## Commands
 
 ```bash
-npm ci                    # Install dependencies (Node.js >= 24 required)
-npm run rules:build       # Compile definitions/ YAML → scripts/config/ JS modules
-npm run build             # rules:build + esbuild bundle + copy assets to dist/
-npm run verify            # Build then run verify:main
-npm run example:config    # Build then generate dist/example-full-config.yaml
-npm run audit:rule-overlap # Check domain/IP overlap across rule providers (fetches remote)
-npm run tools:setup        # Resolve or download the locked Mihomo binary
-npm run check:v2           # Run all v2 gates and re-verify v1
-npm run build:publication  # Build v2 Pages/Release dry-run assets
+npm ci
+npm run tools:setup
+npm run check
+npm run build
+npm run test
+npm run config:check
+npm run verify:golden
+npm run verify:mihomo
+npm run audit:rules
+npm run build:publication
+npm run verify:publication
 ```
 
-No test framework — verification is done via `tools/verify-main.js` (bundle sanity check).
+Run `npm run check` after code or configuration changes. Publication requires a current Mihomo verification receipt.
 
-## Architecture
+## Boundaries
 
-### Build pipeline
+- `config/`: only human-authored business configuration; `manifest.yaml` explicitly assembles modules.
+- `src/compiler/`: YAML loading, Zod raw schemas, semantic validation, and Project IR.
+- `src/domain/`: pure domain logic; no compiler, apps, tools, or Node API imports.
+- `src/runtime/`: type-only Project IR dependency; no apps, tools, or Node API imports.
+- `src/apps/`: host adapters; override and rename must not depend on one another.
+- `src/build/`, `src/tools/`: bundles, official tool resolution, publication, and CI orchestration.
+- `public/rules/`: custom rule assets copied verbatim during publication.
+- historical `tests/fixtures/v1-input/` and `tests/golden/v1-*`: frozen migration evidence, not executable v1 code.
 
-1. **`tools/yaml-to-js.js`** compiles YAML from three namespaces under `definitions/` into JS modules under `scripts/config/`:
-   - `definitions/mihomo-preset/*.yaml` → `scripts/config/mihomo-preset/*.js` (base, dns, sniffer, tun, profile, geodata)
-   - `definitions/proxy-groups/*.yaml` → `scripts/config/proxy-groups/*.js` (groupDefinitions, regions, placeholders, chains)
-   - `definitions/rules/*.yaml` → `scripts/config/rules/*.js` (inlineRules, ruleProviders)
-2. **`build.js`** bundles `scripts/override/main.js` via esbuild into `dist/scripts/override/main.js` (IIFE with `globalName: __proxyConfigHub`; the footer exposes `main` both as `globalThis.main` and `module.exports = { main }` to cover Sub-Store / CommonJS loaders), then copies assets listed in `tools/lib/paths.js:COPY_ASSETS` to `dist/`.
+Never edit or commit generated `dist/v2/` artifacts.
 
-### Shared tool modules
+## Conventions
 
-- **`tools/lib/fs-helpers.js`** — shared filesystem utilities: `pathExists`, `listEntries`, `copyDirectory`, `copyFile`. Used by build.js and yaml-to-js.js.
-- **`tools/lib/paths.js`** — centralized path constants, namespace configs, and asset copy mappings. All tools import paths from here instead of computing them locally. To add a new asset to copy during build, add an entry to `COPY_ASSETS`. Namespace configs (`CANONICAL_NAMESPACES`) and layout validation sets are also defined here.
-- **`tools/lib/bundle-runtime.js`** — loads and executes the bundled override script in a VM context; provides template config loading, example config generation, and YAML serialization.
+- ESM, strict TypeScript, ES2020 bundle target.
+- YAML remains the human interface; do not replace it with TypeScript configuration constants.
+- Standard provider shorthand and full custom providers coexist.
+- Runtime apply modes are explicit `overlay/replace/if-absent`; no generic deep merge.
+- Initial topology supports `client → transit → landing → target` while retaining an IR boundary for future hops.
+- Managed Mihomo fields are explicit; unrelated host fields pass through.
+- QuickJS execution is not a formal gate yet.
+- Subscription proxies remain in memory and must not enter logs, snapshots, or publication assets.
+- Mihomo resolution order is `MIHOMO_BIN` → `PATH` → project cache with locked checksum.
+- Network rule audit is independent and does not run inside normal `check`.
 
-### Override script (`scripts/override/main.js`)
+## CI/CD
 
-Entry point: `function main(config)` — receives a Mihomo config object with `proxies` populated, returns the fully configured object. At module load, `validateChainsSchema(chainDefinitions, transitDefinitions)` runs once so YAML schema errors fail fast. Runtime pipeline:
+- push/PR: `npm run tools:setup && npm run check`.
+- `main`: deploy `/v2/` through a GitHub Pages artifact after checks pass.
+- `v2.*.*` tag: validate and create an immutable GitHub Release.
+- weekly/manual: remote provider availability and overlap audit.
 
-1. **`applyRuntimePreset(config)`** — merges all runtime YAML presets (base, profile, geodata, sniffer, dns; tun / allow-lan only when absent) onto config in-place
-2. **Empty-proxy guard** — `getNamedProxies(config.proxies)` filters nodes with a non-empty `name`; when the result is empty, logs an error and returns after preset (skips groups / rules generation)
-3. **`buildChainGroups(namedProxies, chainDefinitions)`** — extracts landing nodes via `landing_pattern` (first-match-wins), returns `{chainGroups, remainingProxies}`
-4. **`buildTransitGroups(remainingProxies, transitDefinitions)`** — builds transit groups from the remaining pool (empty `transit_pattern` means "all remaining"), returns `{groups, idToName}`. If either chain or transit list is empty, the chain flow is skipped for this run (`chainsEffective = false`)
-5. **`buildProxyGroups(remainingProxies, groupDefinitions, {chainGroups, transitGroups})`** — emits `reserved → chain → transit → other custom → region → fallback`; region patterns and the unified placeholder table are loaded from compiled YAML products; also enforces group-name uniqueness
-6. **`applyProxyChains(config, chainDefinitions, transitIdToName)`** — (only when `chainsEffective`) injects `dialer-proxy = <transit group name>` onto every proxy whose name matches a chain's `landing_pattern`
-7. **`assembleRuleSet(groupDefinitions, ruleProviders, inlineRulesConfig)`** — returns `{providers, rules}`: normalized `inlineRules.prependRules` first, then one `RULE-SET,<id>,<group>[,no-resolve]` per provider, then the fallback `MATCH`. The caller writes `providers` to `config["rule-providers"]` and `rules` to `config.rules`
-8. **`validateOutput(config, groupDefinitions, {chainDefinitions, transitDefinitions})`** — post-assembly validation: RULE-SET targets exist, MATCH is last and points at the fallback group, no unexpanded `@`-placeholders leak into group members, chain / transit invariants (spec §7.2 / §7.3), and every `dialer-proxy` references an existing proxy group. Reuses `extractRuleTarget` from rule-assembly
+Do not publish this project through `dist`, `gh-pages`, or `v2` branches.
 
-Shared modules live in `scripts/override/lib/`:
-- **`utils.js`** — shared utilities (`cloneData`)
-- **`proxy-groups.js`** — region detection, proxy classification, and group building. Region patterns and the placeholder table are loaded from compiled YAML products (`scripts/config/proxy-groups/regions.js`, `scripts/config/proxy-groups/placeholders.js`), not hardcoded. Public exports: `buildProxyGroups`, `getNamedProxies`. Internally, `expandGroupTarget` dispatches each placeholder via the unified `placeholders` table by `kind`; the `CONTEXT_SOURCES` map (`allNodes` / `regionGroups` / `chainGroups`) is the single place to extend when adding a new `kind: context` source
-- **`proxy-chains.js`** — chain / transit group construction and `dialer-proxy` injection. Exports `validateChainsSchema` (run at module load), `buildChainGroups`, `buildTransitGroups`, `applyProxyChains`
-- **`rule-assembly.js`** — rule set assembly, exports `assembleRuleSet` and `extractRuleTarget`
-- **`runtime-preset.js`** — runtime preset application (in-place on the passed config)
-- **`validate-output.js`** — output validation
-
-### Data model
-
-- **`definitions/`** is the single source of truth for all declarative config. Never hand-edit `scripts/config/` — it is generated.
-- `definitions/rules/` is the active rule-set assembly entrypoint (inlineRules + ruleProviders).
-- `definitions/proxy-groups/` holds proxy-group / chain construction data (groupDefinitions, regions, placeholders, chains).
-- `definitions/mihomo-preset/` holds Mihomo top-level key presets (base, dns, sniffer, tun, profile, geodata).
-- `definitions/assets/custom/` contains template/asset files copied verbatim to `dist/assets/custom/` — they are NOT part of the active assembly.
-- `definitions/proxy-groups/regions.yaml` defines region matching patterns (id, name, icon, regex pattern, flags). To add a new region, add an entry here — no JS code change needed. The last entry must be the OTHER bucket (id=OTHER, pattern=`.*`) and is treated as the fallback region.
-- `definitions/proxy-groups/placeholders.yaml` defines reserved group IDs, fallback group ID, and the unified `placeholders` table. Each placeholder entry has `kind: ref` (with `target` pointing to a reserved group ID) or `kind: context` (with `source` in `allNodes` / `regionGroups` / `chainGroups`). To add a new placeholder, add an entry here — no JS code change needed unless introducing a new context source (which also requires updating `CONTEXT_SOURCES` in proxy-groups.js and `PLACEHOLDER_ALLOWED_CONTEXT_SOURCES` in yaml-to-js.js).
-- The build rejects unknown top-level entries under `definitions/`.
-- `tools/verify-main.js` dynamically scans `definitions/` to discover expected outputs — adding new YAML files requires no changes to verification code.
-
-### CI/CD
-
-Push to `main` → GitHub Actions builds, verifies, deploys `dist/` to the `dist` branch, and purges jsdelivr CDN cache.
-
-## Key Conventions
-
-- ESM throughout (`"type": "module"` in package.json), target ES2020 for the bundle.
-- The override script uses ES2018 features (negative lookbehind) — compatible with V8/Node but not JavaScriptCore (iOS).
-- Rule providers reference remote rule-set URLs; group definitions declare proxy-group structure. Both are YAML-declared, JS-generated.
-- Runtime preset YAML files map 1:1 to Mihomo top-level config keys (dns, sniffer, tun, etc.).
-- All path constants are centralized in `tools/lib/paths.js`. Do not hardcode paths in tool scripts.
-- Filesystem utilities are shared via `tools/lib/fs-helpers.js`. Do not duplicate `pathExists`/`copyDirectory` etc. in individual scripts.
-- Design document is at `docs/DESIGN.md`.
+Authoritative documentation is under `docs/v2/`, with `docs/DESIGN.md` as the entry point.
