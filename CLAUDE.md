@@ -8,6 +8,19 @@ Mihomo (Clash.Meta) override script and declarative YAML rule configuration hub.
 
 Language: Chinese (Simplified) is used in commit messages, comments, docs, and console output throughout this repo. Follow this convention.
 
+## V2 Parallel Migration
+
+The `rewrite/v2` branch keeps the working v1 implementation alongside v2:
+
+- `definitions/`, `scripts/override/`, `scripts/config/`, and the default `npm run build/verify` remain v1 until the final switch is explicitly approved.
+- `config/` is the only human-authored v2 configuration source; `src/` is strict TypeScript; `tests/` uses Vitest.
+- V2 produces `dist/v2/override.js` and `dist/v2/rename.js`; never edit generated artifacts.
+- Run `npm run check:v2` after v2 changes and `npm run tools:setup` before the first real Mihomo validation.
+- `npm run compare:v1-v2` and the v1 baseline protect observable compatibility.
+- Confirm before deploying Pages, deleting v1, or creating/pushing a `v2.*.*` tag.
+
+Use `docs/v2/ARCHITECTURE.md`, `CONFIGURATION.md`, `MIGRATION.md`, and `OPERATIONS.md` as the v2 authority.
+
 ## Commands
 
 ```bash
@@ -17,6 +30,9 @@ npm run build             # rules:build + esbuild bundle + copy assets to dist/
 npm run verify            # Build then run verify:main
 npm run example:config    # Build then generate dist/example-full-config.yaml
 npm run audit:rule-overlap # Check domain/IP overlap across rule providers (fetches remote)
+npm run tools:setup        # Resolve or download the locked Mihomo binary
+npm run check:v2           # Run all v2 gates and re-verify v1
+npm run build:publication  # Build v2 Pages/Release dry-run assets
 ```
 
 No test framework — verification is done via `tools/verify-main.js` (bundle sanity check).

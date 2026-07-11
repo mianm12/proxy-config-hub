@@ -31,6 +31,7 @@
 以下行为在切换后单独提交：
 
 - 无有效代理从“返回部分配置”改为 fatal error。
+- landing 命中但 transit 为空时，将 landing 恢复到普通节点池；并行期先保持 v1 的移除行为以完成 golden 等价。
 - 节点识别从 first-match regex 完全切换到优先级分类器时产生的少数归属修正。
 - rename legacy 参数废弃或输出文案调整。
 - 策略组、DNS、规则本身的业务优化。
@@ -355,13 +356,15 @@ GitHub Actions 只调用相同命令，不复制内部步骤。
 
 ### 11.1 CI
 
-PR/push：
+并行迁移期 PR/push：
 
 ```text
 npm ci
 npm run tools:setup
-npm run check
+npm run check:v2
 ```
+
+最终切换提交再把 workflow 中的命令同步提升为 `npm run check`；两者始终调用同一个 Node 编排入口，不在 workflow 复制内部步骤。
 
 可缓存：
 
@@ -420,8 +423,8 @@ Pages 发布 source 选择 GitHub Actions。`v2` 是 artifact 内目录，不是
 - [x] Sub-Store Mihomo config override harness 通过。
 - [x] Sub-Store rename operator harness 通过。
 - [x] `mihomo -t -f` 通过。
-- [ ] 本地 `npm run check` 通过。
-- [ ] GitHub Actions 同一命令通过。
+- [x] 本地并行期 `npm run check:v2` 通过。
+- [ ] GitHub Actions 并行期 `npm run check:v2` 通过。
 - [ ] Pages staging URL 能被三个实际宿主加载。
 - [x] Release dry-run 资产与 manifest/checksum 正确。
 - [x] 文档中的配置示例与真实 schema 一致。
@@ -452,12 +455,13 @@ Pages 发布 source 选择 GitHub Actions。`v2` 是 artifact 内目录，不是
 架构切换完成后，以独立提交进行：
 
 1. 无有效代理改为 fatal error。
-2. 启用新的节点冲突诊断并审阅 OTHER 归属。
-3. 将 Sub-Store 使用链接切换为命名 rename profile。
-4. 根据实际使用情况缩小 legacy rename 参数面。
-5. 删除确认无用的 CommonJS override 桥。
-6. 评估加入正式 QuickJS 执行测试。
-7. 根据需要设计两跳中转 YAML。
+2. landing 命中但 transit 为空时，将 landing 恢复到普通节点池。
+3. 启用新的节点冲突诊断并审阅 OTHER 归属。
+4. 将 Sub-Store 使用链接切换为命名 rename profile。
+5. 根据实际使用情况缩小 legacy rename 参数面。
+6. 删除确认无用的 CommonJS override 桥。
+7. 评估加入正式 QuickJS 执行测试。
+8. 根据需要设计两跳中转 YAML。
 
 不得把这些行为变化塞入首次 v2 等价切换提交。
 

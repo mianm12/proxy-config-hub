@@ -348,6 +348,8 @@ selector:
 4. 任一端为空时输出 warning，并让链路整体不生效。
 5. 节点已有 `dialer-proxy` 时保留原值并 warning。
 
+第 4 项是切换后的目标语义。并行迁移期为了通过 v1/v2 golden，对“landing 已命中但 transit 为空”的情况暂时保留 v1 行为：landing 仍从普通池移除，但不注入 `dialer-proxy`。该兼容差异必须在切换后以独立行为提交修正，不能混入首次等价切换。
+
 内部 IR 使用 edge 表达 `landing -> transit`；未来两跳通过新增中转 edge 扩展。
 
 ## 7. 策略组模板

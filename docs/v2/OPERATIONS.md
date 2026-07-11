@@ -44,6 +44,8 @@ docker run --rm \
 
 ## 3. 构建与发布 dry-run
 
+发布构建要求当前 `example-full-config.yaml` 已通过真实 Mihomo 校验；`npm run check:v2` 会原子写入与示例摘要、实际 Mihomo 版本和锁文件版本绑定的本地验证回执。配置、锁文件或示例变化后直接发布会失败，必须重新执行完整门槛。
+
 ```bash
 npm run build:publication
 npm run verify:publication
@@ -70,7 +72,7 @@ rules.tar.gz
 ## 4. GitHub Actions
 
 - `ci-v2.yaml`：PR、`rewrite/v2` 与 `main` 执行 `tools:setup + check:v2`。
-- `pages-v2-dry-run.yaml`：仅手动通过官方 `upload-pages-artifact` 生成可部署的 Pages artifact，不调用 `deploy-pages`。
+- `pages-v2-dry-run.yaml`：仅手动执行 `tools:setup + check:v2`，再通过官方 `upload-pages-artifact` 生成可部署的 Pages artifact，不调用 `deploy-pages`。
 - `release-v2.yaml`：只有推送 `v2.*.*` tag 才执行完整校验并创建 GitHub Release。
 - `rule-audit.yaml`：每周及手动执行远程 provider 可用性和重叠审计，不阻塞普通发布。
 

@@ -2,6 +2,25 @@
 
 Mihomo 覆写脚本与声明式 YAML 规则配置的统一仓库。
 
+> `rewrite/v2` 正在并行实现 v2。当前远程 URL 与 `main` 发布流程仍指向 v1；v2 已具备本地构建、测试、Mihomo 校验和发布 dry-run，但尚未切换公开通道。
+
+## v2 并行实现
+
+v2 以 `config/**/*.yaml` 作为人工配置源，TypeScript 负责编译、语义校验与运行时装配。它生成两份互相独立、共享窄 node-domain 的单文件产物：
+
+- `dist/v2/override.js`：Mihomo Party、Clash Verge Rev、Sub-Store Mihomo 配置覆写共用。
+- `dist/v2/rename.js`：Sub-Store 节点重命名 operator。
+
+本地完整门槛：
+
+```bash
+npm ci
+npm run tools:setup
+npm run check:v2
+```
+
+`tools:setup` 按 `MIHOMO_BIN`、`PATH`、项目缓存的顺序解析 Mihomo；缓存缺失时下载 `tooling/mihomo.lock.json` 锁定的官方资产并校验 SHA-256。Ubuntu Docker、CI 与本地使用同一套 npm 命令，详见 [v2 运维说明](docs/v2/OPERATIONS.md)。
+
 ## 远程使用
 
 构建产物自动发布到 `dist` 分支，可通过以下方式引用。
@@ -55,6 +74,14 @@ npm run verify  # 运行验证
 | `npm run example:config` | 构建后生成完整示例配置到 `dist/example-full-config.yaml`；支持 `-- <路径>` 或 `-- -` 输出到 stdout |
 | `npm run verify` | 运行打包验证 |
 | `npm run audit:rule-overlap` | 检测规则集之间的域名/IP 重叠与遮蔽关系（需联网拉取规则文件） |
+| `npm run build:v2` | 编译 v2 配置并生成双应用 bundle |
+| `npm run test:v2` | 运行 v2 单元、集成、golden 与宿主契约测试 |
+| `npm run compare:v1-v2` | 比较 v1/v2 代表性结构化输出 |
+| `npm run tools:setup` | 按固定优先级准备锁定的 Mihomo 工具 |
+| `npm run check:v2` | 执行 v2 全部门槛并再次验证 v1 |
+| `npm run build:publication` | 生成 v2 Pages/Release dry-run 资产 |
+| `npm run build:site` | 使用同一发布构建器生成 Pages artifact 内容 |
+| `npm run verify:publication` | 校验 manifest、版本与全部发布 checksum |
 
 ## CI/CD
 
@@ -64,6 +91,8 @@ npm run verify  # 运行验证
 2. 运行验证
 3. 将 `dist/` 发布到 `dist` 分支
 4. 清除 jsdelivr CDN 缓存
+
+以上仍是 v1 稳定通道。v2 另有独立 CI、Pages artifact dry-run、tag Release 和 weekly rule audit 工作流；Pages dry-run 不执行部署。
 
 ## 仓库结构
 
@@ -116,5 +145,5 @@ templates/
 ## 相关文档
 
 - 当前 v1 设计文档与历史上下文：[DESIGN.md](docs/DESIGN.md)
-- v2 重构设计：[架构](docs/v2/ARCHITECTURE.md) / [配置模型](docs/v2/CONFIGURATION.md) / [迁移计划](docs/v2/MIGRATION.md)
+- v2 重构设计：[架构](docs/v2/ARCHITECTURE.md) / [配置模型](docs/v2/CONFIGURATION.md) / [迁移计划](docs/v2/MIGRATION.md) / [运维说明](docs/v2/OPERATIONS.md)
 - 脱敏 Mihomo 示例配置：[templates/mihomo/config-example.yaml](templates/mihomo/config-example.yaml)
