@@ -387,6 +387,8 @@ Pages 发布 source 选择 GitHub Actions。`v2` 是 artifact 内目录，不是
 
 自定义域名暂不锁定；使用 `PUBLIC_BASE_URL` 或部署配置生成绝对链接。以后切换域名只需重新构建发布。
 
+`workflow_dispatch` 只能手动触发默认分支已登记的 workflow。并行迁移期由 `ci-v2` 在 `rewrite/v2` push 检查成功后调用 reusable Pages dry-run；不为登记 workflow 提前修改 `main`，也不调用 `deploy-pages`。
+
 ### 11.3 Release
 
 `v2.*.*` tag workflow：

@@ -33,3 +33,8 @@ jobs:
       - run: npm ci
       - run: npm run tools:setup
       - run: npm run check:v2
+
+  pages-dry-run:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/rewrite/v2'
+    needs: check
+    uses: ./.github/workflows/pages-v2-dry-run.yaml

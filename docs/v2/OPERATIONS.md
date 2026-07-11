@@ -71,12 +71,14 @@ rules.tar.gz
 
 ## 4. GitHub Actions
 
-- `ci-v2.yaml`：PR、`rewrite/v2` 与 `main` 执行 `tools:setup + check:v2`。
-- `pages-v2-dry-run.yaml`：仅手动执行 `tools:setup + check:v2`，再通过官方 `upload-pages-artifact` 生成可部署的 Pages artifact，不调用 `deploy-pages`。
+- `ci-v2.yaml`：PR、`rewrite/v2` 与 `main` 执行 `tools:setup + check:v2`；迁移分支 push 成功后调用 reusable Pages dry-run job。
+- `pages-v2-dry-run.yaml`：支持 reusable 调用；进入默认分支后也可手动执行。它运行 `tools:setup + check:v2`，再通过官方 `upload-pages-artifact` 生成可部署的 Pages artifact，不调用 `deploy-pages`。
 - `release-v2.yaml`：只有推送 `v2.*.*` tag 才执行完整校验并创建 GitHub Release。
 - `rule-audit.yaml`：每周及手动执行远程 provider 可用性和重叠审计，不阻塞普通发布。
 
 tag 必须精确等于 `v<package.json version>`。当前首个版本为 `v2.0.0`；创建并推送 tag 代表人工发布授权。
+
+GitHub 只允许手动 dispatch 默认分支上已登记的 workflow。并行迁移期不修改 `main`，因此由 `ci-v2.yaml` 在 `rewrite/v2` 检查成功后调用 reusable workflow；首次切换后仍保留手动入口。
 
 ## 5. 宿主契约
 
