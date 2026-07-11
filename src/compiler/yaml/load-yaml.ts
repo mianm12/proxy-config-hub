@@ -15,8 +15,8 @@ import {
   ConfigCompilationError,
   type Diagnostic,
   type DiagnosticSource,
-} from "../../domain/diagnostics/diagnostic.js";
-import { YamlSource, formatSourcePath, type SourcePath } from "./yaml-source.js";
+} from "../../domain/diagnostics/diagnostic.ts";
+import { YamlSource, formatSourcePath, type SourcePath } from "./yaml-source.ts";
 
 const UTF8_DECODER = new TextDecoder("utf-8", { fatal: true });
 

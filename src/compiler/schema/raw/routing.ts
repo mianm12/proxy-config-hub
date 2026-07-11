@@ -9,7 +9,7 @@ import {
   providerIdSchema,
   providerReferenceSchema,
   providerSchema,
-} from "./common.js";
+} from "./common.ts";
 
 const groupTemplateSchema = z
   .object({

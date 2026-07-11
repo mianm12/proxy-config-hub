@@ -1,7 +1,7 @@
 import { z } from "zod";
 
-import { ConfigCompilationError, type Diagnostic } from "../../domain/diagnostics/diagnostic.js";
-import type { SourcePath, YamlSource } from "../yaml/yaml-source.js";
+import { ConfigCompilationError, type Diagnostic } from "../../domain/diagnostics/diagnostic.ts";
+import type { SourcePath, YamlSource } from "../yaml/yaml-source.ts";
 
 function issuePath(issue: z.core.$ZodIssue): SourcePath {
   const base = issue.path.filter(

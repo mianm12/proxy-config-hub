@@ -6,7 +6,7 @@ import {
   providerSourcesSchema,
   renameProfilesSchema,
   routingModuleSchema,
-} from "../../../src/compiler/schema/raw/index.js";
+} from "../../../src/compiler/schema/raw/index.ts";
 
 describe("v2 raw schemas", () => {
   it("接受有限策略组模板与结构化成员引用", () => {

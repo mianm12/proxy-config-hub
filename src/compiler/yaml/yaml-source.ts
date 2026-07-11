@@ -1,7 +1,7 @@
 import type { Document } from "yaml";
 import { isNode, LineCounter } from "yaml";
 
-import type { DiagnosticSource } from "../../domain/diagnostics/diagnostic.js";
+import type { DiagnosticSource } from "../../domain/diagnostics/diagnostic.ts";
 
 type SourcePath = readonly (string | number)[];
 

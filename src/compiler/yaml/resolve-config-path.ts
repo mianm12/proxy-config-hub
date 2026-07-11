@@ -4,7 +4,7 @@ import path from "node:path";
 import {
   ConfigCompilationError,
   type DiagnosticSource,
-} from "../../domain/diagnostics/diagnostic.js";
+} from "../../domain/diagnostics/diagnostic.ts";
 
 function isInside(root: string, candidate: string): boolean {
   const relative = path.relative(root, candidate);

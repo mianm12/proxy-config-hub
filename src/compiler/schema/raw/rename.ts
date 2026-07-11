@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { domainIdSchema, nonEmptyStringSchema } from "./common.js";
+import { domainIdSchema, nonEmptyStringSchema } from "./common.ts";
 
 const renameProfileSchema = z
   .object({

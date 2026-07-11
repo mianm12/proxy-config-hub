@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { domainIdSchema, generatedGroupKindSchema, relativeConfigPathSchema } from "./common.js";
+import { domainIdSchema, generatedGroupKindSchema, relativeConfigPathSchema } from "./common.ts";
 
 const runtimeApplySchema = z.enum(["overlay", "replace", "if-absent"]);
 

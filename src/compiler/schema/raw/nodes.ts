@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { domainIdSchema, groupTypeSchema, nonEmptyStringSchema } from "./common.js";
+import { domainIdSchema, groupTypeSchema, nonEmptyStringSchema } from "./common.ts";
 
 const regionIdSchema = z
   .string()

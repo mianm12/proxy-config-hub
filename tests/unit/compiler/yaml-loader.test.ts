@@ -4,15 +4,15 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { parseYamlSchema } from "../../../src/compiler/schema/parse-schema.js";
-import { manifestSchema } from "../../../src/compiler/schema/raw/manifest.js";
+import { parseYamlSchema } from "../../../src/compiler/schema/parse-schema.ts";
+import { manifestSchema } from "../../../src/compiler/schema/raw/manifest.ts";
 import {
   decodeYamlUtf8,
   loadYamlFile,
   parseYamlSource,
-} from "../../../src/compiler/yaml/load-yaml.js";
-import { resolveConfigPath } from "../../../src/compiler/yaml/resolve-config-path.js";
-import { ConfigCompilationError } from "../../../src/domain/diagnostics/diagnostic.js";
+} from "../../../src/compiler/yaml/load-yaml.ts";
+import { resolveConfigPath } from "../../../src/compiler/yaml/resolve-config-path.ts";
+import { ConfigCompilationError } from "../../../src/domain/diagnostics/diagnostic.ts";
 
 function captureCompilationError(operation: () => unknown): ConfigCompilationError {
   try {
