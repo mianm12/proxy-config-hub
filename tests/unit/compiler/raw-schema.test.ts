@@ -59,6 +59,7 @@ describe("v2 raw schemas", () => {
           "url-template": "https://example.com/{name}.mrs",
           "path-template": "./ruleset/{id}.mrs",
           provider: { type: "http", behavior: "domain", format: "mrs", interval: 86400 },
+          mihomo: { "size-limit": 1048576 },
         },
       },
     });
@@ -89,6 +90,41 @@ describe("v2 raw schemas", () => {
 
     expect(sources.success).toBe(true);
     expect(module.success).toBe(true);
+  });
+
+  it("标准来源固定为 HTTP，自定义 provider 支持 inline payload", () => {
+    expect(
+      providerSourcesSchema.safeParse({
+        sources: {
+          invalid_file_source: {
+            "id-template": "{name}",
+            "url-template": "https://example.com/{name}.yaml",
+            "path-template": "./ruleset/{id}.yaml",
+            provider: { type: "file", behavior: "domain" },
+          },
+        },
+      }).success,
+    ).toBe(false);
+
+    expect(
+      routingModuleSchema.safeParse({
+        id: "custom",
+        groups: [],
+        "rule-blocks": [
+          {
+            id: "inline",
+            target: "DIRECT",
+            providers: [
+              {
+                id: "personal_inline",
+                provider: { type: "inline", behavior: "domain" },
+                mihomo: { payload: ["+.example.com"] },
+              },
+            ],
+          },
+        ],
+      }).success,
+    ).toBe(true);
   });
 
   it("拒绝策略组模板实例混入完整声明字段", () => {

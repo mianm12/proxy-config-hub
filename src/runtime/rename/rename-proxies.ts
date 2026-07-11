@@ -1,6 +1,6 @@
-import type { RegionIr, RenameProfileIr } from "../../compiler/ir/project-ir.ts";
+import type { RenameProfileIr } from "../../compiler/ir/project-ir.ts";
 import type { Diagnostic } from "../../domain/diagnostics/diagnostic.ts";
-import { parseNodeName, type ProxyNode } from "../../domain/node/index.ts";
+import { parseNodeName, type ProxyNode, type RegionDefinition } from "../../domain/node/index.ts";
 import type { RenameResult } from "./types.ts";
 
 interface RenameCandidate {
@@ -10,7 +10,7 @@ interface RenameCandidate {
 
 function buildBaseName(
   profile: RenameProfileIr,
-  region: RegionIr,
+  region: RegionDefinition,
   tags: readonly string[],
   multiplierLabel: string | undefined,
 ): string {
@@ -30,7 +30,7 @@ function buildBaseName(
 function renameProxies(
   proxies: readonly ProxyNode[],
   profile: RenameProfileIr,
-  catalog: readonly RegionIr[],
+  catalog: readonly RegionDefinition[],
 ): RenameResult {
   const regions = new Map(catalog.map((region) => [region.id, region]));
   const diagnostics: Diagnostic[] = [];

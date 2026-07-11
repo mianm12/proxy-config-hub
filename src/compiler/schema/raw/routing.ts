@@ -28,7 +28,11 @@ const providerSourceSchema = z
     "id-template": nonEmptyStringSchema,
     "url-template": nonEmptyStringSchema,
     "path-template": nonEmptyStringSchema,
-    provider: providerSchema.omit({ url: true, path: true }),
+    provider: providerSchema
+      .omit({ url: true, path: true })
+      .extend({ type: z.literal("http") })
+      .strict(),
+    mihomo: mihomoOptionsSchema.optional(),
   })
   .strict();
 

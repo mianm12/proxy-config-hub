@@ -91,7 +91,10 @@ describe("Sub-Store rename bundle", () => {
     expect(bundle).not.toContain("node:path");
     expect(bundle).not.toContain("parseDocument");
     expect(bundle).not.toContain("ZodError");
+    expect(bundle).not.toContain(".at(");
+    expect(bundle).not.toContain('"mixed-port"');
+    expect(bundle).not.toContain('"rule-providers"');
     expect(bundle).not.toContain(REPO_ROOT);
-    expect(fs.readdirSync(`${REPO_ROOT}/dist/v2`).sort()).toEqual(["rename.js"]);
+    expect(fs.readdirSync(`${REPO_ROOT}/dist/v2`).sort()).toEqual(["override.js", "rename.js"]);
   });
 });

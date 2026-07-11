@@ -1,4 +1,4 @@
-import type { ProviderConfigIr, ProviderIr, RuleIr } from "../ir/project-ir.ts";
+import type { GroupIr, ProviderConfigIr, ProviderIr, RuleIr } from "../ir/project-ir.ts";
 import type { LoadedYaml, RawProject } from "../load-raw-project.ts";
 import type { RawRoutingModule } from "../schema/raw/index.ts";
 import type { DiagnosticCollector } from "./diagnostic-collector.ts";
@@ -29,8 +29,6 @@ const PROVIDER_OWNED_MIHOMO_KEYS = new Set([
   "interval",
   "target-group",
 ]);
-const SECRET_QUERY_KEYS =
-  /^(?:access[_-]?token|api[_-]?key|auth|password|secret|signature|token)$/i;
 
 function renderTemplate(
   template: string,
@@ -70,13 +68,8 @@ function validateProviderUrl(
 
   try {
     const parsed = new URL(url);
-    if (parsed.username !== "" || parsed.password !== "") {
-      diagnostics.error("CFG_SECRET_LIKE_URL", "provider URL 不得包含凭据", source);
-    }
-    for (const key of parsed.searchParams.keys()) {
-      if (SECRET_QUERY_KEYS.test(key)) {
-        diagnostics.error("CFG_SECRET_LIKE_URL", `provider URL 包含疑似凭据 query: ${key}`, source);
-      }
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+      diagnostics.error("CFG_PROVIDER_URL_INVALID", `provider URL 只允许 HTTP(S): ${url}`, source);
     }
   } catch {
     diagnostics.error("CFG_PROVIDER_URL_INVALID", `provider URL 非法: ${url}`, source);
@@ -119,6 +112,60 @@ function makeProviderConfig(
     ...(provider.interval === undefined ? {} : { interval: provider.interval }),
     mihomo,
   };
+}
+
+function inferRawRuleTarget(raw: string): string | undefined {
+  const fields = raw.split(",").map((field) => field.trim());
+  let targetIndex = fields.length - 1;
+  if (fields[targetIndex]?.toLocaleLowerCase("en-US") === "no-resolve") targetIndex -= 1;
+  return targetIndex >= 2 && fields[targetIndex] !== "" ? fields[targetIndex] : undefined;
+}
+
+function compileRawRuleTarget(
+  rule: { readonly raw: string; readonly target?: string | undefined },
+  groupsById: ReadonlyMap<string, GroupIr>,
+  groupIdsByName: ReadonlyMap<string, string>,
+  diagnostics: DiagnosticCollector,
+  source: ReturnType<RawProject["modules"][number]["source"]["locate"]>,
+): string | undefined {
+  const ruleType = rule.raw.split(",", 1)[0]?.trim().toLocaleUpperCase("en-US");
+  if (ruleType === "MATCH" || ruleType === "FINAL" || ruleType === "RULE-SET") {
+    diagnostics.error(
+      "CFG_RAW_RULE_STRUCTURED_REQUIRED",
+      `${ruleType} 已有结构化装配能力，不允许使用 raw`,
+      source,
+    );
+    return rule.target;
+  }
+
+  const inferred = inferRawRuleTarget(rule.raw);
+  if (rule.target !== undefined) {
+    const expected = groupsById.get(rule.target)?.name ?? rule.target;
+    if (inferred !== undefined && inferred !== expected) {
+      diagnostics.error(
+        "CFG_RAW_RULE_TARGET_MISMATCH",
+        `raw 规则目标 ${inferred} 与显式 target ${rule.target}（输出名 ${expected}）不一致`,
+        source,
+      );
+    }
+    return rule.target;
+  }
+
+  if (inferred === undefined) {
+    diagnostics.error(
+      "CFG_RAW_RULE_TARGET_REQUIRED",
+      "无法从 raw 规则可靠解析目标，必须显式声明 target",
+      source,
+    );
+    return undefined;
+  }
+
+  const groupId = groupIdsByName.get(inferred);
+  if (groupId !== undefined) return groupId;
+  if (BUILTIN_TARGETS.has(inferred)) return inferred;
+
+  diagnostics.error("CFG_UNKNOWN_REFERENCE", `raw 规则 target 不存在: ${inferred}`, source);
+  return undefined;
 }
 
 function expandProvider(
@@ -164,9 +211,10 @@ function expandProvider(
       diagnostics,
       templateSource,
     );
+    validateProviderMihomo(sourceDefinition.mihomo ?? {}, diagnostics, templateSource);
     const config = makeProviderConfig(
       { ...sourceDefinition.provider, url, path: providerPath },
-      {},
+      sourceDefinition.mihomo ?? {},
     );
     validateProviderUrl(url, diagnostics, sourcePath);
     return {
@@ -186,6 +234,42 @@ function expandProvider(
       sourcePath,
     );
   }
+  if (config.type === "file" && config.path === undefined) {
+    diagnostics.error(
+      "CFG_PROVIDER_INCOMPLETE",
+      `file provider ${reference.id} 必须声明 path`,
+      sourcePath,
+    );
+  }
+  if (
+    config.type === "inline" &&
+    (!Array.isArray(config.mihomo["payload"]) || config.mihomo["payload"].length === 0)
+  ) {
+    diagnostics.error(
+      "CFG_PROVIDER_INCOMPLETE",
+      `inline provider ${reference.id} 必须在 mihomo.payload 声明非空规则`,
+      sourcePath,
+    );
+  }
+  if (
+    config.type !== "http" &&
+    (config.url !== undefined ||
+      config.interval !== undefined ||
+      (config.type === "inline" && config.path !== undefined))
+  ) {
+    diagnostics.error(
+      "CFG_PROVIDER_FIELD_INVALID",
+      `${config.type} provider ${reference.id} 包含不适用的远程字段`,
+      sourcePath,
+    );
+  }
+  if (config.format === "mrs" && config.behavior === "classical") {
+    diagnostics.error(
+      "CFG_PROVIDER_FIELD_INVALID",
+      `provider ${reference.id} 的 mrs format 不支持 classical behavior`,
+      sourcePath,
+    );
+  }
   validateProviderUrl(config.url, diagnostics, sourcePath);
   return {
     id: reference.id,
@@ -197,9 +281,12 @@ function expandProvider(
 
 function compileRouting(
   project: RawProject,
-  groupIds: ReadonlySet<string>,
+  groups: readonly GroupIr[],
   diagnostics: DiagnosticCollector,
 ): RoutingCompilationResult {
+  const groupsById = new Map(groups.map((group) => [group.id, group]));
+  const groupIds = new Set(groupsById.keys());
+  const groupIdsByName = new Map(groups.map((group) => [group.name, group.id]));
   const modules = new Map<string, LoadedYaml<RawRoutingModule>>();
   const allBlocks = new Map<string, BlockReference>();
 
@@ -354,12 +441,14 @@ function compileRouting(
       });
     });
 
-    for (const rule of block.rules ?? []) {
+    for (const [ruleIndex, rule] of (block.rules ?? []).entries()) {
       if ("raw" in rule) {
+        const source = module.source.locate(["rule-blocks", blockIndex, "rules", ruleIndex]);
+        const target = compileRawRuleTarget(rule, groupsById, groupIdsByName, diagnostics, source);
         rules.push({
           kind: "raw",
           value: rule.raw,
-          ...(rule.target === undefined ? {} : { target: rule.target }),
+          ...(target === undefined ? {} : { target }),
         });
       } else {
         rules.push({

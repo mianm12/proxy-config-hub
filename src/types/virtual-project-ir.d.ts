@@ -1,6 +1,7 @@
 declare module "virtual:project-ir" {
-  const nodeCatalog: readonly import("../compiler/ir/project-ir.ts").RegionIr[];
+  const nodeCatalog: readonly import("../domain/node/index.ts").RegionDefinition[];
   const renameProfiles: readonly import("../compiler/ir/project-ir.ts").RenameProfileIr[];
+  const overrideProject: import("../runtime/override/index.ts").OverrideProject;
 
-  export { nodeCatalog, renameProfiles };
+  export { nodeCatalog, overrideProject, renameProfiles };
 }

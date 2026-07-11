@@ -1,21 +1,12 @@
+import type { RegionDefinition } from "../../domain/node/index.ts";
+
 interface RuntimeSectionIr {
   readonly target: string;
   readonly apply: "overlay" | "replace" | "if-absent";
   readonly value: unknown;
 }
 
-interface RegionIr {
-  readonly id: string;
-  readonly name: string;
-  readonly emoji: string;
-  readonly codes: readonly string[];
-  readonly names: {
-    readonly zh: readonly string[];
-    readonly en: readonly string[];
-  };
-  readonly aliases: readonly string[];
-  readonly cities: readonly string[];
-}
+type RegionIr = RegionDefinition;
 
 interface RoutingRegionIr {
   readonly id: string;

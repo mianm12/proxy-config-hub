@@ -45,6 +45,13 @@ function compileNodes(
 
   const catalog = project.nodeCatalog.data.regions.map((region, index): RegionIr => {
     const source = project.nodeCatalog.source.locate(["regions", index]);
+    if (region.id === "OTHER") {
+      diagnostics.error(
+        "CFG_REGION_FALLBACK_INVALID",
+        "OTHER 是编译器保留 fallback ID，不得在 catalog 中声明",
+        source,
+      );
+    }
     if (ids.has(region.id)) {
       diagnostics.error("CFG_DUPLICATE_ID", `region ID 重复: ${region.id}`, source);
     }

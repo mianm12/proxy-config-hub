@@ -1,9 +1,8 @@
-import type { RegionIr } from "../../compiler/ir/project-ir.ts";
 import type { Diagnostic } from "../diagnostics/diagnostic.ts";
-import type { RegionConfidence } from "./types.ts";
+import type { RegionConfidence, RegionDefinition } from "./types.ts";
 
 interface RegionMatch {
-  readonly region: RegionIr;
+  readonly region: RegionDefinition;
   readonly confidence: RegionConfidence;
   readonly signal: string;
   readonly index: number;
@@ -11,7 +10,7 @@ interface RegionMatch {
 }
 
 interface RegionResolution {
-  readonly region: RegionIr | undefined;
+  readonly region: RegionDefinition | undefined;
   readonly confidence: RegionConfidence;
   readonly diagnostics: readonly Diagnostic[];
 }
@@ -33,7 +32,7 @@ function findCode(name: string, code: string): number {
 
 function bestSignal(
   name: string,
-  region: RegionIr,
+  region: RegionDefinition,
   confidence: RegionConfidence,
   priority: number,
   signals: readonly string[],
@@ -49,7 +48,10 @@ function bestSignal(
     : { region, confidence, priority, signal: selected.signal, index: selected.index };
 }
 
-function collectRegionMatches(name: string, catalog: readonly RegionIr[]): readonly RegionMatch[] {
+function collectRegionMatches(
+  name: string,
+  catalog: readonly RegionDefinition[],
+): readonly RegionMatch[] {
   return catalog.flatMap((region) => {
     const candidates = [
       bestSignal(name, region, "flag", 0, [region.emoji], findText),
@@ -68,7 +70,7 @@ function collectRegionMatches(name: string, catalog: readonly RegionIr[]): reado
   });
 }
 
-function resolveRegion(name: string, catalog: readonly RegionIr[]): RegionResolution {
+function resolveRegion(name: string, catalog: readonly RegionDefinition[]): RegionResolution {
   const matches = [...collectRegionMatches(name, catalog)].sort(
     (left, right) =>
       left.priority - right.priority ||

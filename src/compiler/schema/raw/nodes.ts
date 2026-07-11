@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { domainIdSchema, groupTypeSchema, nonEmptyStringSchema } from "./common.ts";
+import { domainIdSchema, nonEmptyStringSchema } from "./common.ts";
 
 const regionIdSchema = z
   .string()
@@ -30,7 +30,7 @@ const routingRegionSchema = z
   .object({
     id: z.union([regionIdSchema, z.literal("OTHER")]),
     "group-name": nonEmptyStringSchema,
-    type: groupTypeSchema,
+    type: z.literal("select"),
   })
   .strict();
 
@@ -62,7 +62,7 @@ const chainEndpointSchema = z
   .object({
     id: domainIdSchema,
     "group-name": nonEmptyStringSchema,
-    type: groupTypeSchema,
+    type: z.literal("select"),
     selector: nodeSelectorSchema,
   })
   .strict();

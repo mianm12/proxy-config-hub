@@ -59,8 +59,20 @@ const manifestSchema = z
     rename: z.object({ profiles: relativeConfigPathSchema }).strict(),
     deployment: z
       .object({
-        channel: domainIdSchema,
-        "public-base-url": z.url().nullable(),
+        channel: z.literal("v2"),
+        "public-base-url": z
+          .url()
+          .refine((url) => {
+            const parsed = new URL(url);
+            return (
+              (parsed.protocol === "https:" || parsed.protocol === "http:") &&
+              parsed.username === "" &&
+              parsed.password === "" &&
+              parsed.search === "" &&
+              parsed.hash === ""
+            );
+          }, "必须是无凭据、query 和 fragment 的 HTTP(S) 基址")
+          .nullable(),
       })
       .strict(),
   })

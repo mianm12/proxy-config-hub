@@ -1,13 +1,12 @@
-import type { RegionIr } from "../../compiler/ir/project-ir.ts";
 import { extractMultiplier } from "./multiplier.ts";
 import { resolveRegion } from "./region-matcher.ts";
 import { extractTags } from "./tags.ts";
-import type { NodeMetadata } from "./types.ts";
+import type { NodeMetadata, RegionDefinition } from "./types.ts";
 
 /** 将节点名解析为 override 与 rename 共用的规范元数据。 */
 function parseNodeName(
   name: string,
-  catalog: readonly RegionIr[],
+  catalog: readonly RegionDefinition[],
   configuredTags: readonly string[] = [],
 ): NodeMetadata {
   const region = resolveRegion(name, catalog);
