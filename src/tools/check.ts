@@ -6,8 +6,8 @@ const steps = [
   "lint",
   "typecheck",
   "config:v2:check",
-  "test:v2",
   "build:v2",
+  "test:v2",
   "verify",
   "baseline:v1:check",
 ] as const;

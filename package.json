@@ -17,7 +17,7 @@
     "lint": "eslint \"src/**/*.ts\" \"tests/**/*.ts\" \"vitest.config.ts\"",
     "typecheck": "tsc --project tsconfig.json --noEmit",
     "test:v2": "vitest run",
-    "build:v2": "tsc --project tsconfig.build.json",
+    "build:v2": "node src/tools/build.ts",
     "config:v2:check": "node src/tools/compile-config.ts",
     "compare:v1-v2": "node src/tools/compare-v1-v2.ts",
     "check:v2": "node src/tools/check.ts",
