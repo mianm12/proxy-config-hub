@@ -1,6 +1,6 @@
 # proxy-config-hub v2 配置设计
 
-> 本文描述 v2 的人类配置格式和装配语义。示例用于确定 schema 方向；实施时允许在不改变已确认边界的前提下微调字段名称。
+> 本文描述 v2 已实现的人类配置格式和装配语义；真实装配入口为 `config/manifest.yaml`。
 
 ## 1. 配置原则
 
@@ -150,17 +150,25 @@ routing:
   rule-pipeline:
     - { module: core, block: ads }
     - { module: core, block: private }
-    - module: ai
+    - { module: ai, block: services }
     - { module: media, block: youtube }
-    - module: education
-    - module: social
-    - { module: media, block: streaming }
+    - { module: education, block: services }
+    - { module: social, block: telegram }
+    - { module: social, block: twitter }
+    - { module: social, block: meta }
+    - { module: social, block: discord }
+    - { module: social, block: other }
+    - { module: media, block: netflix }
+    - { module: media, block: disney }
+    - { module: media, block: western }
+    - { module: media, block: asia }
     - module: gaming
     - { module: media, block: news }
     - { module: cloud, block: google }
     - { module: cloud, block: apple }
     - module: developer
-    - { module: commerce, block: payment_and_encryption }
+    - { module: commerce, block: payments }
+    - { module: commerce, block: encryption }
     - { module: cloud, block: cloud_services }
     - { module: cloud, block: microsoft }
     - { module: commerce, block: shopping }
@@ -222,6 +230,7 @@ rule-pipeline:
 - sniffer 使用 replace。
 - TUN 使用 if-absent。
 - `allow-lan: false` 作为 manifest 单值 item，目标为 `allow-lan`，使用 `if-absent`；不得用 truthy/falsy 判断替代 undefined 判断。
+- `proxies`、`proxy-groups`、`rule-providers`、`rules` 由运行时装配器独占，runtime source 和 target 均不得声明这些键。
 
 ### 5.2 不支持通用 deep merge
 
@@ -232,6 +241,8 @@ rule-pipeline:
 ### 6.1 catalog.yaml
 
 catalog 是 rename 与 override 的共享地区/别名真相源。
+
+当前首期 catalog 只重建仓库 v1 override 已使用的 27 个地区及两个真实 rename fixture 所需行为。旧 rename 脚本中来源与许可证无法确认的四套平行国家数组没有复制；以后扩展地区时应从可确认许可的标准来源逐项加入并补测试。
 
 ```yaml
 regions:
@@ -456,6 +467,8 @@ sources:
 
 source 不包含 target group 或 rule order。
 
+非 MetaCubeX 标准来源可在 source 定义的 `mihomo` 区统一声明 `size-limit`、公开 header 等原生扩展；这些字段同样不能覆盖 `type/url/path` 等领域字段，也不能包含凭据。
+
 ### 8.2 标准简写
 
 ```yaml
@@ -488,6 +501,8 @@ providers:
 ```
 
 自定义 provider 是正式能力，不是仅供调试的 fallback。
+
+完整自定义声明还支持 `file` 与 `inline`。`file` 必须显式声明 `path`；`inline` 在 `mihomo.payload` 中声明非空规则。根据 Mihomo 原生约束，`mrs` 只允许 `domain` 或 `ipcidr` behavior。
 
 `provider` 对常见 Mihomo 字段做类型校验；尚未建模的新字段放入显式透传区：
 
@@ -763,6 +778,7 @@ group:
 - runtime target/apply 组合合法。
 - `mihomo` 透传不能覆盖领域拥有字段。
 - 公共 URL 不含凭据。
+- 所有 YAML（包括 `mihomo` 透传区）拒绝非空 `secret`、`token`、`password`、`Authorization`、私钥等敏感字段。
 
 ## 14. 输出确定性
 

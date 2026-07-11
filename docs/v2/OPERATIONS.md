@@ -1,0 +1,97 @@
+# proxy-config-hub v2 运维说明
+
+本文覆盖 v2 的本地、Ubuntu Docker、CI、Pages dry-run 与 Release 操作。当前 `rewrite/v2` 仍处于并行迁移期，v1 公开通道未切换。
+
+## 1. 本地完整验证
+
+环境要求：Node.js >= 24、npm，以及 macOS 或 Linux 的 x64/arm64 环境。
+
+```bash
+npm ci
+npm run tools:setup
+npm run check:v2
+```
+
+`check:v2` 依次执行格式、lint、类型、YAML schema/语义编译、双 bundle、全部测试、v1/v2 golden 对比、真实 Mihomo 配置检查、v1 verify 与 v1 基线防漂移。
+
+`npm run tools:setup` 使用固定优先级：
+
+1. `MIHOMO_BIN` 显式路径；路径无效时直接失败。
+2. `PATH` 中可执行的 `mihomo`。
+3. `.cache/tools/mihomo/<version>/<platform>/mihomo`。
+
+第三层使用 `tooling/mihomo.lock.json` 锁定的 [MetaCubeX/mihomo 官方 Release](https://github.com/MetaCubeX/mihomo/releases) 资产。下载 URL 固定为：
+
+```text
+https://github.com/MetaCubeX/mihomo/releases/download/<version>/<asset>
+```
+
+归档必须通过锁定 SHA-256 才会解压；最终二进制通过临时文件原子写入缓存。`verify:mihomo` 使用项目内 `.cache/validation/mihomo` 作为数据目录，不写用户的 `~/.config/mihomo`。
+
+## 2. Ubuntu Docker
+
+仓库本身是配置编译与静态发布项目，不需要常驻应用进程。在 Ubuntu 服务器可用一次性 Node 容器执行与本地相同的命令：
+
+```bash
+docker run --rm \
+  -v "$PWD:/workspace" \
+  -w /workspace \
+  node:24-bookworm \
+  bash -lc 'npm ci && npm run tools:setup && npm run check:v2'
+```
+
+如需复用下载缓存，可额外挂载宿主目录到 `/workspace/.cache`。容器架构为 linux-x64 或 linux-arm64 时，会选择对应的锁定官方资产。
+
+## 3. 构建与发布 dry-run
+
+```bash
+npm run build:publication
+npm run verify:publication
+```
+
+Pages workflow 使用等价别名 `npm run build:site`，两者调用同一 Node 构建器。
+
+输出位于 `dist/v2/`：
+
+```text
+override.js
+rename.js
+example-full-config.yaml
+manifest.json
+checksums.txt
+rules/
+rules.tar.gz
+```
+
+`manifest.json` 记录项目版本、schema 版本、commit、构建时间、验证所用 Mihomo 版本，以及 Pages 可访问文件的 SHA-256。`checksums.txt` 精确覆盖 Release 上传的 override、rename、脱敏示例、manifest 和规则资产包；Release 资产不得覆盖已发布版本。
+
+设置 `PUBLIC_BASE_URL=https://mianm12.github.io/proxy-config-hub` 时，构建器会结合 manifest 的 `deployment.channel: v2` 为每个 artifact 生成绝对 URL。以后启用自定义域名只需更换该环境变量并重新构建，不修改业务配置。
+
+## 4. GitHub Actions
+
+- `ci-v2.yaml`：PR、`rewrite/v2` 与 `main` 执行 `tools:setup + check:v2`。
+- `pages-v2-dry-run.yaml`：仅手动通过官方 `upload-pages-artifact` 生成可部署的 Pages artifact，不调用 `deploy-pages`。
+- `release-v2.yaml`：只有推送 `v2.*.*` tag 才执行完整校验并创建 GitHub Release。
+- `rule-audit.yaml`：每周及手动执行远程 provider 可用性和重叠审计，不阻塞普通发布。
+
+tag 必须精确等于 `v<package.json version>`。当前首个版本为 `v2.0.0`；创建并推送 tag 代表人工发布授权。
+
+## 5. 宿主契约
+
+- Mihomo Party：`main(config)`。
+- Clash Verge Rev：`main(config, profileName)`；首期保留但不消费 `profileName`。
+- Sub-Store Mihomo 配置覆写：`main(config)`，并保留迁移期 CommonJS bridge。
+- Sub-Store 节点脚本：`operator(proxies, targetPlatform, context)`，参数来自 `$arguments.profile` 或兼容 legacy 参数。
+
+三种 override 宿主必须引用同一份 `override.js`，rename 单独引用 `rename.js`。首期不把 QuickJS 真实执行加入正式门槛。
+
+## 6. 尚未执行的切换
+
+以下操作必须另行确认后执行：
+
+1. 部署 Pages `/v2/` 并用三个真实宿主加载 staging URL。
+2. 将 v2 npm scripts 提升为默认命令并替换现有 v1 `main` 发布工作流。
+3. 删除 `definitions/`、`scripts/config/`、`scripts/override/` 与旧验证工具。
+4. 创建或推送 `v2.0.0` tag、发布 GitHub Release。
+
+自定义域名仍可后续决定；业务配置不依赖域名。

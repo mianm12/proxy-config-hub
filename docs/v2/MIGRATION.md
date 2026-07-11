@@ -409,22 +409,22 @@ Pages 发布 source 选择 GitHub Actions。`v2` 是 artifact 内目录，不是
 
 只有以下条件全部满足才允许移除 v1：
 
-- [ ] v1 当前 verify 仍通过。
-- [ ] v2 所有 YAML schema/semantic 校验通过。
-- [ ] 代表性 override fixtures 新旧结构化输出等价。
-- [ ] 链路有效与退化 fixtures 通过。
-- [ ] runtime apply 语义 fixtures 通过。
-- [ ] 两个 rename profile 与当前参数结果等价。
-- [ ] Mihomo Party contract harness 通过。
-- [ ] Clash Verge Rev 参数 contract harness 通过。
-- [ ] Sub-Store Mihomo config override harness 通过。
-- [ ] Sub-Store rename operator harness 通过。
-- [ ] `mihomo -t -f` 通过。
+- [x] v1 当前 verify 仍通过。
+- [x] v2 所有 YAML schema/semantic 校验通过。
+- [x] 代表性 override fixtures 新旧结构化输出等价。
+- [x] 链路有效与退化 fixtures 通过。
+- [x] runtime apply 语义 fixtures 通过。
+- [x] 两个 rename profile 与当前参数结果等价。
+- [x] Mihomo Party contract harness 通过。
+- [x] Clash Verge Rev 参数 contract harness 通过。
+- [x] Sub-Store Mihomo config override harness 通过。
+- [x] Sub-Store rename operator harness 通过。
+- [x] `mihomo -t -f` 通过。
 - [ ] 本地 `npm run check` 通过。
 - [ ] GitHub Actions 同一命令通过。
 - [ ] Pages staging URL 能被三个实际宿主加载。
-- [ ] Release dry-run 资产与 manifest/checksum 正确。
-- [ ] 文档中的配置示例与真实 schema 一致。
+- [x] Release dry-run 资产与 manifest/checksum 正确。
+- [x] 文档中的配置示例与真实 schema 一致。
 
 ## 13. 最终切换
 
