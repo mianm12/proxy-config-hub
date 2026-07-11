@@ -42,22 +42,21 @@ function loadTemplateConfig(): z.infer<typeof configSchema> {
   return { proxies: template.proxies };
 }
 
-describe("override v1 golden", () => {
+describe("override 行为回归", () => {
   const project = compileProject(path.resolve(process.cwd(), "config"));
-  const fixtureRoot = path.resolve(process.cwd(), "tests/fixtures/v1-input/override");
-  const fixtureNames = fs
-    .readdirSync(fixtureRoot)
+  const fixtureRoot = path.resolve(process.cwd(), "tests/fixtures/override");
+  const expectedRoot = path.resolve(process.cwd(), "tests/expected/override");
+  const expectedNames = fs
+    .readdirSync(expectedRoot)
     .filter((name) => name.endsWith(".json"))
     .sort();
 
-  for (const fixtureFile of fixtureNames) {
+  for (const fixtureFile of expectedNames) {
     const fixtureId = path.basename(fixtureFile, ".json");
     const fixture = fixtureSchema.parse(readJson(path.join(fixtureRoot, fixtureFile)));
-    const golden = goldenSchema.parse(
-      readJson(path.resolve(process.cwd(), `tests/golden/v1-output/${fixtureFile}`)),
-    );
+    const golden = goldenSchema.parse(readJson(path.join(expectedRoot, fixtureFile)));
 
-    it(`${fixtureId} 与 v1 输出等价`, () => {
+    it(`${fixtureId} 生成审阅后的预期配置`, () => {
       expect(golden.fixture).toBe(fixtureId);
       expect(fixture.cases).toHaveLength(golden.cases.length);
 

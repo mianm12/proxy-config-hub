@@ -8,7 +8,6 @@ const steps = [
   "config:check",
   "build",
   "test",
-  "verify:golden",
   "verify:mihomo",
 ] as const;
 

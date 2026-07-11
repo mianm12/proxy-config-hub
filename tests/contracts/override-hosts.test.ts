@@ -56,10 +56,10 @@ describe("override 三宿主契约", () => {
   beforeAll(async () => buildBundles());
 
   const fixture = fixtureSchema.parse(
-    readJson(`${REPO_ROOT}/tests/fixtures/v1-input/override/chain-effective.json`),
+    readJson(`${REPO_ROOT}/tests/fixtures/override/chain-effective.json`),
   );
   const golden = goldenSchema.parse(
-    readJson(`${REPO_ROOT}/tests/golden/v1-output/chain-effective.json`),
+    readJson(`${REPO_ROOT}/tests/expected/override/chain-effective.json`),
   );
   const input = fixture.cases[0]?.config;
   const expected = golden.cases[0]?.config;

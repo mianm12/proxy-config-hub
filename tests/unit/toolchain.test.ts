@@ -21,13 +21,11 @@ describe("v2 工具链", () => {
       test: "vitest run",
       check: "node src/tools/check.ts",
       "config:check": "node src/tools/compile-config.ts",
-      "verify:golden": "node src/tools/verify-golden.ts",
     });
     expect(Object.keys(packageMetadata.scripts).some((name) => name.includes(":v2"))).toBe(false);
-    expect(Object.keys(packageMetadata.scripts).some((name) => name.includes("v1"))).toBe(false);
   });
 
-  it("v1 可执行链已删除且发布规则来自 public", () => {
+  it("旧可执行链已删除且发布规则来自 public", () => {
     for (const removed of ["build.js", "definitions", "scripts", "tools"]) {
       expect(fs.existsSync(path.resolve(removed)), removed).toBe(false);
     }

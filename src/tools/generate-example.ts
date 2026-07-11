@@ -1,29 +1,20 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { stringify } from "yaml";
+import { parse, stringify } from "yaml";
 import { z } from "zod";
 
 import { CONFIG_ROOT, DIST_V2_ROOT, REPO_ROOT } from "../build/paths.ts";
 import { compileProject } from "../compiler/compile-project.ts";
 import { compileOverride } from "../runtime/override/index.ts";
 
-const fixtureSchema = z.object({
-  cases: z
-    .array(z.object({ config: z.looseObject({ proxies: z.array(z.unknown()).min(1) }) }))
-    .min(1),
-});
+const templateSchema = z.looseObject({ proxies: z.array(z.unknown()).min(1) });
+
 function generateExample(): string {
-  const fixture = fixtureSchema.parse(
-    JSON.parse(
-      fs.readFileSync(
-        path.join(REPO_ROOT, "tests/fixtures/v1-input/override/chain-effective.json"),
-        "utf8",
-      ),
-    ) as unknown,
+  const template = templateSchema.parse(
+    parse(fs.readFileSync(path.join(REPO_ROOT, "templates/mihomo/config-example.yaml"), "utf8")),
   );
-  const input = fixture.cases[0]?.config;
-  if (input === undefined) throw new Error("Mihomo 验证 fixture 缺少配置");
+  const input = { proxies: template.proxies };
   const output = compileOverride(input, compileProject(CONFIG_ROOT)).config;
   const target = path.join(DIST_V2_ROOT, "example-full-config.yaml");
 
