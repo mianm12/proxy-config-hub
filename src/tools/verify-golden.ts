@@ -82,8 +82,8 @@ function compareOverride(project: ReturnType<typeof compileProject>): number {
 }
 
 function compareRename(project: ReturnType<typeof compileProject>): number {
-  const fixtureRoot = path.join(REPO_ROOT, "tests/fixtures/v1-input/rename");
-  const goldenRoot = path.join(REPO_ROOT, "tests/golden/v1-rename");
+  const fixtureRoot = path.join(REPO_ROOT, "tests/fixtures/rename");
+  const goldenRoot = path.join(REPO_ROOT, "tests/expected/rename");
   let compared = 0;
 
   for (const file of jsonFiles(fixtureRoot)) {

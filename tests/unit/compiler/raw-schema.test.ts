@@ -145,7 +145,7 @@ describe("v2 raw schemas", () => {
     expect(result.success).toBe(false);
   });
 
-  it("接受命名 rename profile 且拒绝未知 legacy 字段", () => {
+  it("接受命名 rename profile 且拒绝未知字段", () => {
     const validProfile = {
       profiles: {
         pokemon: {

@@ -21,47 +21,36 @@ function readJson(file: string): unknown {
   return JSON.parse(fs.readFileSync(file, "utf8")) as unknown;
 }
 
-describe("rename v1 golden", () => {
+describe("rename 行为回归", () => {
   const project = compileProject(path.resolve(process.cwd(), "config"));
 
   for (const profileId of ["pokemon", "self_hosted"] as const) {
-    it(`${profileId} 与实际 legacy 参数结果等价`, () => {
+    it(`${profileId} 生成审阅后的预期名称`, () => {
       const fixtureName = profileId === "pokemon" ? "rename-pokemon" : "rename-self-hosted";
       const fixture = fixtureSchema.parse(
-        readJson(path.resolve(process.cwd(), `tests/fixtures/v1-input/rename/${fixtureName}.json`)),
+        readJson(path.resolve(process.cwd(), `tests/fixtures/rename/${fixtureName}.json`)),
       );
       const golden = goldenSchema.parse(
-        readJson(path.resolve(process.cwd(), `tests/golden/v1-rename/${fixtureName}.json`)),
+        readJson(path.resolve(process.cwd(), `tests/expected/rename/${fixtureName}.json`)),
       );
       const inputSnapshot = structuredClone(fixture.proxies);
       const runtime = {
         nodeCatalog: project.nodeCatalog,
         renameProfiles: project.renameProfiles,
       };
-      const legacyDiagnostics: string[] = [];
-      const namedDiagnostics: string[] = [];
-      const legacyResult = runRenameAdapter(
+      const diagnostics: string[] = [];
+      const result = runRenameAdapter(
         fixture.proxies,
         "ClashMeta",
         {},
         fixture.arguments,
         runtime,
-        ({ code }) => legacyDiagnostics.push(code),
-      );
-      const namedResult = runRenameAdapter(
-        fixture.proxies,
-        "ClashMeta",
-        {},
-        { profile: profileId },
-        runtime,
-        ({ code }) => namedDiagnostics.push(code),
+        ({ code }) => diagnostics.push(code),
       );
 
       expect(fixture.proxies).toEqual(inputSnapshot);
-      expect(legacyResult).toEqual(golden.proxies);
-      expect(namedResult).toEqual(golden.proxies);
-      expect(legacyDiagnostics).toContain("RENAME_UNKNOWN_REGION");
-      expect(namedDiagnostics).toContain("RENAME_UNKNOWN_REGION");
+      expect(result).toEqual(golden.proxies);
+      expect(diagnostics).toContain("RENAME_UNKNOWN_REGION");
     });
   }
 });

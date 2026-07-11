@@ -1,12 +1,7 @@
 {
   "name": "rename-self-hosted",
   "arguments": {
-    "blkey": "直连+IPLC+IEPL+专线+中转+XHTTP+xhttp+cdn+REALITY+reality+Reality+tls+down+家宽+原生+V6+游戏+测试+AWS+BWH+DMIT+vircs+MEGABOX+proWee+ebCorona",
-    "fgf": "-",
-    "flag": true,
-    "name": "自建",
-    "nf": true,
-    "one": true
+    "profile": "self_hosted"
   },
   "targetPlatform": "ClashMeta",
   "context": {},

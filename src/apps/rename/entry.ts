@@ -3,7 +3,7 @@ import { nodeCatalog, renameProfiles } from "virtual:project-ir";
 import { formatDiagnostic } from "../../domain/diagnostics/diagnostic.ts";
 import type { ProxyNode } from "../../domain/node/index.ts";
 import { runRenameAdapter } from "./adapter.ts";
-import type { RenameArguments } from "./legacy-arguments.ts";
+import type { RenameArguments } from "./profile-arguments.ts";
 
 function readHostArguments(): RenameArguments {
   const hostGlobal = globalThis as typeof globalThis & { $arguments?: unknown };

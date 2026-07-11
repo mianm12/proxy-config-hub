@@ -53,12 +53,12 @@ describe("Sub-Store rename bundle", () => {
   beforeAll(async () => buildBundles());
 
   for (const fixtureName of ["rename-pokemon", "rename-self-hosted"] as const) {
-    it(`${fixtureName} legacy 参数契约与 v1 golden 等价`, async () => {
+    it(`${fixtureName} 命名 profile 契约符合预期`, async () => {
       const fixture = fixtureSchema.parse(
-        readJson(`${REPO_ROOT}/tests/fixtures/v1-input/rename/${fixtureName}.json`),
+        readJson(`${REPO_ROOT}/tests/fixtures/rename/${fixtureName}.json`),
       );
       const golden = goldenSchema.parse(
-        readJson(`${REPO_ROOT}/tests/golden/v1-rename/${fixtureName}.json`),
+        readJson(`${REPO_ROOT}/tests/expected/rename/${fixtureName}.json`),
       );
       const runtime = loadOperator(fixture.arguments);
       const result = await runtime.operator(structuredClone(fixture.proxies), "ClashMeta", {});
@@ -70,10 +70,10 @@ describe("Sub-Store rename bundle", () => {
 
   it("支持命名 profile 主接口", async () => {
     const fixture = fixtureSchema.parse(
-      readJson(`${REPO_ROOT}/tests/fixtures/v1-input/rename/rename-pokemon.json`),
+      readJson(`${REPO_ROOT}/tests/fixtures/rename/rename-pokemon.json`),
     );
     const golden = goldenSchema.parse(
-      readJson(`${REPO_ROOT}/tests/golden/v1-rename/rename-pokemon.json`),
+      readJson(`${REPO_ROOT}/tests/expected/rename/rename-pokemon.json`),
     );
     const runtime = loadOperator({ profile: "pokemon" });
 

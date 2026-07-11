@@ -2,7 +2,7 @@ import type { RenameProfileIr } from "../../compiler/ir/project-ir.ts";
 import type { Diagnostic } from "../../domain/diagnostics/diagnostic.ts";
 import type { ProxyNode, RegionDefinition } from "../../domain/node/index.ts";
 import { renameProxies } from "../../runtime/rename/index.ts";
-import { resolveRenameProfile, type RenameArguments } from "./legacy-arguments.ts";
+import { resolveRenameProfile, type RenameArguments } from "./profile-arguments.ts";
 
 interface RenameRuntimeData {
   readonly nodeCatalog: readonly RegionDefinition[];

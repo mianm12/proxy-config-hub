@@ -1,13 +1,7 @@
 {
   "name": "rename-pokemon",
   "arguments": {
-    "bl": true,
-    "blkey": "直连+IPLC+IEPL+专线+Vless+Anytls+家宽+原生+V6+游戏+测试+AWS",
-    "fgf": "-",
-    "flag": true,
-    "name": "宝可梦",
-    "nf": true,
-    "one": true
+    "profile": "pokemon"
   },
   "targetPlatform": "ClashMeta",
   "context": {},
