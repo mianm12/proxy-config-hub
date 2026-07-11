@@ -389,6 +389,8 @@ Pages 发布 source 选择 GitHub Actions。`v2` 是 artifact 内目录，不是
 
 `workflow_dispatch` 只能手动触发默认分支已登记的 workflow。并行迁移期由 `ci-v2` 在 `rewrite/v2` push 检查成功后调用 reusable Pages dry-run；不为登记 workflow 提前修改 `main`，也不调用 `deploy-pages`。
 
+实际 staging deployment 由同一 `ci-v2` 在 artifact job 成功后执行，并受仓库变量 `ENABLE_V2_PAGES_DEPLOY=true` 显式保护。部署 job 只持有 `pages: write` 与 `id-token: write`，使用 `github-pages` environment；关闭变量仍保留完整 dry-run。
+
 ### 11.3 Release
 
 `v2.*.*` tag workflow：

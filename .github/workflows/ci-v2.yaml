@@ -38,3 +38,21 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/rewrite/v2'
     needs: check
     uses: ./.github/workflows/pages-v2-dry-run.yaml
+
+  pages-deploy:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/rewrite/v2' && vars.ENABLE_V2_PAGES_DEPLOY == 'true'
+    needs: pages-dry-run
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    concurrency:
+      group: pages-v2-staging
+      cancel-in-progress: false
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy Pages staging
+        id: deployment
+        uses: actions/deploy-pages@v4

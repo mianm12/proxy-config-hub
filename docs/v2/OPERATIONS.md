@@ -67,11 +67,11 @@ rules.tar.gz
 
 `manifest.json` 记录项目版本、schema 版本、commit、构建时间、验证所用 Mihomo 版本，以及 Pages 可访问文件的 SHA-256。`checksums.txt` 精确覆盖 Release 上传的 override、rename、脱敏示例、manifest 和规则资产包；Release 资产不得覆盖已发布版本。
 
-设置 `PUBLIC_BASE_URL=https://mianm12.github.io/proxy-config-hub` 时，构建器会结合 manifest 的 `deployment.channel: v2` 为每个 artifact 生成绝对 URL。以后启用自定义域名只需更换该环境变量并重新构建，不修改业务配置。
+设置 `PUBLIC_BASE_URL=https://www.quietus.icu/proxy-config-hub` 时，构建器会结合 manifest 的 `deployment.channel: v2` 为每个 artifact 生成绝对 URL。该地址来自用户站点自定义域名对项目站点的继承；以后改用独立子域名只需更换该环境变量并重新构建，不修改业务配置。
 
 ## 4. GitHub Actions
 
-- `ci-v2.yaml`：PR、`rewrite/v2` 与 `main` 执行 `tools:setup + check:v2`；迁移分支 push 成功后调用 reusable Pages dry-run job。
+- `ci-v2.yaml`：PR、`rewrite/v2` 与 `main` 执行 `tools:setup + check:v2`；迁移分支 push 成功后调用 reusable Pages dry-run job。只有仓库变量 `ENABLE_V2_PAGES_DEPLOY=true` 时，才在 artifact 成功后部署 staging。
 - `pages-v2-dry-run.yaml`：支持 reusable 调用；进入默认分支后也可手动执行。它运行 `tools:setup + check:v2`，再通过官方 `upload-pages-artifact` 生成可部署的 Pages artifact，不调用 `deploy-pages`。
 - `release-v2.yaml`：只有推送 `v2.*.*` tag 才执行完整校验并创建 GitHub Release。
 - `rule-audit.yaml`：每周及手动执行远程 provider 可用性和重叠审计，不阻塞普通发布。
@@ -79,6 +79,8 @@ rules.tar.gz
 tag 必须精确等于 `v<package.json version>`。当前首个版本为 `v2.0.0`；创建并推送 tag 代表人工发布授权。
 
 GitHub 只允许手动 dispatch 默认分支上已登记的 workflow。并行迁移期不修改 `main`，因此由 `ci-v2.yaml` 在 `rewrite/v2` 检查成功后调用 reusable workflow；首次切换后仍保留手动入口。
+
+staging 部署使用 `github-pages` environment、`pages: write` 与 OIDC `id-token: write`，且按 `pages-v2-staging` concurrency group 串行执行。开关关闭时仍生成 dry-run artifact，但不会创建 deployment。
 
 ## 5. 宿主契约
 
@@ -93,7 +95,7 @@ GitHub 只允许手动 dispatch 默认分支上已登记的 workflow。并行迁
 
 以下操作必须另行确认后执行：
 
-1. 部署 Pages `/v2/` 并用三个真实宿主加载 staging URL。
+1. 用三个真实宿主加载 Pages `/v2/` staging URL。
 2. 将 v2 npm scripts 提升为默认命令并替换现有 v1 `main` 发布工作流。
 3. 删除 `definitions/`、`scripts/config/`、`scripts/override/` 与旧验证工具。
 4. 创建或推送 `v2.0.0` tag、发布 GitHub Release。
