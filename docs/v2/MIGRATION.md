@@ -432,7 +432,7 @@ Pages 发布 source 选择 GitHub Actions。`v2` 是 artifact 内目录，不是
 - [x] GitHub Actions 并行期 `npm run check:v2` 通过。
 - [x] GitHub Actions Pages artifact dry-run 上传并校验通过。
 - [x] Pages staging HTTPS、CORS、manifest 与远程 bundle checksum/契约验证通过。
-- [ ] Pages staging URL 能被三个实际宿主加载。
+- [x] Pages staging 宿主验收已接受：Sub-Store 与 Mihomo Party 实机成功；Clash Verge Rev 由用户明确接受契约测试替代实机加载。
 - [x] Release dry-run 资产与 manifest/checksum 正确。
 - [x] 文档中的配置示例与真实 schema 一致。
 
@@ -443,7 +443,9 @@ Pages 发布 source 选择 GitHub Actions。`v2` 是 artifact 内目录，不是
 - 本地与 GitHub Actions 的完整 `check:v2`、Pages artifact/deployment、远程 manifest checksum 和 bundle 契约均已实际通过。
 - `npm run audit:rules` 已联网读取当前 93 个 provider；未发现完整遮蔽，部分重叠继续由独立审计报告呈现，不进入普通构建门槛。
 - v1 默认命令、源码与发布 workflow 仍保留；`dist/`、工具缓存和发布产物未被 Git 跟踪。
-- 唯一未满足的删除前门槛是三个真实宿主的 staging URL 实机加载；完成前不执行第 13 节切换。
+- Sub-Store 与 Mihomo Party 已实际加载 staging `override.js` 成功；此前提交的完整覆写结果来自 Sub-Store。
+- Clash Verge Rev 尚未安装，因此没有实机结果；用户明确接受现有 `main(config, profileName)` 契约测试作为本次切换验收依据。
+- 删除前门槛已全部获得验收，但第 13 节仍是独立的破坏性切换，必须再次获得明确授权后执行。
 
 ## 13. 最终切换
 

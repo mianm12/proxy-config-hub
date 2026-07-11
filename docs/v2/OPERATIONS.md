@@ -90,7 +90,7 @@ https://www.quietus.icu/proxy-config-hub/v2/rename.js
 https://www.quietus.icu/proxy-config-hub/v2/manifest.json
 ```
 
-这些 URL 已通过 HTTPS、CORS、MIME、manifest checksum 与远程 bundle 契约验证，但在三个真实宿主完成加载前不视为稳定通道。
+这些 URL 已通过 HTTPS、CORS、MIME、manifest checksum 与远程 bundle 契约验证。Sub-Store 与 Mihomo Party 已实机加载成功；Clash Verge Rev 尚未安装，用户明确接受其 `main(config, profileName)` 契约测试替代本次实机加载。最终稳定通道仍需完成第 6 节的独立切换授权。
 
 ## 5. 宿主契约
 
@@ -117,13 +117,14 @@ https://www.quietus.icu/proxy-config-hub/v2/rename.js#profile=pokemon#noCache
 https://www.quietus.icu/proxy-config-hub/v2/rename.js#profile=self_hosted#noCache
 ```
 
-## 6. 尚未执行的切换
+## 6. 最终切换状态
 
-以下操作必须另行确认后执行：
+宿主验收已经完成：Sub-Store 与 Mihomo Party 实机成功，Clash Verge Rev 由用户接受契约测试作为替代验收。
 
-1. 用三个真实宿主加载 Pages `/v2/` staging URL。
-2. 将 v2 npm scripts 提升为默认命令并替换现有 v1 `main` 发布工作流。
-3. 删除 `definitions/`、`scripts/config/`、`scripts/override/` 与旧验证工具。
-4. 创建或推送 `v2.0.0` tag、发布 GitHub Release。
+以下操作仍必须另行确认后执行：
+
+1. 将 v2 npm scripts 提升为默认命令并替换现有 v1 `main` 发布工作流。
+2. 删除 `definitions/`、`scripts/config/`、`scripts/override/` 与旧验证工具。
+3. 创建或推送 `v2.0.0` tag、发布 GitHub Release。
 
 自定义域名仍可后续决定；业务配置不依赖域名。
