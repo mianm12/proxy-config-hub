@@ -1,0 +1,22 @@
+id: regional
+
+groups:
+  - { id: cn_service, name: "🔒 国内服务", template: direct_first }
+  - { id: non_cn, name: "🌐 国外服务", template: proxy_service }
+
+rule-blocks:
+  - id: geolocation_cn
+    target: cn_service
+    providers:
+      - { source: metacubex_geosite, name: geolocation-cn }
+
+  - id: geolocation_non_cn
+    target: non_cn
+    providers:
+      - { source: metacubex_geosite, name: geolocation-!cn }
+
+  - id: cn
+    target: cn_service
+    providers:
+      - { source: metacubex_geosite, name: cn }
+      - { source: metacubex_geoip, name: cn, no-resolve: true }

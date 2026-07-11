@@ -1,0 +1,45 @@
+id: cloud
+
+groups:
+  - { id: google, name: "🔍 谷歌服务", template: proxy_service }
+  - { id: microsoft, name: "Ⓜ️ 微软服务", template: proxy_service }
+  - { id: apple, name: "🍏 苹果服务", template: proxy_service }
+  - { id: cloud_service, name: "☁️ 云服务", template: proxy_service }
+
+rule-blocks:
+  - id: google
+    target: google
+    providers:
+      - { source: metacubex_geosite, name: google }
+      - { source: metacubex_geoip, name: google, no-resolve: true }
+
+  - id: apple
+    target: apple
+    providers:
+      - { source: metacubex_geosite, name: icloud }
+      - { source: metacubex_geosite, name: apple }
+
+  - id: cloud_services
+    target: cloud_service
+    providers:
+      - { source: metacubex_geosite, name: aws }
+      - { source: metacubex_geosite, name: azure }
+      - { source: metacubex_geosite, name: cloudflare }
+      - { source: metacubex_geosite, name: digitalocean }
+      - { source: metacubex_geosite, name: vercel }
+      - { source: metacubex_geosite, name: netlify }
+      - { source: metacubex_geoip, name: cloudflare, no-resolve: true }
+
+  - id: microsoft
+    target: microsoft
+    providers:
+      - { source: metacubex_geosite, name: onedrive }
+      - { source: metacubex_geosite, name: microsoft }
+
+constraints:
+  - before: azure
+    after: microsoft
+    reason: Microsoft 广义规则可能覆盖 Azure 专用规则
+  - before: aws
+    after: amazon
+    reason: Amazon 广义规则可能覆盖 AWS 专用规则

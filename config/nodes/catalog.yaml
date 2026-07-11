@@ -1,0 +1,190 @@
+regions:
+  - id: HK
+    name: 香港
+    emoji: "🇭🇰"
+    codes: [HK]
+    names: { zh: [香港], en: [Hong Kong, HongKong] }
+    aliases: []
+    cities: []
+  - id: TW
+    name: 台湾
+    emoji: "🇹🇼"
+    codes: [TW]
+    names: { zh: [台湾], en: [Taiwan] }
+    aliases: []
+    cities: []
+  - id: JP
+    name: 日本
+    emoji: "🇯🇵"
+    codes: [JP]
+    names: { zh: [日本], en: [Japan] }
+    aliases: []
+    cities: [Tokyo, Osaka]
+  - id: SG
+    name: 新加坡
+    emoji: "🇸🇬"
+    codes: [SG]
+    names: { zh: [新加坡], en: [Singapore] }
+    aliases: []
+    cities: []
+  - id: US
+    name: 美国
+    emoji: "🇺🇸"
+    codes: [US, USA]
+    names: { zh: [美国], en: [United States] }
+    aliases: []
+    cities: [Los Angeles, San Jose, Seattle, New York]
+  - id: KR
+    name: 韩国
+    emoji: "🇰🇷"
+    codes: [KR]
+    names: { zh: [韩国], en: [Korea, South Korea] }
+    aliases: []
+    cities: [Seoul]
+  - id: GB
+    name: 英国
+    emoji: "🇬🇧"
+    codes: [GB, UK]
+    names: { zh: [英国], en: [United Kingdom] }
+    aliases: []
+    cities: [London]
+  - id: DE
+    name: 德国
+    emoji: "🇩🇪"
+    codes: [DE]
+    names: { zh: [德国], en: [Germany] }
+    aliases: []
+    cities: []
+  - id: FR
+    name: 法国
+    emoji: "🇫🇷"
+    codes: [FR]
+    names: { zh: [法国], en: [France] }
+    aliases: []
+    cities: [Paris]
+  - id: CA
+    name: 加拿大
+    emoji: "🇨🇦"
+    codes: [CA]
+    names: { zh: [加拿大], en: [Canada] }
+    aliases: []
+    cities: []
+  - id: AU
+    name: 澳大利亚
+    emoji: "🇦🇺"
+    codes: [AU]
+    names: { zh: [澳大利亚], en: [Australia] }
+    aliases: [澳洲]
+    cities: []
+  - id: RU
+    name: 俄罗斯
+    emoji: "🇷🇺"
+    codes: [RU]
+    names: { zh: [俄罗斯], en: [Russia] }
+    aliases: []
+    cities: []
+  - id: IN
+    name: 印度
+    emoji: "🇮🇳"
+    codes: [IN]
+    names: { zh: [印度], en: [India] }
+    aliases: []
+    cities: []
+  - id: MO
+    name: 澳门
+    emoji: "🇲🇴"
+    codes: [MO]
+    names: { zh: [澳门], en: [Macau, Macao] }
+    aliases: []
+    cities: []
+  - id: NZ
+    name: 新西兰
+    emoji: "🇳🇿"
+    codes: [NZ]
+    names: { zh: [新西兰], en: [New Zealand] }
+    aliases: []
+    cities: []
+  - id: IT
+    name: 意大利
+    emoji: "🇮🇹"
+    codes: [IT]
+    names: { zh: [意大利], en: [Italy] }
+    aliases: []
+    cities: []
+  - id: NL
+    name: 荷兰
+    emoji: "🇳🇱"
+    codes: [NL]
+    names: { zh: [荷兰], en: [Netherlands] }
+    aliases: []
+    cities: []
+  - id: PL
+    name: 波兰
+    emoji: "🇵🇱"
+    codes: [PL]
+    names: { zh: [波兰], en: [Poland] }
+    aliases: []
+    cities: []
+  - id: CH
+    name: 瑞士
+    emoji: "🇨🇭"
+    codes: [CH]
+    names: { zh: [瑞士], en: [Switzerland] }
+    aliases: []
+    cities: []
+  - id: VN
+    name: 越南
+    emoji: "🇻🇳"
+    codes: [VN]
+    names: { zh: [越南], en: [Vietnam] }
+    aliases: []
+    cities: []
+  - id: TH
+    name: 泰国
+    emoji: "🇹🇭"
+    codes: [TH]
+    names: { zh: [泰国], en: [Thailand] }
+    aliases: []
+    cities: [Bangkok]
+  - id: PH
+    name: 菲律宾
+    emoji: "🇵🇭"
+    codes: [PH]
+    names: { zh: [菲律宾], en: [Philippines] }
+    aliases: []
+    cities: []
+  - id: MY
+    name: 马来西亚
+    emoji: "🇲🇾"
+    codes: [MY]
+    names: { zh: [马来西亚, 马来], en: [Malaysia] }
+    aliases: []
+    cities: []
+  - id: ID
+    name: 印尼
+    emoji: "🇮🇩"
+    codes: [ID]
+    names: { zh: [印尼, 印度尼西亚], en: [Indonesia] }
+    aliases: []
+    cities: []
+  - id: TR
+    name: 土耳其
+    emoji: "🇹🇷"
+    codes: [TR]
+    names: { zh: [土耳其], en: [Turkey, Türkiye] }
+    aliases: []
+    cities: []
+  - id: AR
+    name: 阿根廷
+    emoji: "🇦🇷"
+    codes: [AR]
+    names: { zh: [阿根廷], en: [Argentina] }
+    aliases: []
+    cities: []
+  - id: BR
+    name: 巴西
+    emoji: "🇧🇷"
+    codes: [BR]
+    names: { zh: [巴西], en: [Brazil] }
+    aliases: []
+    cities: []

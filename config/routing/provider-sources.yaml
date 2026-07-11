@@ -1,0 +1,20 @@
+sources:
+  metacubex_geosite:
+    id-template: "{name}"
+    url-template: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/{name}.mrs"
+    path-template: "./ruleset/{id}.mrs"
+    provider:
+      type: http
+      behavior: domain
+      format: mrs
+      interval: 86400
+
+  metacubex_geoip:
+    id-template: "{name}-ip"
+    url-template: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/{name}.mrs"
+    path-template: "./ruleset/{id}.mrs"
+    provider:
+      type: http
+      behavior: ipcidr
+      format: mrs
+      interval: 86400

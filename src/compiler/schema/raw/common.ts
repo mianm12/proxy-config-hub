@@ -10,6 +10,11 @@ const providerIdSchema = z
   .min(1)
   .regex(/^[a-z0-9][a-z0-9_!+.-]*$/, "provider ID 包含非法字符");
 
+const providerSourceNameSchema = z
+  .string()
+  .min(1)
+  .regex(/^[a-z0-9][a-z0-9_!+@.-]*$/, "provider source name 包含非法字符");
+
 const relativeConfigPathSchema = z.string().min(1);
 const nonEmptyStringSchema = z.string().min(1);
 const mihomoOptionsSchema = z.record(z.string(), z.unknown());
@@ -46,7 +51,7 @@ const providerSchema = z
 const sourceProviderReferenceSchema = z
   .object({
     source: domainIdSchema,
-    name: providerIdSchema,
+    name: providerSourceNameSchema,
     id: providerIdSchema.optional(),
     "no-resolve": z.boolean().optional(),
   })
@@ -76,6 +81,7 @@ export {
   mihomoOptionsSchema,
   nonEmptyStringSchema,
   providerIdSchema,
+  providerSourceNameSchema,
   providerReferenceSchema,
   providerSchema,
   relativeConfigPathSchema,

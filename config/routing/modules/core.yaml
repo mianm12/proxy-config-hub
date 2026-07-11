@@ -1,0 +1,17 @@
+id: core
+
+groups:
+  - { id: ad_block, name: "🛑 广告拦截", template: reject_first }
+  - { id: private, name: "🏠 私有网络", template: direct_first }
+
+rule-blocks:
+  - id: ads
+    target: ad_block
+    providers:
+      - { source: metacubex_geosite, name: category-ads-all }
+
+  - id: private
+    target: private
+    providers:
+      - { source: metacubex_geosite, name: private }
+      - { source: metacubex_geoip, name: private, no-resolve: true }

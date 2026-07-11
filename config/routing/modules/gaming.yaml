@@ -1,0 +1,34 @@
+id: gaming
+
+groups:
+  - { id: steam, name: "🎮 Steam", template: proxy_service }
+  - { id: game_pc, name: "🖥️ PC 游戏", template: proxy_service }
+  - { id: game_console, name: "🎮 主机游戏", template: proxy_service }
+
+rule-blocks:
+  - id: steam_cn
+    target: DIRECT
+    providers:
+      - { source: metacubex_geosite, name: steam@cn, id: steam-cn }
+
+  - id: steam
+    target: steam
+    providers:
+      - { source: metacubex_geosite, name: steam }
+
+  - id: pc
+    target: game_pc
+    providers:
+      - { source: metacubex_geosite, name: epicgames }
+      - { source: metacubex_geosite, name: ea }
+      - { source: metacubex_geosite, name: ubisoft }
+      - { source: metacubex_geosite, name: blizzard }
+      - { source: metacubex_geosite, name: gog }
+      - { source: metacubex_geosite, name: riot }
+
+  - id: console
+    target: game_console
+    providers:
+      - { source: metacubex_geosite, name: playstation }
+      - { source: metacubex_geosite, name: xbox }
+      - { source: metacubex_geosite, name: nintendo }

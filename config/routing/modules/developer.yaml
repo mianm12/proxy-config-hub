@@ -1,0 +1,28 @@
+id: developer
+
+groups:
+  - { id: developer_tools, name: "🛠️ 开发工具", template: proxy_service }
+  - { id: code_hosting, name: "🐱 代码托管", template: proxy_service }
+  - { id: storage_service, name: "📦 网盘存储", template: proxy_service }
+
+rule-blocks:
+  - id: tools
+    target: developer_tools
+    providers:
+      - { source: metacubex_geosite, name: docker }
+      - { source: metacubex_geosite, name: npmjs }
+      - { source: metacubex_geosite, name: jetbrains }
+      - { source: metacubex_geosite, name: stackexchange }
+
+  - id: code_hosting
+    target: code_hosting
+    providers:
+      - { source: metacubex_geosite, name: github }
+      - { source: metacubex_geosite, name: gitlab }
+      - { source: metacubex_geosite, name: atlassian }
+
+  - id: storage
+    target: storage_service
+    providers:
+      - { source: metacubex_geosite, name: dropbox }
+      - { source: metacubex_geosite, name: notion }

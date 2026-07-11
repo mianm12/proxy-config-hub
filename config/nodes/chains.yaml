@@ -1,0 +1,16 @@
+chains:
+  - id: default_chain
+    transit:
+      id: transit
+      group-name: "🔀 中转"
+      type: select
+      selector:
+        any-name: [Transit, 中转, 自建]
+      include-direct: false
+    landing:
+      id: landing
+      group-name: "🚪 落地"
+      type: select
+      selector:
+        any-name: [Relay, 落地]
+        all-names: [直连, 家宽]

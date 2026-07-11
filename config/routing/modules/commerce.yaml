@@ -1,0 +1,25 @@
+id: commerce
+
+groups:
+  - { id: payment, name: "💳 支付服务", template: proxy_service }
+  - { id: encryption, name: "🔐 加密货币", template: proxy_service }
+  - { id: shopping, name: "🛒 购物平台", template: proxy_service }
+
+rule-blocks:
+  - id: payments
+    target: payment
+    providers:
+      - { source: metacubex_geosite, name: paypal }
+      - { source: metacubex_geosite, name: stripe }
+      - { source: metacubex_geosite, name: wise }
+
+  - id: encryption
+    target: encryption
+    providers:
+      - { source: metacubex_geosite, name: binance }
+
+  - id: shopping
+    target: shopping
+    providers:
+      - { source: metacubex_geosite, name: amazon }
+      - { source: metacubex_geosite, name: ebay }

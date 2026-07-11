@@ -5,6 +5,7 @@ const steps = [
   "format:check",
   "lint",
   "typecheck",
+  "config:v2:check",
   "test:v2",
   "build:v2",
   "verify",

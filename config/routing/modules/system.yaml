@@ -1,0 +1,9 @@
+id: system
+
+groups:
+  - { id: proxy_select, name: "🚀 代理选择", template: proxy_root }
+  - { id: manual_select, name: "🔧 手动选择", template: manual_nodes }
+  - { id: auto_select, name: "⚡ 自动选择", template: auto_test }
+  - { id: fallback, name: "🐟 漏网之鱼", template: proxy_service }
+
+rule-blocks: []

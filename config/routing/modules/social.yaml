@@ -1,0 +1,45 @@
+id: social
+
+groups:
+  - { id: telegram, name: "📲 电报消息", template: proxy_service }
+  - { id: twitter, name: "🐦 推特/X", template: proxy_service }
+  - { id: meta_social, name: "📘 Meta 系", template: proxy_service }
+  - { id: discord, name: "🎙️ Discord", template: proxy_service }
+  - { id: social_other, name: "💬 其他社交", template: proxy_service }
+
+rule-blocks:
+  - id: telegram
+    target: telegram
+    providers:
+      - { source: metacubex_geosite, name: telegram }
+      - { source: metacubex_geoip, name: telegram, no-resolve: true }
+
+  - id: twitter
+    target: twitter
+    providers:
+      - { source: metacubex_geosite, name: twitter }
+      - { source: metacubex_geoip, name: twitter, no-resolve: true }
+
+  - id: meta
+    target: meta_social
+    providers:
+      - { source: metacubex_geosite, name: facebook }
+      - { source: metacubex_geosite, name: instagram }
+      - { source: metacubex_geosite, name: whatsapp }
+      - { source: metacubex_geoip, name: facebook, no-resolve: true }
+
+  - id: discord
+    target: discord
+    providers:
+      - { source: metacubex_geosite, name: discord }
+
+  - id: other
+    target: social_other
+    providers:
+      - { source: metacubex_geosite, name: tiktok }
+      - { source: metacubex_geosite, name: line }
+      - { source: metacubex_geosite, name: reddit }
+      - { source: metacubex_geosite, name: linkedin }
+      - { source: metacubex_geosite, name: snap }
+      - { source: metacubex_geosite, name: pinterest }
+      - { source: metacubex_geosite, name: tumblr }

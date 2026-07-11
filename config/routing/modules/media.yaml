@@ -1,0 +1,56 @@
+id: media
+
+groups:
+  - { id: youtube, name: "📹 油管视频", template: proxy_service }
+  - { id: netflix, name: "🎬 Netflix", template: proxy_service }
+  - { id: disney_plus, name: "🧞‍♂️ Disney+", template: proxy_service }
+  - { id: western_streaming, name: "📺 欧美流媒体", template: proxy_service }
+  - { id: asia_streaming, name: "🌏 亚洲流媒体", template: proxy_service }
+  - { id: news, name: "📰 新闻资讯", template: proxy_service }
+
+rule-blocks:
+  - id: youtube
+    target: youtube
+    providers:
+      - { source: metacubex_geosite, name: youtube }
+
+  - id: netflix
+    target: netflix
+    providers:
+      - { source: metacubex_geosite, name: netflix }
+      - { source: metacubex_geoip, name: netflix, no-resolve: true }
+
+  - id: disney
+    target: disney_plus
+    providers:
+      - { source: metacubex_geosite, name: disney }
+
+  - id: western
+    target: western_streaming
+    providers:
+      - { source: metacubex_geosite, name: apple-tvplus }
+      - { source: metacubex_geosite, name: hbo }
+      - { source: metacubex_geosite, name: hulu }
+      - { source: metacubex_geosite, name: primevideo }
+      - { source: metacubex_geosite, name: spotify }
+      - { source: metacubex_geosite, name: twitch }
+      - { source: metacubex_geosite, name: dazn }
+
+  - id: asia
+    target: asia_streaming
+    providers:
+      - { source: metacubex_geosite, name: bahamut }
+      - { source: metacubex_geosite, name: biliintl }
+      - { source: metacubex_geosite, name: niconico }
+      - { source: metacubex_geosite, name: abema }
+      - { source: metacubex_geosite, name: viu }
+      - { source: metacubex_geosite, name: kktv }
+
+  - id: news
+    target: news
+    providers:
+      - { source: metacubex_geosite, name: bbc }
+      - { source: metacubex_geosite, name: cnn }
+      - { source: metacubex_geosite, name: nytimes }
+      - { source: metacubex_geosite, name: wsj }
+      - { source: metacubex_geosite, name: bloomberg }

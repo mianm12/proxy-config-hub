@@ -1,0 +1,113 @@
+schema-version: 2
+
+runtime:
+  - source: runtime/base.yaml
+    target: root
+    apply: overlay
+  - source: runtime/dns.yaml
+    target: dns
+    apply: replace
+  - source: runtime/sniffer.yaml
+    target: sniffer
+    apply: replace
+  - source: runtime/tun.yaml
+    target: tun
+    apply: if-absent
+  - value: false
+    target: allow-lan
+    apply: if-absent
+
+nodes:
+  catalog: nodes/catalog.yaml
+  routing-regions: nodes/routing-regions.yaml
+  chains: nodes/chains.yaml
+
+routing:
+  group-templates: routing/group-templates.yaml
+  provider-sources: routing/provider-sources.yaml
+  modules:
+    - routing/modules/system.yaml
+    - routing/modules/core.yaml
+    - routing/modules/ai.yaml
+    - routing/modules/education.yaml
+    - routing/modules/social.yaml
+    - routing/modules/media.yaml
+    - routing/modules/gaming.yaml
+    - routing/modules/developer.yaml
+    - routing/modules/cloud.yaml
+    - routing/modules/commerce.yaml
+    - routing/modules/regional.yaml
+
+  group-layout:
+    - group: proxy_select
+    - group: manual_select
+    - group: auto_select
+    - generated: chain_groups
+    - generated: transit_groups
+    - group: ad_block
+    - group: private
+    - group: cn_service
+    - group: non_cn
+    - group: ai_service
+    - group: youtube
+    - group: google
+    - group: microsoft
+    - group: apple
+    - group: telegram
+    - group: code_hosting
+    - group: twitter
+    - group: meta_social
+    - group: discord
+    - group: social_other
+    - group: netflix
+    - group: disney_plus
+    - group: western_streaming
+    - group: asia_streaming
+    - group: steam
+    - group: game_pc
+    - group: game_console
+    - group: cloud_service
+    - group: developer_tools
+    - group: storage_service
+    - group: payment
+    - group: encryption
+    - group: education
+    - group: news
+    - group: shopping
+    - generated: region_groups
+    - group: fallback
+
+  rule-pipeline:
+    - { module: core, block: ads }
+    - { module: core, block: private }
+    - { module: ai, block: services }
+    - { module: media, block: youtube }
+    - { module: education, block: services }
+    - { module: social, block: telegram }
+    - { module: social, block: twitter }
+    - { module: social, block: meta }
+    - { module: social, block: discord }
+    - { module: social, block: other }
+    - { module: media, block: netflix }
+    - { module: media, block: disney }
+    - { module: media, block: western }
+    - { module: media, block: asia }
+    - module: gaming
+    - { module: media, block: news }
+    - { module: cloud, block: google }
+    - { module: cloud, block: apple }
+    - module: developer
+    - { module: commerce, block: payments }
+    - { module: commerce, block: encryption }
+    - { module: cloud, block: cloud_services }
+    - { module: cloud, block: microsoft }
+    - { module: commerce, block: shopping }
+    - module: regional
+    - fallback: fallback
+
+rename:
+  profiles: rename/profiles.yaml
+
+deployment:
+  channel: v2
+  public-base-url: null

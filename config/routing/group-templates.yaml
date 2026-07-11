@@ -1,0 +1,50 @@
+templates:
+  proxy_root:
+    type: select
+    members:
+      - group: manual_select
+      - group: auto_select
+      - generated: chain_groups
+      - generated: region_groups
+      - builtin: DIRECT
+
+  manual_nodes:
+    type: select
+    members:
+      - generated: chain_groups
+      - pool: all_nodes
+
+  auto_test:
+    type: url-test
+    members:
+      - pool: all_nodes
+    mihomo:
+      url: https://www.gstatic.com/generate_204
+      interval: 300
+      lazy: false
+
+  reject_first:
+    type: select
+    members:
+      - builtin: REJECT
+      - builtin: DIRECT
+
+  direct_first:
+    type: select
+    members:
+      - builtin: DIRECT
+      - group: proxy_select
+      - group: manual_select
+      - group: auto_select
+      - generated: chain_groups
+      - generated: region_groups
+
+  proxy_service:
+    type: select
+    members:
+      - group: proxy_select
+      - group: manual_select
+      - group: auto_select
+      - builtin: DIRECT
+      - generated: chain_groups
+      - generated: region_groups
