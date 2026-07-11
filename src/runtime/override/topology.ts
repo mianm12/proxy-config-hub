@@ -26,8 +26,10 @@ function resolveTopology(
   for (const chain of chains) {
     const landing = remaining.filter(({ name }) => matchesSelector(name, chain.landing.selector));
     const landingIndexes = new Set(landing.map(({ index }) => index));
-    remaining = remaining.filter(({ index }) => !landingIndexes.has(index));
-    const transit = remaining.filter(({ name }) => matchesSelector(name, chain.transit.selector));
+    const remainingWithoutLanding = remaining.filter(({ index }) => !landingIndexes.has(index));
+    const transit = remainingWithoutLanding.filter(({ name }) =>
+      matchesSelector(name, chain.transit.selector),
+    );
 
     if (landing.length === 0) {
       diagnostics.push({
@@ -47,6 +49,7 @@ function resolveTopology(
       continue;
     }
 
+    remaining = remainingWithoutLanding;
     chainGroups.push({
       name: chain.landing.groupName,
       type: chain.landing.type,

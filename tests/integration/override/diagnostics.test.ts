@@ -5,36 +5,60 @@ import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
 import { compileProject } from "../../../src/compiler/compile-project.ts";
+import { ConfigCompilationError } from "../../../src/domain/diagnostics/diagnostic.ts";
 import { compileOverride } from "../../../src/runtime/override/index.ts";
 
 const fixtureSchema = z.object({
-  cases: z.array(z.object({ config: z.looseObject({}) })).min(1),
+  cases: z.array(z.object({ name: z.string(), config: z.looseObject({}) })).min(1),
 });
 
-function fixtureInput(name: string): Readonly<Record<string, unknown>> {
+function fixtureInput(file: string, caseName?: string): Readonly<Record<string, unknown>> {
   const fixture = fixtureSchema.parse(
     JSON.parse(
-      fs.readFileSync(
-        path.resolve(process.cwd(), `tests/fixtures/v1-input/override/${name}.json`),
-        "utf8",
-      ),
+      fs.readFileSync(path.resolve(process.cwd(), `tests/fixtures/override/${file}.json`), "utf8"),
     ) as unknown,
   );
-  const input = fixture.cases[0]?.config;
-  if (input === undefined) throw new Error(`${name} fixture 缺少输入`);
+  const input =
+    caseName === undefined
+      ? fixture.cases[0]?.config
+      : fixture.cases.find(({ name }) => name === caseName)?.config;
+  if (input === undefined) throw new Error(`${file}/${caseName ?? "<first>"} fixture 缺少输入`);
   return input;
+}
+
+function expectNoProxyError(input: Readonly<Record<string, unknown>>): void {
+  try {
+    compileOverride(input, compileProject(path.resolve(process.cwd(), "config")));
+  } catch (error) {
+    expect(error).toBeInstanceOf(ConfigCompilationError);
+    if (!(error instanceof ConfigCompilationError)) return;
+    expect(error.diagnostics).toEqual([
+      {
+        code: "OVERRIDE_NO_PROXIES",
+        severity: "error",
+        message: "config.proxies 为空，无法生成策略组和分流规则",
+      },
+    ]);
+    return;
+  }
+  throw new Error("预期空代理输入抛出 ConfigCompilationError");
 }
 
 describe("override 稳定诊断代码", () => {
   const project = compileProject(path.resolve(process.cwd(), "config"));
 
-  it("空节点保持迁移期部分配置语义并报告 error", () => {
-    const result = compileOverride(fixtureInput("invalid-names"), project);
+  it("空代理与全部无效名称均直接失败", () => {
+    expectNoProxyError(fixtureInput("invalid-names", "空代理数组"));
+    expectNoProxyError(fixtureInput("invalid-names", "全部节点名无效"));
+  });
 
-    expect(result.diagnostics.map(({ code, severity }) => ({ code, severity }))).toEqual([
-      { code: "OVERRIDE_NO_PROXIES", severity: "error" },
-      { code: "OVERRIDE_PARTIAL_CONFIG", severity: "warning" },
-    ]);
+  it("有效与无效名称混合时仅把有效名称加入策略组", () => {
+    const result = compileOverride(fixtureInput("invalid-names", "有效与无效节点名混合"), project);
+    const groups = z
+      .array(z.looseObject({ name: z.string(), proxies: z.array(z.string()) }))
+      .parse(result.config["proxy-groups"]);
+
+    expect(groups.find(({ name }) => name === "🔧 手动选择")?.proxies).toEqual(["香港-Valid-01"]);
   });
 
   it("缺少落地时链路退化", () => {
@@ -45,12 +69,17 @@ describe("override 稳定诊断代码", () => {
     ).toEqual(["OVERRIDE_CHAIN_NO_LANDING"]);
   });
 
-  it("缺少中转时链路退化", () => {
-    expect(
-      compileOverride(fixtureInput("chain-no-transit"), project).diagnostics.map(
-        ({ code }) => code,
-      ),
-    ).toEqual(["OVERRIDE_CHAIN_NO_TRANSIT"]);
+  it("缺少中转时链路退化并将落地节点恢复到普通池", () => {
+    const result = compileOverride(fixtureInput("chain-no-transit"), project);
+    const groups = z
+      .array(z.looseObject({ name: z.string(), proxies: z.array(z.string()) }))
+      .parse(result.config["proxy-groups"]);
+
+    expect(result.diagnostics.map(({ code }) => code)).toEqual(["OVERRIDE_CHAIN_NO_TRANSIT"]);
+    expect(groups.find(({ name }) => name === "🔧 手动选择")?.proxies).toEqual([
+      "Relay-🇺🇸-Landing-01",
+      "普通-🇭🇰-01",
+    ]);
   });
 
   it("已有 dialer-proxy 保留并报告 warning", () => {

@@ -1,4 +1,4 @@
-import type { Diagnostic } from "../../domain/diagnostics/diagnostic.ts";
+import { ConfigCompilationError, type Diagnostic } from "../../domain/diagnostics/diagnostic.ts";
 import type { ProxyNode } from "../../domain/node/index.ts";
 import { buildProxyGroups } from "./groups.ts";
 import { buildRegionGroups } from "./regions.ts";
@@ -22,19 +22,13 @@ function compileOverride(input: unknown, project: OverrideProject): OverrideResu
   const diagnostics: Diagnostic[] = [];
 
   if (namedProxies.length === 0) {
-    diagnostics.push(
+    throw new ConfigCompilationError([
       {
         code: "OVERRIDE_NO_PROXIES",
         severity: "error",
         message: "config.proxies 为空，无法生成策略组和分流规则",
       },
-      {
-        code: "OVERRIDE_PARTIAL_CONFIG",
-        severity: "warning",
-        message: "已应用 runtime preset，跳过 proxy-groups、rule-providers 和 rules 生成",
-      },
-    );
-    return { config: output, diagnostics };
+    ]);
   }
 
   const topology = resolveTopology(sourceProxies, namedProxies, project.chains);
