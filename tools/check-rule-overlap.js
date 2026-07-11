@@ -1,53 +1,91 @@
-import fs from "node:fs";
 import net from "node:net";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import yaml from "js-yaml";
 
-import { RULE_PROVIDERS_YAML_PATH } from "./lib/paths.js";
+import { CONFIG_ROOT } from "../src/build/paths.ts";
+import { compileProject } from "../src/compiler/compile-project.ts";
+
+const AUDIT_CONCURRENCY = 8;
+const AUDIT_TIMEOUT_MS = 30_000;
 
 function loadRuleProviders() {
-  const content = fs.readFileSync(RULE_PROVIDERS_YAML_PATH, "utf8");
-  const document = yaml.load(content);
-  const entries = Object.entries(document?.ruleProviders ?? {});
-  return entries.map(([id, definition], index) => ({
-    id,
-    index,
-    ...definition,
-  }));
+  return compileProject(CONFIG_ROOT).providers.flatMap((provider, index) => {
+    const { config } = provider;
+    return config.type === "http" && config.url !== undefined
+      ? [
+          {
+            id: provider.id,
+            index,
+            url: config.url,
+            behavior: config.behavior,
+            format:
+              config.format ??
+              (config.url.endsWith(".mrs")
+                ? "mrs"
+                : config.url.endsWith(".txt")
+                  ? "text"
+                  : "yaml"),
+            "target-group": provider.target,
+          },
+        ]
+      : [];
+  });
 }
 
-function toYamlSourceUrl(url) {
-  if (typeof url !== "string") {
-    throw new Error(`Invalid provider url: ${url}`);
-  }
+function resolveAuditSource(provider) {
+  const parsed = new URL(provider.url);
+  const isMetaRulesMrs =
+    provider.format === "mrs" &&
+    parsed.hostname === "raw.githubusercontent.com" &&
+    parsed.pathname.startsWith("/MetaCubeX/meta-rules-dat/") &&
+    parsed.pathname.endsWith(".mrs");
 
-  if (url.endsWith(".mrs")) {
-    return `${url.slice(0, -4)}.yaml`;
-  }
-
-  return url;
+  return isMetaRulesMrs
+    ? { url: `${provider.url.slice(0, -4)}.yaml`, format: "yaml", opaque: false }
+    : { url: provider.url, format: provider.format, opaque: provider.format === "mrs" };
 }
 
 async function fetchRuleSet(provider) {
-  const sourceUrl = toYamlSourceUrl(provider.url);
-  const response = await fetch(sourceUrl);
+  const source = resolveAuditSource(provider);
+  const response = await fetch(source.url, { signal: AbortSignal.timeout(AUDIT_TIMEOUT_MS) });
 
   if (!response.ok) {
     throw new Error(`Failed to fetch ${provider.id}: ${response.status} ${response.statusText}`);
   }
 
   const content = await response.text();
-  const document = yaml.load(content);
-  const payload = Array.isArray(document?.payload) ? document.payload : [];
+  if (!content.trim() || /^\s*</.test(content)) {
+    throw new Error(`Invalid or empty rule content: ${provider.id}`);
+  }
+  const payload = parseRulePayload(provider.id, content, source);
 
   return {
     ...provider,
-    sourceUrl,
+    sourceUrl: source.url,
+    opaque: source.opaque,
     payload,
     entries: payload.map((value) => normalizeEntry(provider.behavior, value)),
   };
+}
+
+function parseRulePayload(providerId, content, source) {
+  if (source.opaque) {
+    return [];
+  }
+  if (source.format === "text") {
+    return content
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter((line) => line && !line.startsWith("#"));
+  }
+
+  const document = yaml.load(content);
+  if (!document || typeof document !== "object" || !Array.isArray(document.payload)) {
+    throw new Error(`Rule payload must be an array: ${providerId}`);
+  }
+  return document.payload;
 }
 
 function normalizeEntry(behavior, value) {
@@ -59,7 +97,36 @@ function normalizeEntry(behavior, value) {
     return normalizeCidrEntry(value);
   }
 
+  if (behavior === "classical") {
+    return normalizeClassicalEntry(value);
+  }
+
   throw new Error(`Unsupported behavior: ${behavior}`);
+}
+
+function normalizeClassicalEntry(value) {
+  const raw = String(value).trim();
+  if (!raw) throw new Error("Empty classical entry");
+  const [type, body] = raw.split(",", 2);
+  const normalizedType = type?.trim().toUpperCase();
+  const normalizedBody = body?.trim();
+
+  if (normalizedType === "DOMAIN" && normalizedBody) {
+    return normalizeDomainEntry(normalizedBody);
+  }
+  if (normalizedType === "DOMAIN-SUFFIX" && normalizedBody) {
+    return normalizeDomainEntry(`+.${normalizedBody}`);
+  }
+  if ((normalizedType === "IP-CIDR" || normalizedType === "IP-CIDR6") && normalizedBody) {
+    return normalizeCidrEntry(normalizedBody);
+  }
+
+  return {
+    kind: "classical",
+    value: raw.toLowerCase(),
+    raw,
+    key: `classical:${raw.toLowerCase()}`,
+  };
 }
 
 function normalizeDomainEntry(value) {
@@ -241,6 +308,10 @@ function entryCovers(leftEntry, rightEntry) {
     return cidrCovers(leftEntry, rightEntry);
   }
 
+  if (leftEntry.kind === "classical" && rightEntry.kind === "classical") {
+    return leftEntry.value === rightEntry.value;
+  }
+
   return false;
 }
 
@@ -274,6 +345,7 @@ function findCoveredEntries(leftProvider, rightProvider) {
 function summarizeOverlap(providers) {
   const fullShadowPairs = [];
   const partialOverlapPairs = [];
+  const opaqueProviders = providers.filter(({ opaque }) => opaque).map(({ id }) => id);
 
   for (let rightIndex = 0; rightIndex < providers.length; rightIndex += 1) {
     const rightProvider = providers[rightIndex];
@@ -313,7 +385,7 @@ function summarizeOverlap(providers) {
   fullShadowPairs.sort(compareOverlap);
   partialOverlapPairs.sort(compareOverlap);
 
-  return { fullShadowPairs, partialOverlapPairs };
+  return { fullShadowPairs, partialOverlapPairs, opaqueProviders };
 }
 
 function compareOverlap(left, right) {
@@ -357,6 +429,8 @@ function printReport(report, options = {}) {
     console.log("");
     console.log(`# Same-Group Full Shadow Pairs: ${report.fullShadowPairs.length - crossGroupFullShadowPairs.length}`);
     console.log(`# Partial Overlap Pairs: ${report.partialOverlapPairs.length}`);
+    console.log(`# Opaque MRS Providers (URL only): ${report.opaqueProviders.length}`);
+    if (report.opaqueProviders.length) console.log(report.opaqueProviders.join(", "));
     return;
   }
 
@@ -384,12 +458,25 @@ function printReport(report, options = {}) {
       }
     }
   }
+
+  console.log("");
+  console.log("# Opaque MRS Providers (URL availability only)");
+  console.log(report.opaqueProviders.length ? report.opaqueProviders.join("\n") : "(none)");
 }
 
 async function main(options = {}) {
   const { summaryOnly = false } = options;
   const providers = loadRuleProviders();
-  const fetchedProviders = await Promise.all(providers.map((provider) => fetchRuleSet(provider)));
+  const fetchedProviders = new Array(providers.length);
+  let nextIndex = 0;
+  const workers = Array.from({ length: Math.min(AUDIT_CONCURRENCY, providers.length) }, async () => {
+    while (nextIndex < providers.length) {
+      const index = nextIndex;
+      nextIndex += 1;
+      fetchedProviders[index] = await fetchRuleSet(providers[index]);
+    }
+  });
+  await Promise.all(workers);
   const report = summarizeOverlap(fetchedProviders);
   printReport(report, { summaryOnly });
   return report;
@@ -405,4 +492,4 @@ if (isDirectRun) {
   });
 }
 
-export { main };
+export { main, normalizeEntry, parseRulePayload, resolveAuditSource };

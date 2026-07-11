@@ -1,0 +1,36 @@
+name: V2 Pages Dry Run
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  artifact:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+      - uses: actions/cache@v5
+        with:
+          path: |
+            .cache/tools/mihomo
+            .cache/validation/mihomo
+          key: ${{ runner.os }}-${{ runner.arch }}-mihomo-${{ hashFiles('tooling/mihomo.lock.json', 'config/runtime/*.yaml') }}
+      - run: npm ci
+      - run: npm run tools:setup
+      - run: npm run check:v2
+      - run: npm run build:site
+        env:
+          PUBLIC_BASE_URL: ${{ vars.PUBLIC_BASE_URL }}
+      - run: npm run verify:publication
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: dist/

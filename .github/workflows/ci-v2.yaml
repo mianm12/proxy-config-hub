@@ -1,0 +1,35 @@
+name: V2 CI
+
+on:
+  pull_request:
+  push:
+    branches: [main, rewrite/v2]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+
+      - uses: actions/cache@v5
+        with:
+          path: |
+            .cache/tools/mihomo
+            .cache/validation/mihomo
+          key: ${{ runner.os }}-${{ runner.arch }}-mihomo-${{ hashFiles('tooling/mihomo.lock.json', 'config/runtime/*.yaml') }}
+
+      - run: npm ci
+      - run: npm run tools:setup
+      - run: npm run check:v2
