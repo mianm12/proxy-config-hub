@@ -22,7 +22,6 @@ npm run check
 npm run build
 npm run test
 npm run config:check
-npm run verify:golden
 npm run verify:mihomo
 npm run audit:rules
 npm run build:publication
@@ -40,7 +39,7 @@ Run `npm run check` after code or configuration changes. Publication requires a 
 - `src/apps/`: host adapters; override and rename must not depend on one another.
 - `src/build/`, `src/tools/`: bundles, official tool resolution, publication, and CI orchestration.
 - `public/rules/`: custom rule assets copied verbatim during publication.
-- historical `tests/fixtures/v1-input/` and `tests/golden/v1-*`: frozen migration evidence, not executable v1 code.
+- `tests/fixtures/` and `tests/expected/`: sanitized behavior inputs and reviewed current-output contracts.
 
 Never edit or commit generated `dist/v2/` artifacts.
 

@@ -1,6 +1,6 @@
 # proxy-config-hub 设计入口
 
-当前实现为 v2。历史 v1 的 YAML → 生成 JS → bundle 双重真相源已经删除；迁移过程与等价证据保留在 `docs/v2/MIGRATION.md` 和历史 golden fixtures 中。
+当前实现以 YAML 作为唯一人工配置源，由严格 TypeScript 编译为两个独立的单文件运行产物。
 
 ## 架构结论
 
@@ -35,7 +35,7 @@ config/manifest.yaml
 - `src/apps/`：宿主契约适配器。
 - `src/build/`、`src/tools/`：构建、验证、发布和远程审计。
 - `public/rules/`：原样发布的自定义规则资产。
-- `tests/`：单元、集成、历史 golden、宿主契约和工具链测试。
+- `tests/`：单元、集成、当前输出回归、宿主契约和工具链测试。
 
 ## 不变量
 
@@ -54,5 +54,4 @@ config/manifest.yaml
 
 - [架构与技术选型](v2/ARCHITECTURE.md)
 - [YAML 配置模型](v2/CONFIGURATION.md)
-- [迁移、验收与回滚](v2/MIGRATION.md)
 - [本地、Docker、CI、Pages 与 Release 运维](v2/OPERATIONS.md)

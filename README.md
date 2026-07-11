@@ -54,17 +54,16 @@ docker run --rm \
 
 ## 常用命令
 
-| 命令 | 作用 |
-|---|---|
-| `npm run config:check` | 编译并校验全部 YAML、引用与顺序约束 |
-| `npm run build` | 生成 override 与 rename bundle |
-| `npm run test` | 运行单元、集成、golden 与宿主契约测试 |
-| `npm run verify:golden` | 校验冻结的历史可观察行为 |
-| `npm run verify:mihomo` | 用锁定的官方 Mihomo 校验完整脱敏配置 |
-| `npm run check` | 本地与 CI 共用的完整确定性门槛 |
-| `npm run audit:rules` | 联网检查 provider 可用性、重叠与遮蔽 |
-| `npm run build:publication` | 构建 Pages/Release 发布资产 |
-| `npm run verify:publication` | 校验 manifest、版本和全部 checksum |
+| 命令                         | 作用                                  |
+| ---------------------------- | ------------------------------------- |
+| `npm run config:check`       | 编译并校验全部 YAML、引用与顺序约束   |
+| `npm run build`              | 生成 override 与 rename bundle        |
+| `npm run test`               | 运行单元、集成、golden 与宿主契约测试 |
+| `npm run verify:mihomo`      | 用锁定的官方 Mihomo 校验完整脱敏配置  |
+| `npm run check`              | 本地与 CI 共用的完整确定性门槛        |
+| `npm run audit:rules`        | 联网检查 provider 可用性、重叠与遮蔽  |
+| `npm run build:publication`  | 构建 Pages/Release 发布资产           |
+| `npm run verify:publication` | 校验 manifest、版本和全部 checksum    |
 
 ## 架构
 
@@ -85,7 +84,7 @@ config/**/*.yaml
 - `src/apps/`：宿主入口适配器。
 - `src/tools/`、`src/build/`：本地/CI 工具和 bundle/发布构建。
 - `public/rules/`：原样发布的自定义规则资产。
-- `tests/`：脱敏 fixtures、历史 golden、领域测试和四种宿主契约。
+- `tests/`：脱敏 fixtures、审阅后的 expected 输出、领域测试和四种宿主契约。
 
 配置模块、人类可读语法、链路模型和 provider 扩展方式见 [配置设计](docs/v2/CONFIGURATION.md)。
 
@@ -102,6 +101,5 @@ config/**/*.yaml
 
 - [架构设计](docs/v2/ARCHITECTURE.md)
 - [配置设计](docs/v2/CONFIGURATION.md)
-- [迁移与验收记录](docs/v2/MIGRATION.md)
 - [运维说明](docs/v2/OPERATIONS.md)
 - [设计入口](docs/DESIGN.md)

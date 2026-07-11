@@ -1,6 +1,6 @@
 # proxy-config-hub v2 运维说明
 
-本文覆盖当前 v2 的本地、Ubuntu Docker、CI、Pages 与 Release 操作。v1 可执行构建链已删除，历史 fixtures/golden 只作为回归证据保留。
+本文覆盖当前版本的本地、Ubuntu Docker、CI、Pages 与 Release 操作。
 
 ## 1. 本地完整验证
 
@@ -12,7 +12,7 @@ npm run tools:setup
 npm run check
 ```
 
-`check` 依次执行格式、lint、类型、YAML schema/语义编译、双 bundle、全部测试、历史 golden 回归和真实 Mihomo 配置检查。
+`check` 依次执行格式、lint、类型、YAML schema/语义编译、双 bundle、全部测试和真实 Mihomo 配置检查。
 
 `npm run tools:setup` 使用固定优先级：
 
@@ -96,8 +96,8 @@ https://www.quietus.icu/proxy-config-hub/v2/manifest.json
 
 - Mihomo Party：`main(config)`。
 - Clash Verge Rev：`main(config, profileName)`；首期保留但不消费 `profileName`。
-- Sub-Store Mihomo 配置覆写：`main(config)`，并保留迁移期 CommonJS bridge。
-- Sub-Store 节点脚本：`operator(proxies, targetPlatform, context)`，参数来自 `$arguments.profile` 或兼容 legacy 参数。
+- Sub-Store Mihomo 配置覆写：`main(config)`，同时提供宿主契约测试覆盖的 CommonJS bridge。
+- Sub-Store 节点脚本：`operator(proxies, targetPlatform, context)`，参数来自 `$arguments.profile`。
 
 三种 override 宿主必须引用同一份 `override.js`，rename 单独引用 `rename.js`。首期不把 QuickJS 真实执行加入正式门槛。
 
@@ -119,7 +119,7 @@ https://www.quietus.icu/proxy-config-hub/v2/rename.js#profile=self_hosted#noCach
 
 ## 6. 当前发布状态
 
-默认 npm 命令、Pages workflow 和源码目录均已切换到 v2；v1 构建链已删除。`main` 是 Pages 稳定发布源，`v2.*.*` tag 是不可变 Release 授权。
+`main` 是 Pages 稳定发布源，`v2.*.*` tag 是不可变 Release 授权。
 
 宿主验收已经完成：Sub-Store 与 Mihomo Party 实机成功，Clash Verge Rev 由用户接受契约测试作为替代验收。
 

@@ -217,13 +217,13 @@ rule-pipeline:
 
 ### 5.1 apply 语义
 
-| apply | 语义 |
-|---|---|
-| `overlay` | 将 source 根键浅覆盖到目标；不递归 deep merge |
-| `replace` | 用 source 完整替换 target |
-| `if-absent` | 只有 target 为 `undefined` 时写入 |
+| apply       | 语义                                          |
+| ----------- | --------------------------------------------- |
+| `overlay`   | 将 source 根键浅覆盖到目标；不递归 deep merge |
+| `replace`   | 用 source 完整替换 target                     |
+| `if-absent` | 只有 target 为 `undefined` 时写入             |
 
-首期等价映射：
+当前映射：
 
 - base/profile/geodata 顶层键合并进 `runtime/base.yaml`，使用 root overlay。
 - DNS 使用 replace。
@@ -242,7 +242,7 @@ rule-pipeline:
 
 catalog 是 rename 与 override 的共享地区/别名真相源。
 
-当前首期 catalog 只重建仓库 v1 override 已使用的 27 个地区及两个真实 rename fixture 所需行为。旧 rename 脚本中来源与许可证无法确认的四套平行国家数组没有复制；以后扩展地区时应从可确认许可的标准来源逐项加入并补测试。
+catalog 当前维护实际使用的地区以及 rename fixture 所需行为。扩展地区时必须从许可可确认的标准来源逐项加入，并同步补充测试。
 
 ```yaml
 regions:
@@ -348,8 +348,6 @@ selector:
 4. 任一端为空时输出 warning，并让链路整体不生效。
 5. 节点已有 `dialer-proxy` 时保留原值并 warning。
 
-第 4 项是切换后的目标语义。并行迁移期为了通过 v1/v2 golden，对“landing 已命中但 transit 为空”的情况暂时保留 v1 行为：landing 仍从普通池移除，但不注入 `dialer-proxy`。该兼容差异必须在切换后以独立行为提交修正，不能混入首次等价切换。
-
 内部 IR 使用 edge 表达 `landing -> transit`；未来两跳通过新增中转 edge 扩展。
 
 ## 7. 策略组模板
@@ -397,12 +395,12 @@ templates:
 ### 7.1 成员引用类型
 
 ```yaml
-- group: proxy_select          # 稳定策略组 ID
-- pool: all_nodes              # 动态节点池
-- generated: region_groups     # 动态生成组集合
+- group: proxy_select # 稳定策略组 ID
+- pool: all_nodes # 动态节点池
+- generated: region_groups # 动态生成组集合
 - generated: chain_groups
-- builtin: DIRECT              # Mihomo 内置目标
-- node: "某个固定节点名"       # 少数必要场景
+- builtin: DIRECT # Mihomo 内置目标
+- node: "某个固定节点名" # 少数必要场景
 ```
 
 每个对象必须只包含一种引用类型。禁止未识别的 `@xxx` 字符串。
@@ -509,15 +507,15 @@ providers:
 `provider` 对常见 Mihomo 字段做类型校验；尚未建模的新字段放入显式透传区：
 
 ```yaml
-  - id: future_provider
-    provider:
-      type: http
-      behavior: domain
-      url: https://example.com/future.mrs
-      path: ./ruleset/future.mrs
-      format: mrs
-    mihomo:
-      future-option: true
+- id: future_provider
+  provider:
+    type: http
+    behavior: domain
+    url: https://example.com/future.mrs
+    path: ./ruleset/future.mrs
+    format: mrs
+  mihomo:
+    future-option: true
 ```
 
 最终仍由 `mihomo -t` 验证原生字段。
@@ -615,8 +613,8 @@ rule-blocks:
 对于暂未结构化建模的 Mihomo 规则，允许显式 raw：
 
 ```yaml
-    rules:
-      - raw: "AND,((PROCESS-NAME,ssh),(NETWORK,tcp)),🔑 SSH"
+rules:
+  - raw: "AND,((PROCESS-NAME,ssh),(NETWORK,tcp)),🔑 SSH"
 ```
 
 raw 规则仍解析并校验目标引用；无法可靠解析时要求显式声明 `target` 供交叉校验。
@@ -696,11 +694,11 @@ profiles:
       - ebCorona
 ```
 
-标签匹配默认大小写不敏感，因此 `REALITY/reality/Reality` 无需重复。迁移期默认保留输入中实际匹配到的拼写，以维持现有输出；以后可以为单个标签显式声明规范输出拼写。
+标签匹配默认大小写不敏感，因此 `REALITY/reality/Reality` 无需重复。输出保留输入中实际匹配到的拼写；需要统一拼写时应为标签增加显式规范化规则。
 
 重命名前会跳过订阅服务混入节点列表的强元数据项，例如“剩余流量”“已用/总流量”“套餐/订阅到期”和“下次流量重置”。判定只使用这些强组合信号；普通 `GB` 地区代码、含“测试”的节点名或单独出现的英文 `Traffic` 不会被过滤。被跳过的项产生 `RENAME_SUBSCRIPTION_METADATA_SKIPPED` warning，便于在宿主日志中追踪。
 
-新主接口：
+唯一参数接口：
 
 ```text
 rename.js#profile=pokemon
@@ -716,13 +714,7 @@ https://www.quietus.icu/proxy-config-hub/v2/rename.js#profile=pokemon#noCache
 https://www.quietus.icu/proxy-config-hub/v2/rename.js#profile=self_hosted#noCache
 ```
 
-迁移期兼容当前 `bl`、`blkey`、`fgf`、`flag`、`name`、`nf`、`one` 等参数。解析优先级：
-
-1. 存在 `profile` 时加载命名 profile。
-2. 旧参数若同时存在，则只允许明确的兼容覆盖项；其他冲突报错。
-3. 没有 profile 时进入 legacy 参数兼容路径。
-
-旧参数兼容层在 v2 内保留，但不继续扩展新参数。
+`profile` 必须存在并指向 `config/rename/profiles.yaml` 中的命名配置。除宿主缓存控制字段 `noCache` 外，其他参数一律拒绝；profile 内容只能通过 YAML 修改，URL 不提供临时覆盖能力。
 
 ## 11. 严格 DSL 与 Mihomo 透传
 
