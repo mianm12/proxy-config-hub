@@ -19,7 +19,19 @@
     "node": ">=24"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^26.1.1",
     "esbuild": "^0.28.0",
-    "js-yaml": "^4.1.1"
+    "eslint": "^10.7.0",
+    "js-yaml": "^4.1.1",
+    "prettier": "^3.9.5",
+    "tsx": "^4.23.0",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.63.0",
+    "vitest": "^4.1.10"
+  },
+  "dependencies": {
+    "yaml": "^2.9.0",
+    "zod": "^4.4.3"
   }
 }
