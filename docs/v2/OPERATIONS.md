@@ -78,6 +78,8 @@ rules.tar.gz
 
 tag 必须精确等于 `v<package.json version>`。当前首个版本为 `v2.0.0`；创建并推送 tag 代表人工发布授权。
 
+首个不可变版本已发布并验证：[v2.0.0](https://github.com/mianm12/proxy-config-hub/releases/tag/v2.0.0)。Release 下载后的 checksum、manifest commit 和 override/rename 契约均已复核。
+
 Pages 部署使用 `github-pages` environment、`pages: write` 与 OIDC `id-token: write`，并按 `pages-production` concurrency group 串行执行。非 `main` push 只生成可审阅 artifact，不创建 deployment。
 
 稳定 URL：

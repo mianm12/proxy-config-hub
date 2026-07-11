@@ -24,7 +24,7 @@ https://www.quietus.icu/proxy-config-hub/v2/rename.js#profile=pokemon#noCache
 https://www.quietus.icu/proxy-config-hub/v2/rename.js#profile=self_hosted#noCache
 ```
 
-Pages 是持续更新通道；GitHub Release 是按版本固定、可用于回滚的不可变通道。公开 manifest 包含当前 commit、Mihomo 版本、artifact URL 与 SHA-256。
+Pages 是持续更新通道；[GitHub Release v2.0.0](https://github.com/mianm12/proxy-config-hub/releases/tag/v2.0.0) 是按版本固定、可用于回滚的不可变通道。公开 manifest 包含当前 commit、Mihomo 版本、artifact URL 与 SHA-256。
 
 ## 本地验证
 

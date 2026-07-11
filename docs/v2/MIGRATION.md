@@ -2,7 +2,7 @@
 
 > 目标：在保持代表性输入语义等价的前提下并行建立 v2，达到验收门槛后一次切换；不长期维护 v1/v2 双轨。
 >
-> 状态：v2 源码与 `main` 稳定通道切换完成；等待 `v2.0.0` Release 验证。
+> 状态：v2 源码、`main` 稳定通道与 `v2.0.0` Release 均已完成并验证。
 
 ## 1. 迁移原则
 
@@ -469,7 +469,7 @@ Pages 发布 source 选择 GitHub Actions。`v2` 是 artifact 内目录，不是
 6. [x] 更新 README、AGENTS.md、CLAUDE.md、设计文档和命令说明。
 7. [x] 在无 v1 文件的工作树中通过 `npm run check`、发布 dry-run 与联网规则审计。
 8. [x] 推送并验证 `rewrite/v2`，再 fast-forward `main`；稳定 Pages manifest、checksum、规则资产和旧 URL 下线均验证通过。
-9. [ ] 创建 `v2.0.0` tag，验证 GitHub Release 与不可变资产。
+9. [x] 创建 `v2.0.0` tag；Release workflow、资产集合、checksum、manifest 和 bundle 契约均验证通过。
 
 删除前再次确认 Git 状态，禁止覆盖迁移期间用户的其他改动。
 

@@ -1,6 +1,6 @@
 # proxy-config-hub v2 架构设计
 
-> 状态：v2 已在 `main` 稳定运行，待首个 Release 验证
+> 状态：v2 已在 `main` 稳定运行，`v2.0.0` Release 已验证
 >
 > 范围：架构与边界设计；实现与切换状态以 `MIGRATION.md` 为准
 
