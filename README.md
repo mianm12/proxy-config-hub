@@ -2,7 +2,7 @@
 
 Mihomo 覆写脚本与声明式 YAML 规则配置的统一仓库。
 
-> `rewrite/v2` 正在并行实现 v2。当前远程 URL 与 `main` 发布流程仍指向 v1；v2 已具备本地构建、测试、Mihomo 校验和发布 dry-run，但尚未切换公开通道。
+> `rewrite/v2` 正在并行实现 v2。当前稳定远程 URL 与 `main` 发布流程仍指向 v1；v2 已部署 Pages staging 供三个宿主实测，但尚未切换公开通道。
 
 ## v2 并行实现
 
@@ -20,6 +20,12 @@ npm run check:v2
 ```
 
 `tools:setup` 按 `MIHOMO_BIN`、`PATH`、项目缓存的顺序解析 Mihomo；缓存缺失时下载 `tooling/mihomo.lock.json` 锁定的官方资产并校验 SHA-256。Ubuntu Docker、CI 与本地使用同一套 npm 命令，详见 [v2 运维说明](docs/v2/OPERATIONS.md)。
+
+v2 staging（仅测试，尚非稳定通道）：
+
+- Override：<https://www.quietus.icu/proxy-config-hub/v2/override.js>
+- Sub-Store rename：<https://www.quietus.icu/proxy-config-hub/v2/rename.js>
+- Manifest：<https://www.quietus.icu/proxy-config-hub/v2/manifest.json>
 
 ## 远程使用
 

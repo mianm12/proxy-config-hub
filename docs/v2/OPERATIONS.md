@@ -82,6 +82,16 @@ GitHub 只允许手动 dispatch 默认分支上已登记的 workflow。并行迁
 
 staging 部署使用 `github-pages` environment、`pages: write` 与 OIDC `id-token: write`，且按 `pages-v2-staging` concurrency group 串行执行。开关关闭时仍生成 dry-run artifact，但不会创建 deployment。
 
+当前 staging URL：
+
+```text
+https://www.quietus.icu/proxy-config-hub/v2/override.js
+https://www.quietus.icu/proxy-config-hub/v2/rename.js
+https://www.quietus.icu/proxy-config-hub/v2/manifest.json
+```
+
+这些 URL 已通过 HTTPS、CORS、MIME、manifest checksum 与远程 bundle 契约验证，但在三个真实宿主完成加载前不视为稳定通道。
+
 ## 5. 宿主契约
 
 - Mihomo Party：`main(config)`。
