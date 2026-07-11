@@ -436,6 +436,15 @@ Pages 发布 source 选择 GitHub Actions。`v2` 是 artifact 内目录，不是
 - [x] Release dry-run 资产与 manifest/checksum 正确。
 - [x] 文档中的配置示例与真实 schema 一致。
 
+### 12.1 当前切换前审计结论
+
+截至当前 `rewrite/v2` staging：
+
+- 本地与 GitHub Actions 的完整 `check:v2`、Pages artifact/deployment、远程 manifest checksum 和 bundle 契约均已实际通过。
+- `npm run audit:rules` 已联网读取当前 93 个 provider；未发现完整遮蔽，部分重叠继续由独立审计报告呈现，不进入普通构建门槛。
+- v1 默认命令、源码与发布 workflow 仍保留；`dist/`、工具缓存和发布产物未被 Git 跟踪。
+- 唯一未满足的删除前门槛是三个真实宿主的 staging URL 实机加载；完成前不执行第 13 节切换。
+
 ## 13. 最终切换
 
 建议切换提交只做以下范围：
