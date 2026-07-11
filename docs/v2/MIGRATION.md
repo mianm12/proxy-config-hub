@@ -426,7 +426,8 @@ Pages 发布 source 选择 GitHub Actions。`v2` 是 artifact 内目录，不是
 - [x] Sub-Store rename operator harness 通过。
 - [x] `mihomo -t -f` 通过。
 - [x] 本地并行期 `npm run check:v2` 通过。
-- [ ] GitHub Actions 并行期 `npm run check:v2` 通过。
+- [x] GitHub Actions 并行期 `npm run check:v2` 通过。
+- [x] GitHub Actions Pages artifact dry-run 上传并校验通过。
 - [ ] Pages staging URL 能被三个实际宿主加载。
 - [x] Release dry-run 资产与 manifest/checksum 正确。
 - [x] 文档中的配置示例与真实 schema 一致。
