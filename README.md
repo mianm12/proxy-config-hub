@@ -115,5 +115,6 @@ templates/
 
 ## 相关文档
 
-- 设计文档与历史上下文：[DESIGN.md](DESIGN.md)
+- 当前 v1 设计文档与历史上下文：[DESIGN.md](docs/DESIGN.md)
+- v2 重构设计：[架构](docs/v2/ARCHITECTURE.md) / [配置模型](docs/v2/CONFIGURATION.md) / [迁移计划](docs/v2/MIGRATION.md)
 - 脱敏 Mihomo 示例配置：[templates/mihomo/config-example.yaml](templates/mihomo/config-example.yaml)
