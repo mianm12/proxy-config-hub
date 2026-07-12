@@ -1,52 +1,17 @@
-profiles:
-  pokemon:
-    prefix: 宝可梦
-    prefix-position: first
-    separator: "-"
-    add-flag: true
-    preserve-multiplier: true
-    collapse-single: true
-    preserve-tags:
-      - 直连
-      - IPLC
-      - IEPL
-      - 专线
-      - Vless
-      - Anytls
-      - 家宽
-      - 原生
-      - V6
-      - 游戏
-      - 测试
-      - AWS
+default-profile: standard
 
+defaults:
+  fields: [subscription, flag, iso, protocol, traits, multiplier, sequence]
+  separator: " "
+  brackets: [subscription, protocol]
+  subscription-fallback: null
+  extra-traits: []
+  sequence: always
+
+profiles:
+  standard: {}
+  airport:
+    extra-traits: [AWS]
   self_hosted:
-    prefix: 自建
-    prefix-position: first
-    separator: "-"
-    add-flag: true
-    preserve-multiplier: false
-    collapse-single: true
-    preserve-tags:
-      - 直连
-      - IPLC
-      - IEPL
-      - 专线
-      - 中转
-      - XHTTP
-      - cdn
-      - REALITY
-      - tls
-      - down
-      - 家宽
-      - 原生
-      - V6
-      - 游戏
-      - 测试
-      - AWS
-      - BWH
-      - DMIT
-      - vircs
-      - MEGABOX
-      - proWee
-      - ebCorona
+    subscription-fallback: 自建
+    extra-traits: [AWS, BWH, DMIT, vircs, MEGABOX, proWee, ebCorona, down]

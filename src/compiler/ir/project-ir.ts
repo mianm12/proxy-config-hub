@@ -87,15 +87,16 @@ type RuleIr =
     }
   | { readonly kind: "raw"; readonly value: string; readonly target?: string };
 
+type RenameFieldIr = RenameField;
+
 interface RenameProfileIr {
   readonly id: string;
-  readonly prefix: string;
-  readonly prefixPosition: "first" | "last";
+  readonly fields: readonly RenameFieldIr[];
   readonly separator: string;
-  readonly addFlag: boolean;
-  readonly preserveMultiplier: boolean;
-  readonly collapseSingle: boolean;
-  readonly preserveTags: readonly string[];
+  readonly brackets: readonly RenameFieldIr[];
+  readonly subscriptionFallback: string | null;
+  readonly extraTraits: readonly string[];
+  readonly sequence: RenameSequence;
 }
 
 interface ProjectIr {
@@ -109,6 +110,7 @@ interface ProjectIr {
   readonly providers: readonly ProviderIr[];
   readonly rules: readonly RuleIr[];
   readonly fallbackGroup: string;
+  readonly renameDefaultProfile: string;
   readonly renameProfiles: readonly RenameProfileIr[];
   readonly deployment: {
     readonly channel: string;
@@ -127,8 +129,10 @@ export type {
   ProviderConfigIr,
   ProviderIr,
   RegionIr,
+  RenameFieldIr,
   RenameProfileIr,
   RoutingRegionIr,
   RuleIr,
   RuntimeSectionIr,
 };
+import type { RenameField, RenameSequence } from "../../domain/rename/options.ts";

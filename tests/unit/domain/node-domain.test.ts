@@ -75,15 +75,22 @@ describe("node-domain", () => {
     ]);
   });
 
-  it("只把强流量和有效期信号识别为订阅信息", () => {
+  it("只把强订阅元数据、提示和官网广告识别为订阅信息", () => {
     expect(isSubscriptionMetadataName("剩余流量：4.26 GB")).toBe(true);
     expect(isSubscriptionMetadataName("套餐到期：2026-08-01")).toBe(true);
     expect(isSubscriptionMetadataName("下次流量重置：2026-08-01")).toBe(true);
     expect(isSubscriptionMetadataName("Traffic: 4.26 GB")).toBe(true);
     expect(isSubscriptionMetadataName("Expiration date: 2026-08-01")).toBe(true);
+    expect(isSubscriptionMetadataName("建议：感到卡顿请切换节点")).toBe(true);
+    expect(isSubscriptionMetadataName("建议切换节点")).toBe(true);
+    expect(isSubscriptionMetadataName("提示节点维护中")).toBe(true);
+    expect(isSubscriptionMetadataName("公告 官网已更新")).toBe(true);
+    expect(isSubscriptionMetadataName("防丢失官网:https://example.invalid")).toBe(true);
 
     expect(isSubscriptionMetadataName("英国 GB 01")).toBe(false);
     expect(isSubscriptionMetadataName("香港 测试 01")).toBe(false);
     expect(isSubscriptionMetadataName("US Traffic Premium 01")).toBe(false);
+    expect(isSubscriptionMetadataName("US https://example.invalid 01")).toBe(false);
+    expect(isSubscriptionMetadataName("香港 通知 测试")).toBe(false);
   });
 });

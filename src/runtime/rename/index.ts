@@ -1,2 +1,3 @@
 export { renameProxies } from "./rename-proxies.ts";
-export type { RenameResult } from "./types.ts";
+export { extractTraits } from "./traits.ts";
+export type { GeoIsoResolver, RenameResult } from "./types.ts";

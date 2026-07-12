@@ -1,11 +1,12 @@
 import type { RenameProfileIr } from "../../compiler/ir/project-ir.ts";
 import type { Diagnostic } from "../../domain/diagnostics/diagnostic.ts";
 import type { ProxyNode, RegionDefinition } from "../../domain/node/index.ts";
-import { renameProxies } from "../../runtime/rename/index.ts";
+import { renameProxies, type GeoIsoResolver } from "../../runtime/rename/index.ts";
 import { resolveRenameProfile, type RenameArguments } from "./profile-arguments.ts";
 
 interface RenameRuntimeData {
   readonly nodeCatalog: readonly RegionDefinition[];
+  readonly renameDefaultProfile: string;
   readonly renameProfiles: readonly RenameProfileIr[];
 }
 
@@ -19,11 +20,16 @@ function runRenameAdapter(
   argumentsValue: RenameArguments,
   runtime: RenameRuntimeData,
   reportDiagnostic: DiagnosticReporter = () => undefined,
+  hostGeoResolver?: GeoIsoResolver,
 ): readonly ProxyNode[] {
   void targetPlatform;
   void context;
-  const profile = resolveRenameProfile(argumentsValue, runtime.renameProfiles);
-  const result = renameProxies(proxies, profile, runtime.nodeCatalog);
+  const profile = resolveRenameProfile(
+    argumentsValue,
+    runtime.renameProfiles,
+    runtime.renameDefaultProfile,
+  );
+  const result = renameProxies(proxies, profile, runtime.nodeCatalog, hostGeoResolver);
   result.diagnostics.forEach(reportDiagnostic);
   return result.proxies;
 }

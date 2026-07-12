@@ -11,9 +11,17 @@ const SUBSCRIPTION_METADATA_PATTERNS = [
   /\b(?:expire(?:s|d)?|expiry|expiration)(?:\s+(?:date|time))?\s*[:：-]\s*(?:\d{4}[-/.]|never\b)/i,
 ] as const;
 
+const ADVISORY_PATTERN = /^(?:建议|提示|公告|通知)/;
+const WEBSITE_KEYWORD_PATTERN = /(?:官网|网站|域名|防丢失|放丢失)/i;
+const URL_PATTERN = /https?:\/\/[^\s]+/i;
+
 /** 识别订阅服务插入的流量、有效期等信息项，避免将容量单位误判为地区代码。 */
 function isSubscriptionMetadataName(name: string): boolean {
-  return SUBSCRIPTION_METADATA_PATTERNS.some((pattern) => pattern.test(name));
+  return (
+    SUBSCRIPTION_METADATA_PATTERNS.some((pattern) => pattern.test(name)) ||
+    ADVISORY_PATTERN.test(name) ||
+    (WEBSITE_KEYWORD_PATTERN.test(name) && URL_PATTERN.test(name))
+  );
 }
 
 export { isSubscriptionMetadataName };

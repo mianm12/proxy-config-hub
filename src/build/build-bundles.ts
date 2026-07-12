@@ -50,6 +50,7 @@ function runtimeDataPlugin(project: ReturnType<typeof compileProject>): esbuild.
         loader: "js",
         contents:
           `export const nodeCatalog = ${JSON.stringify(project.nodeCatalog)};\n` +
+          `export const renameDefaultProfile = ${JSON.stringify(project.renameDefaultProfile)};\n` +
           `export const renameProfiles = ${JSON.stringify(project.renameProfiles)};\n` +
           `export const overrideProject = ${JSON.stringify(overrideProject)};\n`,
       }));

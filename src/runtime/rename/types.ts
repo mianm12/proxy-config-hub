@@ -6,4 +6,6 @@ interface RenameResult {
   readonly diagnostics: readonly Diagnostic[];
 }
 
-export type { RenameResult };
+type GeoIsoResolver = (name: string) => unknown;
+
+export type { GeoIsoResolver, RenameResult };

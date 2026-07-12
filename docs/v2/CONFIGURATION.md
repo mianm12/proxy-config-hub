@@ -248,7 +248,7 @@ rule-pipeline:
 
 ### 6.1 catalog.yaml
 
-catalog 是 rename 与 override 的共享地区/别名真相源。
+catalog 是 override 的地区/别名真相源，也是 rename 在宿主 `ProxyUtils` 不可用或未识别时的确定性后备。
 
 catalog 当前维护实际使用的地区以及 rename fixture 所需行为。扩展地区时必须从许可可确认的标准来源逐项加入，并同步补充测试。
 
@@ -645,84 +645,90 @@ constraints:
 
 ## 10. Rename profiles
 
-`rename/profiles.yaml` 将当前长 URL 参数迁移为可审阅配置。
+`rename/profiles.yaml` 定义默认命名规则与命名 profile。最终配置按 `defaults → profile → $arguments` 覆盖；省略 `profile` 时使用 `default-profile`。
 
 ```yaml
-profiles:
-  pokemon:
-    prefix: 宝可梦
-    prefix-position: first
-    separator: "-"
-    add-flag: true
-    preserve-multiplier: true
-    collapse-single: true
-    preserve-tags:
-      - 直连
-      - IPLC
-      - IEPL
-      - 专线
-      - Vless
-      - Anytls
-      - 家宽
-      - 原生
-      - V6
-      - 游戏
-      - 测试
-      - AWS
+default-profile: standard
 
+defaults:
+  fields: [subscription, flag, iso, protocol, traits, multiplier, sequence]
+  separator: " "
+  brackets: [subscription, protocol]
+  subscription-fallback: null
+  extra-traits: []
+  sequence: always
+
+profiles:
+  standard: {}
+  airport:
+    extra-traits: [AWS]
   self_hosted:
-    prefix: 自建
-    prefix-position: first
-    separator: "-"
-    add-flag: true
-    preserve-multiplier: false
-    collapse-single: true
-    preserve-tags:
-      - 直连
-      - IPLC
-      - IEPL
-      - 专线
-      - 中转
-      - XHTTP
-      - cdn
-      - REALITY
-      - tls
-      - down
-      - 家宽
-      - 原生
-      - V6
-      - 游戏
-      - 测试
-      - AWS
-      - BWH
-      - DMIT
-      - vircs
-      - MEGABOX
-      - proWee
-      - ebCorona
+    subscription-fallback: 自建
+    extra-traits: [AWS, BWH, DMIT, vircs, MEGABOX, proWee, ebCorona, down]
 ```
 
-标签匹配默认大小写不敏感，因此 `REALITY/reality/Reality` 无需重复。输出保留输入中实际匹配到的拼写；需要统一拼写时应为标签增加显式规范化规则。
+### 10.1 字段与格式
 
-重命名前会跳过订阅服务混入节点列表的强元数据项，例如“剩余流量”“已用/总流量”“套餐/订阅到期”和“下次流量重置”。判定只使用这些强组合信号；普通 `GB` 地区代码、含“测试”的节点名或单独出现的英文 `Traffic` 不会被过滤。被跳过的项产生 `RENAME_SUBSCRIPTION_METADATA_SKIPPED` warning，便于在宿主日志中追踪。
+`fields` 是输出字段和顺序，支持：
 
-唯一参数接口：
+- `subscription`：按 `_subDisplayName → _subName → _collectionDisplayName → _collectionName → subscription-fallback` 取订阅名。
+- `flag`、`iso`：国家地区 Emoji 和 ISO 3166-1 alpha-2。
+- `protocol`：小写规范化后的 `proxy.type`；缺失时为 `unknown`。
+- `traits`：规范化特征和配置扩展词。
+- `multiplier`：非 1 倍倍率，统一使用 `×`。
+- `sequence`：防重名序号，必须存在。
+
+`airport` 是通用机场 profile，不绑定具体机场名称。正常情况下直接读取每个节点携带的 Sub-Store 订阅显示名或订阅名，因此同一 profile 可用于多个机场；仅在节点没有有效订阅元数据时，才使用 `subscriptionFallback` 参数补名。
+
+`separator` 连接非空字段且不得包含控制字符；`brackets` 指定使用 `[]` 包裹的已启用字段。空字段不会留下空括号或重复分隔符。`sequence: always` 给每个标准化基础名从 `01` 开始编号；`duplicates` 只在同一基础名重复时编号，并要求同时启用 `flag/iso/protocol` 之一，或为启用的 `subscription` 配置非空 fallback，保证单节点名称仍非空。
+
+默认输出示例：
 
 ```text
-rename.js#profile=pokemon
-rename.js#profile=self_hosted
+[示例机场] 🇭🇰 HK [hysteria2] 直连 01
+[示例机场] 🇹🇼 TW [vless] IPv6 家宽 2× 01
+[自建] 🇺🇸 US [vless] XHTTP REALITY DMIT proWee 01
 ```
 
-`#noCache` 是 Sub-Store 资源缓存控制，不进入 rename profile。
+### 10.2 地区、特征与过滤
+
+Sub-Store 中优先使用 `ProxyUtils.getISO` 识别地区，再回落到内置 catalog；Emoji 始终由最终 ISO 生成。无法识别的节点不会删除，而是输出 `🏳️ ZZ` 并产生 `RENAME_UNKNOWN_REGION` warning。
+
+内置特征固定按网络版本、接入属性、运营商/优化、路线、用途、传输/安全的顺序输出。`V6/IPv6` 统一为 `IPv6`，路线类按 `IPLC/IEPL > 专线 > 中转 > 直连` 只保留最具体项，`XHTTP/REALITY/Vision/TLS/CDN` 统一拼写。`extra-traits` 进行大小写不敏感的字面匹配，并按声明顺序追加配置拼写。
+
+重命名前会跳过强确定的订阅信息项：流量、到期、重置，以“建议/提示/公告/通知”开头的提示，以及同时包含官网类关键词和 URL 的广告。普通 `GB` 地区代码、含“测试”的节点名、普通 URL 或单独出现的英文 `Traffic` 不会被过滤。被跳过的项产生 `RENAME_SUBSCRIPTION_METADATA_SKIPPED` warning。
+
+### 10.3 `$arguments` 覆盖
+
+允许的直接参数为：
+
+- `profile`
+- `fields`
+- `separator`
+- `brackets`
+- `subscriptionFallback`
+- `extraTraits`
+- `sequence`
+- `noCache`（仅宿主缓存控制）
+
+`fields`、`brackets` 和 `extraTraits` 使用逗号列表，并整体替换 profile 对应数组；`brackets=`、`extraTraits=` 可清空列表，`subscriptionFallback=` 可清除 fallback。其他参数替换同名标量。所有值 URI 解码一次；fallback 与扩展词会 trim，trim 后为空或包含控制字符均拒绝。未知参数、未知或重复字段、缺少 `sequence`、`duplicates` 缺少稳定非空字段、括号引用未启用字段、空分隔符、控制字符分隔符和未知 profile 都是结构化错误。
+
+```text
+rename.js#noCache
+rename.js#profile=airport#noCache
+rename.js#profile=airport#subscriptionFallback=MyAirport#noCache
+rename.js#profile=self_hosted#separator=-#noCache
+rename.js#fields=subscription,iso,protocol,sequence#brackets=protocol#separator=-#noCache
+```
 
 在 Sub-Store 中，`rename.js` 必须作为节点列表的“脚本操作”远程链接加载，不能放入内置“重命名操作”；后者有独立的命名规则，不会调用本 bundle 的 `operator`。例如：
 
 ```text
-https://www.quietus.icu/proxy-config-hub/v2/rename.js#profile=pokemon#noCache
+https://www.quietus.icu/proxy-config-hub/v2/rename.js#noCache
+https://www.quietus.icu/proxy-config-hub/v2/rename.js#profile=airport#noCache
+https://www.quietus.icu/proxy-config-hub/v2/rename.js#profile=airport#subscriptionFallback=MyAirport#noCache
 https://www.quietus.icu/proxy-config-hub/v2/rename.js#profile=self_hosted#noCache
 ```
-
-`profile` 必须存在并指向 `config/rename/profiles.yaml` 中的命名配置。除宿主缓存控制字段 `noCache` 外，其他参数一律拒绝；profile 内容只能通过 YAML 修改，URL 不提供临时覆盖能力。
 
 ## 11. 严格 DSL 与 Mihomo 透传
 

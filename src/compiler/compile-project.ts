@@ -22,17 +22,20 @@ function compileProject(configRoot: string): ProjectIr {
   validateGeneratedGroupNames(rawProject, nodes, groups, diagnostics);
   validateGeneratedGroupLayout(rawProject, nodes, groups, diagnostics);
 
+  const renameDefaults = rawProject.renameProfiles.data.defaults;
   const renameProfiles: RenameProfileIr[] = Object.entries(
     rawProject.renameProfiles.data.profiles,
   ).map(([id, profile]) => ({
     id,
-    prefix: profile.prefix,
-    prefixPosition: profile["prefix-position"],
-    separator: profile.separator,
-    addFlag: profile["add-flag"],
-    preserveMultiplier: profile["preserve-multiplier"],
-    collapseSingle: profile["collapse-single"],
-    preserveTags: profile["preserve-tags"],
+    fields: profile.fields ?? renameDefaults.fields,
+    separator: profile.separator ?? renameDefaults.separator,
+    brackets: profile.brackets ?? renameDefaults.brackets,
+    subscriptionFallback:
+      profile["subscription-fallback"] === undefined
+        ? renameDefaults["subscription-fallback"]
+        : profile["subscription-fallback"],
+    extraTraits: profile["extra-traits"] ?? renameDefaults["extra-traits"],
+    sequence: profile.sequence ?? renameDefaults.sequence,
   }));
 
   diagnostics.throwIfAny();
@@ -48,6 +51,7 @@ function compileProject(configRoot: string): ProjectIr {
     providers: routing.providers,
     rules: routing.rules,
     fallbackGroup: routing.fallbackGroup,
+    renameDefaultProfile: rawProject.renameProfiles.data["default-profile"],
     renameProfiles,
     deployment: {
       channel: rawProject.manifest.data.deployment.channel,

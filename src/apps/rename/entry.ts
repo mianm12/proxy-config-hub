@@ -1,7 +1,8 @@
-import { nodeCatalog, renameProfiles } from "virtual:project-ir";
+import { nodeCatalog, renameDefaultProfile, renameProfiles } from "virtual:project-ir";
 
 import { formatDiagnostic } from "../../domain/diagnostics/diagnostic.ts";
 import type { ProxyNode } from "../../domain/node/index.ts";
+import type { GeoIsoResolver } from "../../runtime/rename/index.ts";
 import { runRenameAdapter } from "./adapter.ts";
 import type { RenameArguments } from "./profile-arguments.ts";
 
@@ -11,6 +12,16 @@ function readHostArguments(): RenameArguments {
   return value !== null && typeof value === "object" && !Array.isArray(value)
     ? (value as Readonly<Record<string, unknown>>)
     : {};
+}
+
+function readHostGeoResolver(): GeoIsoResolver | undefined {
+  const hostGlobal = globalThis as typeof globalThis & {
+    ProxyUtils?: { readonly getISO?: unknown };
+  };
+  const getISO = hostGlobal.ProxyUtils?.getISO;
+  return typeof getISO === "function"
+    ? (name) => (getISO as (value: string) => unknown)(name)
+    : undefined;
 }
 
 function operator(
@@ -24,10 +35,11 @@ function operator(
       targetPlatform,
       context,
       readHostArguments(),
-      { nodeCatalog, renameProfiles },
+      { nodeCatalog, renameDefaultProfile, renameProfiles },
       (diagnostic) => {
         console.warn(`[rename] ${formatDiagnostic(diagnostic)}`);
       },
+      readHostGeoResolver(),
     ),
   );
 }

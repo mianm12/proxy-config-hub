@@ -1,0 +1,33 @@
+{
+  "fixture": "rename-airport",
+  "proxies": [
+    {
+      "name": "[示例机场] 🇭🇰 HK [socks5] IPLC 2× 01",
+      "type": "socks5",
+      "_subDisplayName": "示例机场",
+      "server": "192.0.2.80",
+      "port": 1080
+    },
+    {
+      "name": "[示例机场] 🇯🇵 JP [socks5] AWS 01",
+      "type": "socks5",
+      "_subDisplayName": "示例机场",
+      "server": "192.0.2.81",
+      "port": 1080
+    },
+    {
+      "name": "[示例机场] 🇺🇸 US [socks5] 游戏 01",
+      "type": "socks5",
+      "_subDisplayName": "示例机场",
+      "server": "192.0.2.82",
+      "port": 1080
+    },
+    {
+      "name": "[示例机场] 🏳️ ZZ [socks5] 01",
+      "type": "socks5",
+      "_subDisplayName": "示例机场",
+      "server": "192.0.2.83",
+      "port": 1080
+    }
+  ]
+}

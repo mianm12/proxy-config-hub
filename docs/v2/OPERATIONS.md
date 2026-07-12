@@ -97,7 +97,7 @@ https://www.quietus.icu/proxy-config-hub/v2/manifest.json
 - Mihomo Party：`main(config)`。
 - Clash Verge Rev：`main(config, profileName)`；首期保留但不消费 `profileName`。
 - Sub-Store Mihomo 配置覆写：`main(config)`，同时提供宿主契约测试覆盖的 CommonJS bridge。
-- Sub-Store 节点脚本：`operator(proxies, targetPlatform, context)`，参数来自 `$arguments.profile`。
+- Sub-Store 节点脚本：`operator(proxies, targetPlatform, context)`，配置来自默认 profile、可选 `$arguments.profile` 和受控直接参数。
 
 三种 override 宿主必须引用同一份 `override.js`，rename 单独引用 `rename.js`。首期不把 QuickJS 真实执行加入正式门槛。
 
@@ -106,16 +106,20 @@ https://www.quietus.icu/proxy-config-hub/v2/manifest.json
 Mihomo 配置覆写和节点重命名是两条不同调用链：
 
 - Mihomo 配置的“脚本操作”加载 `override.js`，入口是 `main(config)`。
-- 节点列表的“脚本操作”加载 `rename.js#profile=<id>#noCache`，入口是 `operator(proxies, targetPlatform, context)`。
+- 节点列表的“脚本操作”加载 `rename.js#noCache` 或 `rename.js#profile=<id>#noCache`，入口是 `operator(proxies, targetPlatform, context)`。
 
-节点重命名不要选择 Sub-Store 内置“重命名操作”。如果结果以协议类型开头（例如 `hysteria2香港`、`vless美国`），说明当前没有运行 v2 `rename.js`；v2 命名 profile 的结果会以配置的 `宝可梦-` 或 `自建-` 开头。
+节点重命名不要选择 Sub-Store 内置“重命名操作”。v2 rename 的默认结果形如 `[订阅名] 🇭🇰 HK [hysteria2] 家宽 直连 01`；若仍看到原始节点名或内置重命名格式，应检查操作类型和脚本日志。
 
 当前链接：
 
 ```text
-https://www.quietus.icu/proxy-config-hub/v2/rename.js#profile=pokemon#noCache
+https://www.quietus.icu/proxy-config-hub/v2/rename.js#noCache
+https://www.quietus.icu/proxy-config-hub/v2/rename.js#profile=airport#noCache
+https://www.quietus.icu/proxy-config-hub/v2/rename.js#profile=airport#subscriptionFallback=MyAirport#noCache
 https://www.quietus.icu/proxy-config-hub/v2/rename.js#profile=self_hosted#noCache
 ```
+
+`airport` 是通用机场 profile：优先使用节点的 Sub-Store 订阅名，不绑定固定机场。若当前处理链没有提供有效订阅元数据，可传入 URI 编码后的 `subscriptionFallback=<名称>`。
 
 ## 6. 当前发布状态
 

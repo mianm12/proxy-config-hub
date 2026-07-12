@@ -79,7 +79,7 @@ config/manifest.yaml
 - 一跳链路为 `客户端 → 中转 → 落地 → 目标`；IR 只保留未来增加 hop 的边界。
 - landing 或 transit 任一端为空时链路不生效，节点保留在普通池并产生 warning。
 - 节点已有 `dialer-proxy` 时保留原值并产生 warning。
-- Rename 必须使用 `$arguments.profile`；除宿主缓存控制字段 `noCache` 外，其他参数一律拒绝。
+- Rename 使用 `defaults → profile → $arguments` 三层配置；`profile` 可省略并回落到显式默认项，直接参数只允许受控的格式、订阅 fallback、扩展特征和序号覆盖。
 - 三种宿主共享同一份 override bundle；CommonJS bridge 属于当前 Sub-Store 契约，未经宿主证据不得删除。
 - QuickJS 实机执行暂不属于正式门槛。
 

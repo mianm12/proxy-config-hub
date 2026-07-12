@@ -6,9 +6,33 @@
   "targetPlatform": "ClashMeta",
   "context": {},
   "proxies": [
-    { "name": "香港 自建 中转 REALITY", "type": "socks5", "server": "192.0.2.90", "port": 1080 },
-    { "name": "Japan proWee", "type": "socks5", "server": "192.0.2.91", "port": 1080 },
-    { "name": "美国 V6", "type": "socks5", "server": "192.0.2.92", "port": 1080 },
-    { "name": "无法识别的节点", "type": "socks5", "server": "192.0.2.93", "port": 1080 }
+    {
+      "name": "香港 自建 中转 REALITY",
+      "type": "socks5",
+      "_subDisplayName": "自建",
+      "server": "192.0.2.90",
+      "port": 1080
+    },
+    {
+      "name": "Japan proWee",
+      "type": "socks5",
+      "_subDisplayName": "自建",
+      "server": "192.0.2.91",
+      "port": 1080
+    },
+    {
+      "name": "美国 V6",
+      "type": "socks5",
+      "_subDisplayName": "自建",
+      "server": "192.0.2.92",
+      "port": 1080
+    },
+    {
+      "name": "无法识别的节点",
+      "type": "socks5",
+      "_subDisplayName": "自建",
+      "server": "192.0.2.93",
+      "port": 1080
+    }
   ]
 }

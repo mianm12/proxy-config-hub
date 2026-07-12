@@ -20,9 +20,13 @@ https://www.quietus.icu/proxy-config-hub/v2/manifest.json
 Sub-Store 节点重命名必须选择“脚本操作”，不要选择内置“重命名操作”：
 
 ```text
-https://www.quietus.icu/proxy-config-hub/v2/rename.js#profile=pokemon#noCache
+https://www.quietus.icu/proxy-config-hub/v2/rename.js#noCache
+https://www.quietus.icu/proxy-config-hub/v2/rename.js#profile=airport#noCache
+https://www.quietus.icu/proxy-config-hub/v2/rename.js#profile=airport#subscriptionFallback=MyAirport#noCache
 https://www.quietus.icu/proxy-config-hub/v2/rename.js#profile=self_hosted#noCache
 ```
+
+默认格式为 `[订阅名] 🇭🇰 HK [协议] 特征 倍率 01`。`airport` profile 会自动使用 Sub-Store 节点上的订阅名，可供不同机场共用；缺少订阅元数据时通过 `subscriptionFallback` 手动补名。其他受控参数可覆盖字段、分隔符、方括号、扩展特征和序号模式，具体见 `docs/v2/CONFIGURATION.md`。
 
 Pages 是持续更新通道；[GitHub Release v2.0.0](https://github.com/mianm12/proxy-config-hub/releases/tag/v2.0.0) 是按版本固定、可用于回滚的不可变通道。公开 manifest 包含当前 commit、Mihomo 版本、artifact URL 与 SHA-256。
 

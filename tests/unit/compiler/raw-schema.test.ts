@@ -145,25 +145,69 @@ describe("v2 raw schemas", () => {
     expect(result.success).toBe(false);
   });
 
-  it("接受命名 rename profile 且拒绝未知字段", () => {
+  it("接受 defaults + profile 覆盖并拒绝非法 rename 配置", () => {
     const validProfile = {
+      "default-profile": "standard",
+      defaults: {
+        fields: ["subscription", "flag", "iso", "protocol", "traits", "sequence"],
+        separator: " ",
+        brackets: ["subscription", "protocol"],
+        "subscription-fallback": null,
+        "extra-traits": [],
+        sequence: "always",
+      },
       profiles: {
-        pokemon: {
-          prefix: "宝可梦",
-          "prefix-position": "first",
-          separator: "-",
-          "add-flag": true,
-          "preserve-multiplier": true,
-          "collapse-single": true,
-          "preserve-tags": ["IPLC"],
-        },
+        standard: {},
+        airport: { "subscription-fallback": "示例机场", "extra-traits": ["IPLC"] },
       },
     };
 
     expect(renameProfilesSchema.safeParse(validProfile).success).toBe(true);
     expect(
       renameProfilesSchema.safeParse({
-        profiles: { pokemon: { ...validProfile.profiles.pokemon, unsupported: true } },
+        ...validProfile,
+        profiles: { standard: {}, airport: { unsupported: true } },
+      }).success,
+    ).toBe(false);
+    expect(
+      renameProfilesSchema.safeParse({
+        ...validProfile,
+        "default-profile": "missing",
+      }).success,
+    ).toBe(false);
+    expect(
+      renameProfilesSchema.safeParse({
+        ...validProfile,
+        defaults: { ...validProfile.defaults, fields: ["subscription"] },
+      }).success,
+    ).toBe(false);
+    expect(
+      renameProfilesSchema.safeParse({
+        ...validProfile,
+        defaults: { ...validProfile.defaults, separator: "\n" },
+      }).success,
+    ).toBe(false);
+    expect(
+      renameProfilesSchema.safeParse({
+        ...validProfile,
+        profiles: { standard: { "subscription-fallback": " " } },
+      }).success,
+    ).toBe(false);
+    expect(
+      renameProfilesSchema.safeParse({
+        ...validProfile,
+        profiles: { standard: { "extra-traits": [" "] } },
+      }).success,
+    ).toBe(false);
+    expect(
+      renameProfilesSchema.safeParse({
+        ...validProfile,
+        defaults: {
+          ...validProfile.defaults,
+          fields: ["sequence"],
+          brackets: [],
+          sequence: "duplicates",
+        },
       }).success,
     ).toBe(false);
   });

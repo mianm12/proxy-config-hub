@@ -2,21 +2,31 @@
   "fixture": "rename-self-hosted",
   "proxies": [
     {
-      "name": "自建-🇭🇰-香港-中转-REALITY",
+      "name": "[自建] 🇭🇰 HK [socks5] 中转 REALITY 01",
       "type": "socks5",
+      "_subDisplayName": "自建",
       "server": "192.0.2.90",
       "port": 1080
     },
     {
-      "name": "自建-🇯🇵-日本-proWee",
+      "name": "[自建] 🇯🇵 JP [socks5] proWee 01",
       "type": "socks5",
+      "_subDisplayName": "自建",
       "server": "192.0.2.91",
       "port": 1080
     },
     {
-      "name": "自建-🇺🇸-美国-V6",
+      "name": "[自建] 🇺🇸 US [socks5] IPv6 01",
       "type": "socks5",
+      "_subDisplayName": "自建",
       "server": "192.0.2.92",
+      "port": 1080
+    },
+    {
+      "name": "[自建] 🏳️ ZZ [socks5] 01",
+      "type": "socks5",
+      "_subDisplayName": "自建",
+      "server": "192.0.2.93",
       "port": 1080
     }
   ]

@@ -19,7 +19,9 @@ describe("v2 config 结构", () => {
     expect(providerReferences).toHaveLength(93);
     expect(project.routingRegions.data.regions).toHaveLength(28);
     expect(project.nodeCatalog.data.regions).toHaveLength(27);
-    expect(project.renameProfiles.data.profiles).toHaveProperty("pokemon");
+    expect(project.renameProfiles.data.profiles).toHaveProperty("airport");
     expect(project.renameProfiles.data.profiles).toHaveProperty("self_hosted");
+    expect(project.renameProfiles.data.profiles).toHaveProperty("standard");
+    expect(project.renameProfiles.data["default-profile"]).toBe("standard");
   });
 });

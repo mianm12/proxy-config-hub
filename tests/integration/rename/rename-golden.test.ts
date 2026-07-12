@@ -24,9 +24,9 @@ function readJson(file: string): unknown {
 describe("rename 行为回归", () => {
   const project = compileProject(path.resolve(process.cwd(), "config"));
 
-  for (const profileId of ["pokemon", "self_hosted"] as const) {
+  for (const profileId of ["airport", "self_hosted"] as const) {
     it(`${profileId} 生成审阅后的预期名称`, () => {
-      const fixtureName = profileId === "pokemon" ? "rename-pokemon" : "rename-self-hosted";
+      const fixtureName = profileId === "airport" ? "rename-airport" : "rename-self-hosted";
       const fixture = fixtureSchema.parse(
         readJson(path.resolve(process.cwd(), `tests/fixtures/rename/${fixtureName}.json`)),
       );
@@ -36,6 +36,7 @@ describe("rename 行为回归", () => {
       const inputSnapshot = structuredClone(fixture.proxies);
       const runtime = {
         nodeCatalog: project.nodeCatalog,
+        renameDefaultProfile: project.renameDefaultProfile,
         renameProfiles: project.renameProfiles,
       };
       const diagnostics: string[] = [];

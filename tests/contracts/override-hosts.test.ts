@@ -91,7 +91,7 @@ describe("override 三宿主契约", () => {
     expect(bundle).not.toContain("parseDocument");
     expect(bundle).not.toContain("ZodError");
     expect(bundle).not.toContain(".at(");
-    expect(bundle).not.toContain('"pokemon"');
+    expect(bundle).not.toContain('"airport"');
     expect(bundle).not.toContain(REPO_ROOT);
     expect(bundle).not.toMatch(/(?:password|token|private-key)\s*[:=]\s*["'][^"']+/i);
     expect(fs.readdirSync(`${REPO_ROOT}/dist/v2`).sort()).toEqual(["override.js", "rename.js"]);
