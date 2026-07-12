@@ -23,6 +23,7 @@ config/
 ├── runtime/
 │   ├── base.yaml
 │   ├── dns.yaml
+│   ├── profile.yaml
 │   ├── sniffer.yaml
 │   └── tun.yaml
 ├── nodes/
@@ -74,6 +75,12 @@ runtime:
   - source: runtime/base.yaml
     target: root
     apply: overlay
+  - value: 7897
+    target: mixed-port
+    apply: if-absent
+  - source: runtime/profile.yaml
+    target: profile
+    apply: if-absent
   - source: runtime/dns.yaml
     target: dns
     apply: replace
@@ -225,7 +232,8 @@ rule-pipeline:
 
 当前映射：
 
-- base/profile/geodata 顶层键合并进 `runtime/base.yaml`，使用 root overlay。
+- base/geodata 顶层键合并进 `runtime/base.yaml`，使用 root overlay。
+- `mixed-port: 7897` 与 profile 缓存配置使用 if-absent，只在宿主未提供对应字段时写入。
 - DNS 使用 replace。
 - sniffer 使用 replace。
 - TUN 使用 if-absent。

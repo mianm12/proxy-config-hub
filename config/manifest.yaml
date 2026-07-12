@@ -4,6 +4,12 @@ runtime:
   - source: runtime/base.yaml
     target: root
     apply: overlay
+  - value: 7897
+    target: mixed-port
+    apply: if-absent
+  - source: runtime/profile.yaml
+    target: profile
+    apply: if-absent
   - source: runtime/dns.yaml
     target: dns
     apply: replace

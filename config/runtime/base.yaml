@@ -1,13 +1,8 @@
-mixed-port: 7897
 mode: rule
 log-level: info
 unified-delay: true
 tcp-concurrent: true
 find-process-mode: strict
-
-profile:
-  store-selected: true
-  store-fake-ip: false
 
 geodata-mode: true
 geo-auto-update: true

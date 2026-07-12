@@ -185,8 +185,8 @@
             ]
           },
           "fake-ip-filter": [
-            "*.lan",
-            "*.local",
+            "+.lan",
+            "+.local",
             "localhost",
             "stun.*.*.*",
             "stun.*.*",

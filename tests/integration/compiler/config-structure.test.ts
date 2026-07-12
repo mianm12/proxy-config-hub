@@ -13,7 +13,7 @@ describe("v2 config 结构", () => {
     );
 
     expect(project.manifest.data["schema-version"]).toBe(2);
-    expect(project.runtime).toHaveLength(4);
+    expect(project.runtime).toHaveLength(5);
     expect(project.modules).toHaveLength(11);
     expect(groups).toHaveLength(34);
     expect(providerReferences).toHaveLength(93);

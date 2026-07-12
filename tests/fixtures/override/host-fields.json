@@ -4,6 +4,8 @@
       "name": "宿主字段与已有 runtime 字段透传",
       "config": {
         "profile-name": "fixture-profile",
+        "mixed-port": 22227,
+        "profile": { "store-selected": true, "store-fake-ip": true },
         "allow-lan": false,
         "tun": { "enable": true, "stack": "gvisor" },
         "experimental": { "fixture-flag": true },

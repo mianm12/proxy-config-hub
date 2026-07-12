@@ -9,6 +9,11 @@
       ],
       "config": {
         "profile-name": "fixture-profile",
+        "mixed-port": 22227,
+        "profile": {
+          "store-selected": true,
+          "store-fake-ip": true
+        },
         "allow-lan": false,
         "tun": {
           "enable": true,
@@ -31,16 +36,11 @@
             "port": 1080
           }
         ],
-        "mixed-port": 7897,
         "mode": "rule",
         "log-level": "info",
         "unified-delay": true,
         "tcp-concurrent": true,
         "find-process-mode": "strict",
-        "profile": {
-          "store-selected": true,
-          "store-fake-ip": false
-        },
         "geodata-mode": true,
         "geo-auto-update": true,
         "geodata-loader": "standard",
@@ -158,8 +158,8 @@
             ]
           },
           "fake-ip-filter": [
-            "*.lan",
-            "*.local",
+            "+.lan",
+            "+.local",
             "localhost",
             "stun.*.*.*",
             "stun.*.*",
