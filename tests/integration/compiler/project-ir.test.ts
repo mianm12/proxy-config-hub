@@ -24,6 +24,16 @@ describe("Project IR", () => {
       project.rules.every((rule) => rule.kind === "raw" || providerIds.has(rule.provider)),
     ).toBe(true);
     expect(groupIds.has(project.fallbackGroup)).toBe(true);
+    expect(project.renameDefaultProfile).toBe("standard");
+    expect(project.renameProfiles).toContainEqual({
+      id: "self_hosted",
+      fields: ["subscription", "flag", "iso", "protocol", "traits", "multiplier", "sequence"],
+      separator: " ",
+      brackets: ["subscription", "protocol"],
+      subscriptionFallback: "自建",
+      extraTraits: ["AWS", "BWH", "DMIT", "vircs", "MEGABOX", "proWee", "ebCorona", "down"],
+      sequence: "always",
+    });
   });
 
   it("相同输入重复编译产生等价 IR", () => {

@@ -1,4 +1,4 @@
-import type { ProjectIr, RenameProfileIr } from "./ir/project-ir.ts";
+import type { ProjectIr } from "./ir/project-ir.ts";
 import { loadRawProject } from "./load-raw-project.ts";
 import { DiagnosticCollector } from "./semantic/diagnostic-collector.ts";
 import {
@@ -7,6 +7,7 @@ import {
 } from "./semantic/cross-domain.ts";
 import { compileGroups } from "./semantic/groups.ts";
 import { compileNodes } from "./semantic/nodes.ts";
+import { compileRename } from "./semantic/rename.ts";
 import { compileRouting } from "./semantic/routing.ts";
 import { compileRuntimePlan } from "./semantic/runtime.ts";
 import { validateNoSecrets } from "./semantic/security.ts";
@@ -19,24 +20,9 @@ function compileProject(configRoot: string): ProjectIr {
   const nodes = compileNodes(rawProject, diagnostics);
   const groups = compileGroups(rawProject, diagnostics);
   const routing = compileRouting(rawProject, groups.groups, diagnostics);
+  const rename = compileRename(rawProject);
   validateGeneratedGroupNames(rawProject, nodes, groups, diagnostics);
   validateGeneratedGroupLayout(rawProject, nodes, groups, diagnostics);
-
-  const renameDefaults = rawProject.renameProfiles.data.defaults;
-  const renameProfiles: RenameProfileIr[] = Object.entries(
-    rawProject.renameProfiles.data.profiles,
-  ).map(([id, profile]) => ({
-    id,
-    fields: profile.fields ?? renameDefaults.fields,
-    separator: profile.separator ?? renameDefaults.separator,
-    brackets: profile.brackets ?? renameDefaults.brackets,
-    subscriptionFallback:
-      profile["subscription-fallback"] === undefined
-        ? renameDefaults["subscription-fallback"]
-        : profile["subscription-fallback"],
-    extraTraits: profile["extra-traits"] ?? renameDefaults["extra-traits"],
-    sequence: profile.sequence ?? renameDefaults.sequence,
-  }));
 
   diagnostics.throwIfAny();
 
@@ -51,8 +37,8 @@ function compileProject(configRoot: string): ProjectIr {
     providers: routing.providers,
     rules: routing.rules,
     fallbackGroup: routing.fallbackGroup,
-    renameDefaultProfile: rawProject.renameProfiles.data["default-profile"],
-    renameProfiles,
+    renameDefaultProfile: rename.defaultProfile,
+    renameProfiles: rename.profiles,
     deployment: {
       channel: rawProject.manifest.data.deployment.channel,
       publicBaseUrl: rawProject.manifest.data.deployment["public-base-url"],

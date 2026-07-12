@@ -3,10 +3,11 @@ import { z } from "zod";
 import {
   RENAME_FIELDS,
   RENAME_SEQUENCES,
-  canRenderNonEmptyRename,
   hasRenameControlCharacter,
+  inspectRenameOptions,
   isValidRenameSeparator,
   normalizeRenameText,
+  type RenameOptionsIssue,
 } from "../../../domain/rename/options.ts";
 import { domainIdSchema } from "./common.ts";
 
@@ -58,9 +59,6 @@ function validateProfile(value: RenameProfileValue, context: z.RefinementCtx): v
     if (duplicate !== undefined) {
       context.addIssue({ code: "custom", message: `fields 包含重复字段: ${duplicate}` });
     }
-    if (!fields.includes("sequence")) {
-      context.addIssue({ code: "custom", message: "fields 必须包含 sequence" });
-    }
   }
 
   const brackets = value.brackets;
@@ -68,12 +66,6 @@ function validateProfile(value: RenameProfileValue, context: z.RefinementCtx): v
     const duplicate = findDuplicate(brackets);
     if (duplicate !== undefined) {
       context.addIssue({ code: "custom", message: `brackets 包含重复字段: ${duplicate}` });
-    }
-    if (fields !== undefined) {
-      const unavailable = brackets.find((field) => !fields.includes(field));
-      if (unavailable !== undefined) {
-        context.addIssue({ code: "custom", message: `brackets 引用了未启用字段: ${unavailable}` });
-      }
     }
   }
 
@@ -84,6 +76,14 @@ function validateProfile(value: RenameProfileValue, context: z.RefinementCtx): v
       context.addIssue({ code: "custom", message: `extra-traits 包含重复特征: ${duplicate}` });
     }
   }
+}
+
+function renameOptionsIssueMessage(issue: RenameOptionsIssue): string {
+  if (issue.kind === "sequence-field-required") return "fields 必须包含 sequence";
+  if (issue.kind === "bracket-field-unavailable") {
+    return `brackets 引用了未启用字段: ${issue.field}`;
+  }
+  return "sequence=duplicates 时 fields 必须包含稳定非空字段";
 }
 
 const renameDefaultsSchema = z
@@ -126,25 +126,25 @@ const renameProfilesSchema = z
     for (const [id, profile] of Object.entries(value.profiles)) {
       const fields = profile.fields ?? value.defaults.fields;
       const brackets = profile.brackets ?? value.defaults.brackets;
-      const unavailable = brackets.find((field) => !fields.includes(field));
-      if (unavailable !== undefined) {
-        context.addIssue({
-          code: "custom",
-          path: ["profiles", id, "brackets"],
-          message: `brackets 引用了未启用字段: ${unavailable}`,
-        });
-      }
-
       const sequence = profile.sequence ?? value.defaults.sequence;
       const subscriptionFallback =
         profile["subscription-fallback"] === undefined
           ? value.defaults["subscription-fallback"]
           : profile["subscription-fallback"];
-      if (!canRenderNonEmptyRename(fields, sequence, subscriptionFallback)) {
+      for (const issue of inspectRenameOptions({
+        fields,
+        brackets,
+        sequence,
+        subscriptionFallback,
+      })) {
         context.addIssue({
           code: "custom",
-          path: ["profiles", id, "fields"],
-          message: "sequence=duplicates 时 fields 必须包含稳定非空字段",
+          path: [
+            "profiles",
+            id,
+            issue.kind === "bracket-field-unavailable" ? "brackets" : "fields",
+          ],
+          message: renameOptionsIssueMessage(issue),
         });
       }
     }

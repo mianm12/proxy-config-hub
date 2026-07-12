@@ -2,10 +2,11 @@ import type { RenameFieldIr, RenameProfileIr } from "../../compiler/ir/project-i
 import { ConfigCompilationError } from "../../domain/diagnostics/diagnostic.ts";
 import {
   RENAME_FIELDS,
-  canRenderNonEmptyRename,
   hasRenameControlCharacter,
+  inspectRenameOptions,
   isValidRenameSeparator,
   normalizeRenameText,
+  type RenameOptionsIssue,
 } from "../../domain/rename/options.ts";
 
 type RenameArguments = Readonly<Record<string, unknown>>;
@@ -63,7 +64,6 @@ function parseFields(value: unknown): readonly RenameFieldIr[] {
   const fields = parseList("fields", value);
   const invalid = fields.find((field) => !RENAME_FIELD_SET.has(field as RenameFieldIr));
   if (invalid !== undefined) argumentError(`rename 参数 fields 包含未知字段: ${invalid}`);
-  if (!fields.includes("sequence")) argumentError("rename 参数 fields 必须包含 sequence");
   return fields as readonly RenameFieldIr[];
 }
 
@@ -100,6 +100,14 @@ function parseSubscriptionFallback(value: unknown): string | null {
   return normalized;
 }
 
+function renameOptionsIssueMessage(issue: RenameOptionsIssue): string {
+  if (issue.kind === "sequence-field-required") return "rename 参数 fields 必须包含 sequence";
+  if (issue.kind === "bracket-field-unavailable") {
+    return `rename 参数 brackets 引用了未启用字段: ${issue.field}`;
+  }
+  return "sequence=duplicates 时 fields 必须包含稳定非空字段";
+}
+
 function resolveRenameProfile(
   argumentsValue: RenameArguments,
   profiles: readonly RenameProfileIr[],
@@ -119,10 +127,6 @@ function resolveRenameProfile(
     argumentsValue["brackets"] === undefined
       ? profile.brackets
       : parseBrackets(argumentsValue["brackets"]);
-  const unavailable = brackets.find((field) => !fields.includes(field));
-  if (unavailable !== undefined) {
-    argumentError(`rename 参数 brackets 引用了未启用字段: ${unavailable}`);
-  }
 
   let sequence = profile.sequence;
   if (argumentsValue["sequence"] !== undefined) {
@@ -145,8 +149,9 @@ function resolveRenameProfile(
     argumentsValue["extraTraits"] === undefined
       ? profile.extraTraits
       : parseList("extraTraits", argumentsValue["extraTraits"], true);
-  if (!canRenderNonEmptyRename(fields, sequence, subscriptionFallback)) {
-    argumentError("sequence=duplicates 时 fields 必须包含稳定非空字段");
+  const issue = inspectRenameOptions({ fields, brackets, sequence, subscriptionFallback })[0];
+  if (issue !== undefined) {
+    argumentError(renameOptionsIssueMessage(issue));
   }
 
   return {

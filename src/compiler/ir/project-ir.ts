@@ -1,4 +1,5 @@
 import type { RegionDefinition } from "../../domain/node/index.ts";
+import type { RenameField, RenameOptions } from "../../domain/rename/options.ts";
 
 interface RuntimeSectionIr {
   readonly target: string;
@@ -89,14 +90,8 @@ type RuleIr =
 
 type RenameFieldIr = RenameField;
 
-interface RenameProfileIr {
+interface RenameProfileIr extends RenameOptions {
   readonly id: string;
-  readonly fields: readonly RenameFieldIr[];
-  readonly separator: string;
-  readonly brackets: readonly RenameFieldIr[];
-  readonly subscriptionFallback: string | null;
-  readonly extraTraits: readonly string[];
-  readonly sequence: RenameSequence;
 }
 
 interface ProjectIr {
@@ -135,4 +130,3 @@ export type {
   RuleIr,
   RuntimeSectionIr,
 };
-import type { RenameField, RenameSequence } from "../../domain/rename/options.ts";
