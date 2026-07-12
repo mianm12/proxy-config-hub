@@ -17,7 +17,7 @@ function readHostArguments(): RenameArguments {
 }
 
 function readHostGeoResolver(): GeoIsoResolver | undefined {
-  const getISO = typeof ProxyUtils === "undefined" ? undefined : ProxyUtils?.getISO;
+  const getISO = typeof ProxyUtils === "undefined" ? undefined : ProxyUtils.getISO;
   return typeof getISO === "function"
     ? (name) => (getISO as (value: string) => unknown)(name)
     : undefined;

@@ -48,7 +48,7 @@ function loadOperator(
     `(function ($arguments, ProxyUtils) {\n${bundle}\nreturn globalThis.operator;\n})(injectedArguments, injectedProxyUtils)`,
     context,
     { filename: RENAME_BUNDLE },
-  );
+  ) as unknown;
 
   if (typeof operator !== "function") throw new Error("rename bundle 未暴露 operator");
   return { operator: operator as Operator, logs };
