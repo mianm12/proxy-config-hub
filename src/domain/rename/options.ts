@@ -32,7 +32,10 @@ function hasRenameControlCharacter(value: string): boolean {
     const codePoint = character.codePointAt(0);
     if (
       codePoint !== undefined &&
-      (codePoint <= 0x1f || codePoint === 0x7f || codePoint === 0x2028 || codePoint === 0x2029)
+      (codePoint <= 0x1f ||
+        (codePoint >= 0x7f && codePoint <= 0x9f) ||
+        codePoint === 0x2028 ||
+        codePoint === 0x2029)
     ) {
       return true;
     }

@@ -131,11 +131,15 @@ describe("rename arguments", () => {
     );
     expectArgumentError(() => resolveRenameProfile({ separator: "%" }, [PROFILE], "standard"));
     expectArgumentError(() => resolveRenameProfile({ separator: "%0A" }, [PROFILE], "standard"));
+    expectArgumentError(() => resolveRenameProfile({ separator: "%C2%85" }, [PROFILE], "standard"));
     expectArgumentError(() =>
       resolveRenameProfile({ subscriptionFallback: "%20" }, [PROFILE], "standard"),
     );
     expectArgumentError(() =>
       resolveRenameProfile({ extraTraits: "DMIT%0Afoo" }, [PROFILE], "standard"),
+    );
+    expectArgumentError(() =>
+      resolveRenameProfile({ extraTraits: "DMIT%C2%9Bfoo" }, [PROFILE], "standard"),
     );
   });
 });

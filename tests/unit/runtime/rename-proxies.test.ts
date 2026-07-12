@@ -97,12 +97,15 @@ describe("renameProxies", () => {
   });
 
   it("拒绝宿主元数据中的控制字符并使用安全后备", () => {
+    expect(hasRenameControlCharacter("\u0085")).toBe(true);
+    expect(hasRenameControlCharacter("\u009b")).toBe(true);
+
     const result = renameProxies(
       [
         {
-          name: "香港\u0000",
-          type: "vless\u001b",
-          _subDisplayName: "非法\u0000订阅",
+          name: "香港\u0085",
+          type: "vless\u009b",
+          _subDisplayName: "非法\u0085订阅",
           _subName: "有效订阅",
         },
       ],

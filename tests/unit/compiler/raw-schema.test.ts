@@ -196,6 +196,12 @@ describe("v2 raw schemas", () => {
     expect(
       renameProfilesSchema.safeParse({
         ...validProfile,
+        defaults: { ...validProfile.defaults, separator: "\u0085" },
+      }).success,
+    ).toBe(false);
+    expect(
+      renameProfilesSchema.safeParse({
+        ...validProfile,
         profiles: { standard: { "subscription-fallback": " " } },
       }).success,
     ).toBe(false);
@@ -203,6 +209,12 @@ describe("v2 raw schemas", () => {
       renameProfilesSchema.safeParse({
         ...validProfile,
         profiles: { standard: { "extra-traits": [" "] } },
+      }).success,
+    ).toBe(false);
+    expect(
+      renameProfilesSchema.safeParse({
+        ...validProfile,
+        profiles: { standard: { "extra-traits": ["DMIT\u009bfoo"] } },
       }).success,
     ).toBe(false);
     expect(
