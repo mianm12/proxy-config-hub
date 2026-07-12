@@ -63,6 +63,7 @@ async function buildBundles(): Promise<void> {
   fs.rmSync(DIST_V2_ROOT, { force: true, recursive: true });
   fs.mkdirSync(DIST_V2_ROOT, { recursive: true });
 
+  // Sub-Store 在函数作用域中执行脚本；入口必须保持局部，避免污染共享的 Node 全局环境。
   await esbuild.build({
     entryPoints: [OVERRIDE_ENTRY],
     outfile: OVERRIDE_BUNDLE,
@@ -76,11 +77,12 @@ async function buildBundles(): Promise<void> {
     plugins: [runtimeDataPlugin(project)],
     footer: {
       js: `
-if (typeof globalThis !== "undefined" && __proxyConfigHubOverride && typeof __proxyConfigHubOverride.main === "function") {
-  globalThis.main = __proxyConfigHubOverride.main;
+var main = __proxyConfigHubOverride.main;
+if (typeof $substore === "undefined" && typeof globalThis !== "undefined" && typeof main === "function") {
+  globalThis.main = main;
 }
-if (typeof module !== "undefined" && module && module.exports && __proxyConfigHubOverride && typeof __proxyConfigHubOverride.main === "function") {
-  module.exports = { main: __proxyConfigHubOverride.main };
+if (typeof module !== "undefined" && module && module.exports && typeof main === "function") {
+  module.exports = { main };
 }
 `,
     },
@@ -99,8 +101,9 @@ if (typeof module !== "undefined" && module && module.exports && __proxyConfigHu
     plugins: [runtimeDataPlugin(project)],
     footer: {
       js: `
-if (typeof globalThis !== "undefined" && __proxyConfigHubRename && typeof __proxyConfigHubRename.operator === "function") {
-  globalThis.operator = __proxyConfigHubRename.operator;
+var operator = __proxyConfigHubRename.operator;
+if (typeof $substore === "undefined" && typeof globalThis !== "undefined" && typeof operator === "function") {
+  globalThis.operator = operator;
 }
 `,
     },

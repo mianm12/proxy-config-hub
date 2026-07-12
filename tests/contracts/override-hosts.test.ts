@@ -76,7 +76,7 @@ describe("override 三宿主契约", () => {
     expect(runtime.logs).toEqual([]);
   });
 
-  it("Sub-Store Mihomo 配置覆写兼容 global 与 CommonJS main", () => {
+  it("global main 与 CommonJS bridge 输出一致", () => {
     const runtime = loadMain();
     expect(normalize(runtime.globalMain(structuredClone(input)))).toEqual(expected);
     expect(normalize(runtime.commonJsMain(structuredClone(input)))).toEqual(expected);

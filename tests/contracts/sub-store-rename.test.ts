@@ -30,12 +30,14 @@ function loadOperator(
   getISO?: (name: string) => unknown,
 ): {
   readonly operator: Operator;
+  readonly globalOperator: unknown;
   readonly logs: string[];
 } {
   const logs: string[] = [];
   const context: Record<string, unknown> = {
     injectedArguments: argumentsValue,
     injectedProxyUtils: getISO === undefined ? undefined : { getISO },
+    injectedSubStore: {},
     console: {
       log: (...values: unknown[]) => logs.push(values.map(String).join(" ")),
       warn: (...values: unknown[]) => logs.push(values.map(String).join(" ")),
@@ -45,13 +47,13 @@ function loadOperator(
   vm.createContext(context);
   const bundle = fs.readFileSync(RENAME_BUNDLE, "utf8");
   const operator = vm.runInContext(
-    `(function ($arguments, ProxyUtils) {\n${bundle}\nreturn globalThis.operator;\n})(injectedArguments, injectedProxyUtils)`,
+    `(function ($arguments, ProxyUtils, $substore) {\n${bundle}\nreturn operator;\n})(injectedArguments, injectedProxyUtils, injectedSubStore)`,
     context,
     { filename: RENAME_BUNDLE },
   ) as unknown;
 
   if (typeof operator !== "function") throw new Error("rename bundle 未暴露 operator");
-  return { operator: operator as Operator, logs };
+  return { operator: operator as Operator, globalOperator: context["operator"], logs };
 }
 
 describe("Sub-Store rename bundle", () => {
@@ -87,6 +89,10 @@ describe("Sub-Store rename bundle", () => {
         JSON.stringify(await runtime.operator(structuredClone(fixture.proxies), "ClashMeta", {})),
       ) as unknown,
     ).toEqual(golden.proxies);
+  });
+
+  it("不向 Sub-Store 共享全局环境泄漏 operator", () => {
+    expect(loadOperator({}).globalOperator).toBeUndefined();
   });
 
   it("无 profile 时使用 standard 默认配置并支持参数覆盖", async () => {

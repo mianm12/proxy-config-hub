@@ -180,8 +180,11 @@ rename bundle 不包含 override 配置、规则 providers 或 Mihomo runtime pr
 
 两个 bundle 均以 ES2020 IIFE 输出：
 
-- override 暴露 `globalThis.main`，并提供由 Sub-Store 契约测试覆盖的 CommonJS bridge。
-- rename 暴露 `globalThis.operator`。
+- override 在 Mihomo Party、Clash Verge Rev 等普通脚本宿主中暴露 `globalThis.main`，并保留由宿主契约测试覆盖的 CommonJS bridge。
+- Sub-Store 在函数作用域中执行脚本时，override 与 rename 分别使用局部 `main` 和 `operator`，不得把入口写入共享的 Node 全局环境。
+- rename 在非 Sub-Store 的普通脚本环境中仍暴露 `globalThis.operator`。
+
+入口作用域只属于宿主适配边界，不进入 Project IR 或领域流水线。同一 Sub-Store 进程先执行 rename 再执行 override 时，两者不得通过 `globalThis` 互相发现或覆盖入口。
 
 Clash Verge Rev 的可选 `profileName` 当前只属于宿主上下文，不进入领域流水线。
 
