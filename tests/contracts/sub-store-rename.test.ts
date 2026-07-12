@@ -34,21 +34,22 @@ function loadOperator(
 } {
   const logs: string[] = [];
   const context: Record<string, unknown> = {
-    $arguments: argumentsValue,
-    ...(getISO === undefined ? {} : { ProxyUtils: { getISO } }),
+    injectedArguments: argumentsValue,
+    injectedProxyUtils: getISO === undefined ? undefined : { getISO },
     console: {
       log: (...values: unknown[]) => logs.push(values.map(String).join(" ")),
       warn: (...values: unknown[]) => logs.push(values.map(String).join(" ")),
       error: (...values: unknown[]) => logs.push(values.map(String).join(" ")),
     },
   };
-  context["globalThis"] = context;
   vm.createContext(context);
-  vm.runInContext(fs.readFileSync(RENAME_BUNDLE, "utf8"), context, {
-    filename: RENAME_BUNDLE,
-  });
+  const bundle = fs.readFileSync(RENAME_BUNDLE, "utf8");
+  const operator = vm.runInContext(
+    `(function ($arguments, ProxyUtils) {\n${bundle}\nreturn globalThis.operator;\n})(injectedArguments, injectedProxyUtils)`,
+    context,
+    { filename: RENAME_BUNDLE },
+  );
 
-  const operator = context["operator"];
   if (typeof operator !== "function") throw new Error("rename bundle 未暴露 operator");
   return { operator: operator as Operator, logs };
 }
