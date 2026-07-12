@@ -29,22 +29,16 @@ function argumentError(message: string): never {
   ]);
 }
 
-function decodeArgument(key: string, value: unknown, allowEmpty = false): string {
+function readArgumentString(key: string, value: unknown, allowEmpty = false): string {
   if (typeof value !== "string") argumentError(`rename 参数 ${key} 必须是字符串`);
-  let decoded: string;
-  try {
-    decoded = decodeURIComponent(value);
-  } catch {
-    argumentError(`rename 参数 ${key} 不是合法 URI 编码`);
-  }
-  if (!allowEmpty && decoded.length === 0) argumentError(`rename 参数 ${key} 不能为空`);
-  return decoded;
+  if (!allowEmpty && value.length === 0) argumentError(`rename 参数 ${key} 不能为空`);
+  return value;
 }
 
 function parseList(key: string, value: unknown, allowEmptyList = false): readonly string[] {
-  const decoded = decodeArgument(key, value, allowEmptyList);
-  if (allowEmptyList && decoded.length === 0) return [];
-  const items = decoded.split(",").map((item) => item.trim());
+  const argument = readArgumentString(key, value, allowEmptyList);
+  if (allowEmptyList && argument.length === 0) return [];
+  const items = argument.split(",").map((item) => item.trim());
   if (items.some((item) => item.length === 0)) {
     argumentError(`rename 参数 ${key} 包含空值`);
   }
@@ -80,7 +74,7 @@ function assertKnownArguments(argumentsValue: RenameArguments): void {
 }
 
 function parseSeparator(value: unknown): string {
-  const separator = decodeArgument("separator", value);
+  const separator = readArgumentString("separator", value);
   if (!isValidRenameSeparator(separator)) {
     argumentError("rename 参数 separator 不得包含控制字符");
   }
@@ -88,9 +82,9 @@ function parseSeparator(value: unknown): string {
 }
 
 function parseSubscriptionFallback(value: unknown): string | null {
-  const decoded = decodeArgument("subscriptionFallback", value, true);
-  if (decoded.length === 0) return null;
-  const normalized = normalizeRenameText(decoded);
+  const argument = readArgumentString("subscriptionFallback", value, true);
+  if (argument.length === 0) return null;
+  const normalized = normalizeRenameText(argument);
   if (normalized === undefined) {
     argumentError("rename 参数 subscriptionFallback trim 后不能为空");
   }
@@ -117,7 +111,7 @@ function resolveRenameProfile(
   const profileId =
     argumentsValue["profile"] === undefined
       ? defaultProfileId
-      : decodeArgument("profile", argumentsValue["profile"]);
+      : readArgumentString("profile", argumentsValue["profile"]);
   const profile = profiles.find(({ id }) => id === profileId);
   if (profile === undefined) argumentError(`未知 rename profile: ${profileId}`);
 
@@ -130,7 +124,7 @@ function resolveRenameProfile(
 
   let sequence = profile.sequence;
   if (argumentsValue["sequence"] !== undefined) {
-    const value = decodeArgument("sequence", argumentsValue["sequence"]);
+    const value = readArgumentString("sequence", argumentsValue["sequence"]);
     if (value !== "always" && value !== "duplicates") {
       argumentError(`rename 参数 sequence 不支持: ${value}`);
     }

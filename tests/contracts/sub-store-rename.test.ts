@@ -136,7 +136,7 @@ describe("Sub-Store rename bundle", () => {
   it("通用机场 profile 在订阅名无效时使用参数 fallback", async () => {
     const runtime = loadOperator({
       profile: "airport",
-      subscriptionFallback: "%E6%89%8B%E5%8A%A8%E6%9C%BA%E5%9C%BA",
+      subscriptionFallback: "手动机场",
     });
     const result = await runtime.operator(
       [{ name: "香港 IPLC 3x", type: "trojan", _subDisplayName: "   " }],

@@ -35,11 +35,11 @@ describe("rename arguments", () => {
     expect(
       resolveRenameProfile(
         {
-          fields: "subscription%2Ciso%2Cprotocol%2Csequence",
-          separator: "%2D",
+          fields: "subscription,iso,protocol,sequence",
+          separator: "-",
           brackets: "protocol",
-          subscriptionFallback: "%E8%8A%82%E7%82%B9",
-          extraTraits: "DMIT%2CproWee",
+          subscriptionFallback: "节点",
+          extraTraits: "DMIT,proWee",
           sequence: "duplicates",
         },
         [PROFILE],
@@ -56,11 +56,14 @@ describe("rename arguments", () => {
     });
   });
 
-  it("接受 URI 编码的 profile id", () => {
-    const encoded = { ...PROFILE, id: "标准" };
-    expect(resolveRenameProfile({ profile: "%E6%A0%87%E5%87%86" }, [encoded], "standard")).toEqual(
-      encoded,
-    );
+  it("直接消费宿主已解码值并保留字面百分号", () => {
+    expect(
+      resolveRenameProfile(
+        { separator: "%", subscriptionFallback: "机场 100%" },
+        [PROFILE],
+        "standard",
+      ),
+    ).toEqual({ ...PROFILE, separator: "%", subscriptionFallback: "机场 100%" });
   });
 
   it("允许直接参数清空括号、订阅 fallback 和扩展词", () => {
@@ -129,17 +132,17 @@ describe("rename arguments", () => {
     expectArgumentError(() =>
       resolveRenameProfile({ extraTraits: "DMIT,dmit" }, [PROFILE], "standard"),
     );
-    expectArgumentError(() => resolveRenameProfile({ separator: "%" }, [PROFILE], "standard"));
-    expectArgumentError(() => resolveRenameProfile({ separator: "%0A" }, [PROFILE], "standard"));
-    expectArgumentError(() => resolveRenameProfile({ separator: "%C2%85" }, [PROFILE], "standard"));
+    expectArgumentError(() => resolveRenameProfile({ separator: "" }, [PROFILE], "standard"));
+    expectArgumentError(() => resolveRenameProfile({ separator: "\n" }, [PROFILE], "standard"));
+    expectArgumentError(() => resolveRenameProfile({ separator: "\u0085" }, [PROFILE], "standard"));
     expectArgumentError(() =>
-      resolveRenameProfile({ subscriptionFallback: "%20" }, [PROFILE], "standard"),
+      resolveRenameProfile({ subscriptionFallback: " " }, [PROFILE], "standard"),
     );
     expectArgumentError(() =>
-      resolveRenameProfile({ extraTraits: "DMIT%0Afoo" }, [PROFILE], "standard"),
+      resolveRenameProfile({ extraTraits: "DMIT\nfoo" }, [PROFILE], "standard"),
     );
     expectArgumentError(() =>
-      resolveRenameProfile({ extraTraits: "DMIT%C2%9Bfoo" }, [PROFILE], "standard"),
+      resolveRenameProfile({ extraTraits: "DMIT\u009bfoo" }, [PROFILE], "standard"),
     );
   });
 });

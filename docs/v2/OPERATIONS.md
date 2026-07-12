@@ -106,7 +106,7 @@ https://www.quietus.icu/proxy-config-hub/v2/manifest.json
 Mihomo 配置覆写和节点重命名是两条不同调用链：
 
 - Mihomo 配置的“脚本操作”加载 `override.js`，入口是 `main(config)`。
-- 节点列表的“脚本操作”加载 `rename.js#noCache` 或 `rename.js#profile=<id>#noCache`，入口是 `operator(proxies, targetPlatform, context)`。
+- 节点列表的“脚本操作”加载 `rename.js#noCache` 或 `rename.js#profile=<id>&noCache`，入口是 `operator(proxies, targetPlatform, context)`。
 
 节点重命名不要选择 Sub-Store 内置“重命名操作”。v2 rename 的默认结果形如 `[订阅名] 🇭🇰 HK [hysteria2] 家宽 直连 01`；若仍看到原始节点名或内置重命名格式，应检查操作类型和脚本日志。
 
@@ -114,9 +114,9 @@ Mihomo 配置覆写和节点重命名是两条不同调用链：
 
 ```text
 https://www.quietus.icu/proxy-config-hub/v2/rename.js#noCache
-https://www.quietus.icu/proxy-config-hub/v2/rename.js#profile=airport#noCache
-https://www.quietus.icu/proxy-config-hub/v2/rename.js#profile=airport#subscriptionFallback=MyAirport#noCache
-https://www.quietus.icu/proxy-config-hub/v2/rename.js#profile=self_hosted#noCache
+https://www.quietus.icu/proxy-config-hub/v2/rename.js#profile=airport&noCache
+https://www.quietus.icu/proxy-config-hub/v2/rename.js#profile=airport&subscriptionFallback=MyAirport&noCache
+https://www.quietus.icu/proxy-config-hub/v2/rename.js#profile=self_hosted&noCache
 ```
 
 `airport` 是通用机场 profile：优先使用节点的 Sub-Store 订阅名，不绑定固定机场。若当前处理链没有提供有效订阅元数据，可传入 URI 编码后的 `subscriptionFallback=<名称>`。

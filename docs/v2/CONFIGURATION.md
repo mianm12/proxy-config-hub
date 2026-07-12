@@ -711,23 +711,23 @@ Sub-Store 中优先使用 `ProxyUtils.getISO` 识别地区，再回落到内置 
 - `sequence`
 - `noCache`（仅宿主缓存控制）
 
-`fields`、`brackets` 和 `extraTraits` 使用逗号列表，并整体替换 profile 对应数组；`brackets=`、`extraTraits=` 可清空列表，`subscriptionFallback=` 可清除 fallback。其他参数替换同名标量。所有值 URI 解码一次；fallback 与扩展词会 trim，trim 后为空或包含控制字符均拒绝。未知参数、未知或重复字段、缺少 `sequence`、`duplicates` 缺少稳定非空字段、括号引用未启用字段、空分隔符、控制字符分隔符和未知 profile 都是结构化错误。
+`fields`、`brackets` 和 `extraTraits` 使用逗号列表，并整体替换 profile 对应数组；`brackets=`、`extraTraits=` 可清空列表，`subscriptionFallback=` 可清除 fallback。其他参数替换同名标量。同一链接的参数在首个 `#` 后使用 `&` 分隔，参数值按 URI 编码；Sub-Store 负责解码一次，bundle 直接校验宿主传入的已解码字符串。fallback 与扩展词会 trim，trim 后为空或包含控制字符均拒绝。未知参数、未知或重复字段、缺少 `sequence`、`duplicates` 缺少稳定非空字段、括号引用未启用字段、空分隔符、控制字符分隔符和未知 profile 都是结构化错误。
 
 ```text
 rename.js#noCache
-rename.js#profile=airport#noCache
-rename.js#profile=airport#subscriptionFallback=MyAirport#noCache
-rename.js#profile=self_hosted#separator=-#noCache
-rename.js#fields=subscription,iso,protocol,sequence#brackets=protocol#separator=-#noCache
+rename.js#profile=airport&noCache
+rename.js#profile=airport&subscriptionFallback=MyAirport&noCache
+rename.js#profile=self_hosted&separator=-&noCache
+rename.js#fields=subscription,iso,protocol,sequence&brackets=protocol&separator=-&noCache
 ```
 
 在 Sub-Store 中，`rename.js` 必须作为节点列表的“脚本操作”远程链接加载，不能放入内置“重命名操作”；后者有独立的命名规则，不会调用本 bundle 的 `operator`。例如：
 
 ```text
 https://www.quietus.icu/proxy-config-hub/v2/rename.js#noCache
-https://www.quietus.icu/proxy-config-hub/v2/rename.js#profile=airport#noCache
-https://www.quietus.icu/proxy-config-hub/v2/rename.js#profile=airport#subscriptionFallback=MyAirport#noCache
-https://www.quietus.icu/proxy-config-hub/v2/rename.js#profile=self_hosted#noCache
+https://www.quietus.icu/proxy-config-hub/v2/rename.js#profile=airport&noCache
+https://www.quietus.icu/proxy-config-hub/v2/rename.js#profile=airport&subscriptionFallback=MyAirport&noCache
+https://www.quietus.icu/proxy-config-hub/v2/rename.js#profile=self_hosted&noCache
 ```
 
 ## 11. 严格 DSL 与 Mihomo 透传
