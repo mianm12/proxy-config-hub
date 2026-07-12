@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { RegionIr, RenameProfileIr } from "../../../src/compiler/ir/project-ir.ts";
 import { ConfigCompilationError } from "../../../src/domain/diagnostics/diagnostic.ts";
+import { hasRenameControlCharacter } from "../../../src/domain/rename/options.ts";
 import { extractTraits, renameProxies } from "../../../src/runtime/rename/index.ts";
 
 const HK: RegionIr = {
@@ -95,6 +96,32 @@ describe("renameProxies", () => {
     );
   });
 
+  it("拒绝宿主元数据中的控制字符并使用安全后备", () => {
+    const result = renameProxies(
+      [
+        {
+          name: "香港\u0000",
+          type: "vless\u001b",
+          _subDisplayName: "非法\u0000订阅",
+          _subName: "有效订阅",
+        },
+      ],
+      PROFILE,
+      [HK],
+    );
+
+    expect(result.proxies[0]?.name).toBe("[有效订阅] 🏳️ ZZ [unknown] 01");
+    expect(hasRenameControlCharacter(String(result.proxies[0]?.name))).toBe(false);
+    expect(result.diagnostics.map(({ code }) => code)).toEqual(
+      expect.arrayContaining([
+        "RENAME_INVALID_NAME",
+        "RENAME_SUBSCRIPTION_NAME_INVALID",
+        "RENAME_PROTOCOL_INVALID",
+        "RENAME_UNKNOWN_REGION",
+      ]),
+    );
+  });
+
   it("过滤流量、到期、建议和官网广告信息", () => {
     const result = renameProxies(
       [
@@ -136,7 +163,7 @@ describe("renameProxies", () => {
     expect(result.proxies[0]?.name).toContain(`${flag} ${iso}`);
   });
 
-  it("宿主返回非法 ISO 或抛错时回落到 catalog", () => {
+  it("宿主返回非法地区代码或抛错时回落到 catalog", () => {
     const invalid = renameProxies([{ name: "香港", type: "vless" }], PROFILE, [HK], () => ({}));
     const failed = renameProxies([{ name: "香港", type: "vless" }], PROFILE, [HK], () => {
       throw new Error("fixture error");

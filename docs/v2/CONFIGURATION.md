@@ -672,7 +672,7 @@ profiles:
 `fields` 是输出字段和顺序，支持：
 
 - `subscription`：按 `_subDisplayName → _subName → _collectionDisplayName → _collectionName → subscription-fallback` 取订阅名。
-- `flag`、`iso`：国家地区 Emoji 和 ISO 3166-1 alpha-2。
+- `flag`、`iso`：国家地区 Emoji 和两位大写地区代码。宿主负责代码的地区语义，runtime 只校验格式。
 - `protocol`：小写规范化后的 `proxy.type`；缺失时为 `unknown`。
 - `traits`：规范化特征和配置扩展词。
 - `multiplier`：非 1 倍倍率，统一使用 `×`。
