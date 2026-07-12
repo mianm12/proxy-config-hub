@@ -190,6 +190,25 @@ describe("renameProxies", () => {
     ]);
   });
 
+  it("duplicates 模式跳过其他基础名称已占用的序号", () => {
+    const result = renameProxies(
+      [
+        { name: "香港", type: "vless", _subName: "机场 01" },
+        { name: "香港", type: "vless", _subName: "机场" },
+        { name: "香港", type: "vless", _subName: "机场" },
+      ],
+      {
+        ...PROFILE,
+        fields: ["subscription", "sequence"],
+        brackets: [],
+        sequence: "duplicates",
+      },
+      [HK],
+    );
+
+    expect(result.proxies.map(({ name }) => name)).toEqual(["机场 01", "机场 02", "机场 03"]);
+  });
+
   it("拒绝生成空节点名", () => {
     const invalidProfile: RenameProfileIr = {
       ...PROFILE,

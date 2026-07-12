@@ -178,6 +178,12 @@ describe("v2 raw schemas", () => {
     expect(
       renameProfilesSchema.safeParse({
         ...validProfile,
+        "default-profile": "constructor",
+      }).success,
+    ).toBe(false);
+    expect(
+      renameProfilesSchema.safeParse({
+        ...validProfile,
         defaults: { ...validProfile.defaults, fields: ["subscription"] },
       }).success,
     ).toBe(false);

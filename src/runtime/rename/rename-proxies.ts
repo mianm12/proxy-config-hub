@@ -139,6 +139,62 @@ function renderName(
   return pieces.join(profile.separator);
 }
 
+function renderCandidateName(
+  candidate: RenameCandidate,
+  profile: RenameProfileIr,
+  sequence: string | undefined,
+): string {
+  const name = renderName(candidate.values, profile, sequence);
+  if (name.length > 0) return name;
+
+  throw new ConfigCompilationError([
+    {
+      code: "RENAME_EMPTY_OUTPUT_NAME",
+      severity: "error",
+      message: "rename 生成了空节点名",
+      context: { index: candidate.sourceIndex, profile: profile.id },
+    },
+  ]);
+}
+
+function renderCandidates(
+  candidates: readonly RenameCandidate[],
+  profile: RenameProfileIr,
+): readonly ProxyNode[] {
+  const totals = new Map<string, number>();
+  for (const candidate of candidates) {
+    totals.set(candidate.baseName, (totals.get(candidate.baseName) ?? 0) + 1);
+  }
+
+  const unsequencedNames = new Map<RenameCandidate, string>();
+  if (profile.sequence === "duplicates") {
+    for (const candidate of candidates) {
+      if ((totals.get(candidate.baseName) ?? 0) !== 1) continue;
+      unsequencedNames.set(candidate, renderCandidateName(candidate, profile, undefined));
+    }
+  }
+
+  const usedNames = new Set(unsequencedNames.values());
+  const indexes = new Map<string, number>();
+  return candidates.map((candidate) => {
+    const unsequencedName = unsequencedNames.get(candidate);
+    if (unsequencedName !== undefined) {
+      return { ...candidate.proxy, name: unsequencedName };
+    }
+
+    let index = indexes.get(candidate.baseName) ?? 0;
+    let name: string;
+    do {
+      index += 1;
+      name = renderCandidateName(candidate, profile, String(index).padStart(2, "0"));
+    } while (usedNames.has(name));
+
+    indexes.set(candidate.baseName, index);
+    usedNames.add(name);
+    return { ...candidate.proxy, name };
+  });
+}
+
 /** 纯函数重命名节点；除强确定的订阅信息项外，不删除输入代理。 */
 function renameProxies(
   proxies: readonly ProxyNode[],
@@ -204,31 +260,7 @@ function renameProxies(
     });
   });
 
-  const totals = new Map<string, number>();
-  for (const candidate of candidates) {
-    totals.set(candidate.baseName, (totals.get(candidate.baseName) ?? 0) + 1);
-  }
-  const indexes = new Map<string, number>();
-  const renamed = candidates.map(({ proxy, values, baseName, sourceIndex }) => {
-    const index = (indexes.get(baseName) ?? 0) + 1;
-    indexes.set(baseName, index);
-    const showSequence = profile.sequence === "always" || (totals.get(baseName) ?? 0) > 1;
-    const sequence = showSequence ? String(index).padStart(2, "0") : undefined;
-    const name = renderName(values, profile, sequence);
-    if (name.length === 0) {
-      throw new ConfigCompilationError([
-        {
-          code: "RENAME_EMPTY_OUTPUT_NAME",
-          severity: "error",
-          message: "rename 生成了空节点名",
-          context: { index: sourceIndex, profile: profile.id },
-        },
-      ]);
-    }
-    return { ...proxy, name };
-  });
-
-  return { proxies: renamed, diagnostics };
+  return { proxies: renderCandidates(candidates, profile), diagnostics };
 }
 
 export { renameProxies };

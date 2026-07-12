@@ -115,7 +115,7 @@ const renameProfilesSchema = z
   })
   .strict()
   .superRefine((value, context) => {
-    if (value.profiles[value["default-profile"]] === undefined) {
+    if (!Object.hasOwn(value.profiles, value["default-profile"])) {
       context.addIssue({
         code: "custom",
         path: ["default-profile"],
