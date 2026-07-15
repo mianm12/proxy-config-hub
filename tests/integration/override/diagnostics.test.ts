@@ -87,4 +87,44 @@ describe("override 稳定诊断代码", () => {
       compileOverride(fixtureInput("existing-dialer"), project).diagnostics.map(({ code }) => code),
     ).toEqual(["OVERRIDE_DIALER_PRESERVED"]);
   });
+
+  it("排除词命中的节点保留在普通池且不进入中转组", () => {
+    const [chain, ...otherChains] = project.chains;
+    if (chain?.transit.selector.kind !== "keywords") {
+      throw new Error("测试配置缺少关键词中转 selector");
+    }
+    const projectWithExclusion = {
+      ...project,
+      chains: [
+        {
+          ...chain,
+          transit: {
+            ...chain.transit,
+            selector: { ...chain.transit.selector, excludeNames: ["XHTTP"] },
+          },
+        },
+        ...otherChains,
+      ],
+    };
+    const result = compileOverride(
+      {
+        proxies: [
+          { name: "Transit-普通-01", type: "socks5" },
+          { name: "自建-直连-XHTTP-01", type: "socks5" },
+          { name: "Relay-Landing-01", type: "socks5" },
+          { name: "普通-香港-01", type: "socks5" },
+        ],
+      },
+      projectWithExclusion,
+    );
+    const groups = z
+      .array(z.looseObject({ name: z.string(), proxies: z.array(z.string()) }))
+      .parse(result.config["proxy-groups"]);
+
+    expect(groups.find(({ name }) => name === "🔀 中转")?.proxies).toEqual(["Transit-普通-01"]);
+    expect(groups.find(({ name }) => name === "🚪 落地")?.proxies).toEqual(["Relay-Landing-01"]);
+    expect(groups.find(({ name }) => name === "🔧 手动选择")?.proxies).toContain(
+      "自建-直连-XHTTP-01",
+    );
+  });
 });

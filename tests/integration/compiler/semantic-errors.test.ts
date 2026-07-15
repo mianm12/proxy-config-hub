@@ -110,6 +110,31 @@ describe("semantic diagnostics", () => {
     });
   });
 
+  it("关键词 selector 将排除词归一化到 Project IR", () => {
+    withConfigWorkspace((configRoot) => {
+      transform(configRoot, "nodes/chains.yaml", (text) =>
+        text.replace(
+          "        all-names: [自建, 直连]",
+          "        all-names: [自建, 直连]\n        exclude-name: [XHTTP]",
+        ),
+      );
+      const project = compileProject(configRoot);
+
+      expect(project.chains[0]?.transit.selector).toEqual({
+        kind: "keywords",
+        anyName: ["Transit", "中转"],
+        allNames: ["自建", "直连"],
+        excludeNames: ["XHTTP"],
+      });
+      expect(project.chains[0]?.landing.selector).toEqual({
+        kind: "keywords",
+        anyName: ["Relay", "落地"],
+        allNames: ["直连", "家宽"],
+        excludeNames: [],
+      });
+    });
+  });
+
   it("定位跨模块重复 group ID", () => {
     withConfigWorkspace((configRoot) => {
       transform(configRoot, "routing/modules/ai.yaml", (text) =>

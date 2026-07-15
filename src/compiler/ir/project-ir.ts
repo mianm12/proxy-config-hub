@@ -20,6 +20,7 @@ type NodeSelectorIr =
       readonly kind: "keywords";
       readonly anyName: readonly string[];
       readonly allNames: readonly string[];
+      readonly excludeNames: readonly string[];
     }
   | { readonly kind: "regex"; readonly pattern: string; readonly flags: string };
 

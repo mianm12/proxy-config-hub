@@ -26,12 +26,13 @@ describe("override runtime", () => {
     expect(input).toEqual(snapshot);
   });
 
-  it("关键词选择器支持 any 和 all，正则选择器保持显式", () => {
+  it("关键词选择器支持 any、all 和排除词，正则选择器保持显式", () => {
     expect(
       matchesSelector("自建-中转-01", {
         kind: "keywords",
         anyName: ["中转", "Transit"],
         allNames: [],
+        excludeNames: ["XHTTP"],
       }),
     ).toBe(true);
     expect(
@@ -39,6 +40,7 @@ describe("override runtime", () => {
         kind: "keywords",
         anyName: [],
         allNames: ["自建", "中转"],
+        excludeNames: [],
       }),
     ).toBe(true);
     expect(
@@ -46,6 +48,23 @@ describe("override runtime", () => {
         kind: "keywords",
         anyName: [],
         allNames: ["自建", "落地"],
+        excludeNames: [],
+      }),
+    ).toBe(false);
+    expect(
+      matchesSelector("Transit-XHTTP-01", {
+        kind: "keywords",
+        anyName: ["Transit"],
+        allNames: [],
+        excludeNames: ["xhttp", "Hysteria"],
+      }),
+    ).toBe(false);
+    expect(
+      matchesSelector("自建-直连-HYSTERIA-01", {
+        kind: "keywords",
+        anyName: [],
+        allNames: ["自建", "直连"],
+        excludeNames: ["XHTTP", "hysteria"],
       }),
     ).toBe(false);
     expect(

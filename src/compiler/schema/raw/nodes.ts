@@ -40,6 +40,7 @@ const keywordSelectorSchema = z
   .object({
     "any-name": z.array(nonEmptyStringSchema).min(1).optional(),
     "all-names": z.array(nonEmptyStringSchema).min(1).optional(),
+    "exclude-name": z.array(nonEmptyStringSchema).min(1).optional(),
   })
   .strict()
   .refine((selector) => selector["any-name"] !== undefined || selector["all-names"] !== undefined, {

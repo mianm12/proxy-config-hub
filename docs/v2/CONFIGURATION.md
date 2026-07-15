@@ -322,7 +322,11 @@ chains:
         any-name:
           - Transit
           - 中转
+        all-names:
           - 自建
+          - 直连
+        exclude-name:
+          - XHTTP
       include-direct: false
 
     landing:
@@ -338,6 +342,11 @@ chains:
           - 家宽
 ```
 
+关键词 selector 使用不区分大小写的名称子串匹配：`any-name` 中任意关键词命中，或
+`all-names` 中全部关键词命中，即满足正向条件；`exclude-name` 中任意关键词命中都会排除该节点。
+因此整体语义为 `(any-name || all-names) && !exclude-name`。`exclude-name` 不能单独作为
+selector，仍须同时声明 `any-name` 或 `all-names`。
+
 selector 优先使用结构化关键词组合。确实无法表达时允许显式 regex：
 
 ```yaml
@@ -346,7 +355,7 @@ selector:
   flags: i
 ```
 
-两者不得同时存在。
+关键词 selector 与 regex selector 不得同时存在。
 
 运行时行为：
 

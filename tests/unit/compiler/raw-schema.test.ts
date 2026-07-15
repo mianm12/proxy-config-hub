@@ -8,6 +8,29 @@ import {
   routingModuleSchema,
 } from "../../../src/compiler/schema/raw/index.ts";
 
+function parseTransitSelector(selector: unknown) {
+  return chainsSchema.safeParse({
+    chains: [
+      {
+        id: "default_chain",
+        transit: {
+          id: "transit",
+          "group-name": "中转",
+          type: "select",
+          selector,
+          "include-direct": false,
+        },
+        landing: {
+          id: "landing",
+          "group-name": "落地",
+          type: "select",
+          selector: { "any-name": ["Relay"] },
+        },
+      },
+    ],
+  });
+}
+
 describe("v2 raw schemas", () => {
   it("接受有限策略组模板与结构化成员引用", () => {
     const result = groupTemplatesSchema.safeParse({
@@ -26,29 +49,19 @@ describe("v2 raw schemas", () => {
     expect(result.success).toBe(true);
   });
 
-  it("拒绝 selector 同时声明关键词和 regex", () => {
-    const result = chainsSchema.safeParse({
-      chains: [
-        {
-          id: "default_chain",
-          transit: {
-            id: "transit",
-            "group-name": "中转",
-            type: "select",
-            selector: { "any-name": ["Transit"], regex: "Transit" },
-            "include-direct": false,
-          },
-          landing: {
-            id: "landing",
-            "group-name": "落地",
-            type: "select",
-            selector: { "any-name": ["Relay"] },
-          },
-        },
-      ],
-    });
+  it("关键词 selector 接受排除词但拒绝仅声明排除词", () => {
+    expect(
+      parseTransitSelector({
+        "any-name": ["Transit"],
+        "all-names": ["自建", "直连"],
+        "exclude-name": ["XHTTP"],
+      }).success,
+    ).toBe(true);
+    expect(parseTransitSelector({ "exclude-name": ["XHTTP"] }).success).toBe(false);
+  });
 
-    expect(result.success).toBe(false);
+  it("拒绝 selector 同时声明关键词和 regex", () => {
+    expect(parseTransitSelector({ "any-name": ["Transit"], regex: "Transit" }).success).toBe(false);
   });
 
   it("同时支持标准来源简写和完整自定义 provider", () => {

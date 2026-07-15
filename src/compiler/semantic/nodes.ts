@@ -13,6 +13,7 @@ function compileSelector(
     | {
         readonly "any-name"?: readonly string[] | undefined;
         readonly "all-names"?: readonly string[] | undefined;
+        readonly "exclude-name"?: readonly string[] | undefined;
       }
     | { readonly regex: string; readonly flags?: string | undefined },
   diagnostics: DiagnosticCollector,
@@ -33,6 +34,7 @@ function compileSelector(
     kind: "keywords",
     anyName: selector["any-name"] ?? [],
     allNames: selector["all-names"] ?? [],
+    excludeNames: selector["exclude-name"] ?? [],
   };
 }
 

@@ -10,7 +10,10 @@ function matchesSelector(name: string, selector: NodeSelectorIr): boolean {
   const allMatch =
     selector.allNames.length > 0 &&
     selector.allNames.every((keyword) => lowerName.includes(keyword.toLocaleLowerCase("en-US")));
-  return anyMatch || allMatch;
+  const excluded = selector.excludeNames.some((keyword) =>
+    lowerName.includes(keyword.toLocaleLowerCase("en-US")),
+  );
+  return (anyMatch || allMatch) && !excluded;
 }
 
 export { matchesSelector };
