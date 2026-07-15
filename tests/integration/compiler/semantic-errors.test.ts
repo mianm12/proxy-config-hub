@@ -113,10 +113,7 @@ describe("semantic diagnostics", () => {
   it("关键词 selector 将排除词归一化到 Project IR", () => {
     withConfigWorkspace((configRoot) => {
       transform(configRoot, "nodes/chains.yaml", (text) =>
-        text.replace(
-          "        all-names: [自建, 直连]",
-          "        all-names: [自建, 直连]\n        exclude-name: [XHTTP]",
-        ),
+        text.replace("        exclude-name: [XHTTP]", "        exclude-name: [XHTTP, Hysteria]"),
       );
       const project = compileProject(configRoot);
 
@@ -124,7 +121,7 @@ describe("semantic diagnostics", () => {
         kind: "keywords",
         anyName: ["Transit", "中转"],
         allNames: ["自建", "直连"],
-        excludeNames: ["XHTTP"],
+        excludeNames: ["XHTTP", "Hysteria"],
       });
       expect(project.chains[0]?.landing.selector).toEqual({
         kind: "keywords",

@@ -7,6 +7,7 @@ chains:
       selector:
         any-name: [Transit, 中转]
         all-names: [自建, 直连]
+        exclude-name: [XHTTP]
       include-direct: false
     landing:
       id: landing
