@@ -18,6 +18,7 @@
     "tools:setup": "node src/tools/setup-tools.ts",
     "verify:mihomo": "npm run example:config && node src/tools/verify-mihomo.ts",
     "config:check": "node src/tools/compile-config.ts",
+    "config:generate": "node src/tools/generate-config.ts",
     "audit:rules": "node src/tools/audit-rules.ts",
     "check": "node src/tools/check.ts"
   },

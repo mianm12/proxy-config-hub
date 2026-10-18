@@ -28,6 +28,20 @@ https://github.com/MetaCubeX/mihomo/releases/download/<version>/<asset>
 
 归档必须通过锁定 SHA-256 才会解压；最终二进制通过临时文件原子写入缓存。`verify:mihomo` 使用项目内 `.cache/validation/mihomo` 作为数据目录，不写用户的 `~/.config/mihomo`。
 
+### 1.1 生成独立内核完整配置
+
+将已转换为 Mihomo 格式的节点 YAML 放在本地私有目录，然后执行：
+
+```bash
+npm run config:generate -- --input /本地私有目录/nodes.yaml --output /本地私有目录/config.yaml
+```
+
+输入须包含非空 `proxies`，每个节点有非空 `name`、`type`，节点名不得重复。支持仅含节点的 YAML 或完整 Mihomo 配置；只提取 `proxies`，其他输入顶层字段不采用。命令复用业务 YAML → Project IR → override 的完整链路，生成 TUN、DNS、策略组、规则与 providers。脱敏发布示例也使用相同装配入口。
+
+输出目录必须提前存在且位于仓库之外；文件以 `0600` 权限创建，拒绝覆盖任何已有路径，通过同目录硬链接原子发布。原始订阅不写缓存或日志，警告只输出诊断代码。生成文件含节点凭据，仅供私有部署，不得上传到 Pages/Release。
+
+此命令不下载订阅、不启动 Mihomo，也不切换客户端或系统网络。具体代理协议字段仍由 Mihomo 校验；部署前可用目标内核执行 `mihomo -t -d /私有运行目录 -f /本地私有目录/config.yaml`。运行时需保留数据目录以持久化 Fake-IP，首次加载仍需要下载远程规则与 GEO 资产。输入已有 `dialer-proxy` 时沿用 override 的引用校验，必须指向生成配置中的策略组。
+
 ## 2. Ubuntu Docker
 
 仓库本身是配置编译与静态发布项目，不需要常驻应用进程。在 Ubuntu 服务器可用一次性 Node 容器执行与本地相同的命令：
