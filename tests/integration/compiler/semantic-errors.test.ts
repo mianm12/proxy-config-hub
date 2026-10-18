@@ -46,6 +46,38 @@ function expectCode(error: ConfigCompilationError, code: string): void {
 }
 
 describe("semantic diagnostics", () => {
+  it.each(["root", "replace"])("拒绝不适用的 per-field 组合 %s", (invalid) => {
+    withConfigWorkspace((configRoot) => {
+      transform(configRoot, "manifest.yaml", (text) =>
+        invalid === "root"
+          ? text.replace("    apply: overlay", "    apply: overlay\n    per-field: true")
+          : text.replace(
+              "    target: profile\n    apply: if-absent",
+              "    target: profile\n    apply: replace",
+            ),
+      );
+      expectCode(captureDiagnostics(configRoot), "CFG_RUNTIME_APPLY_INVALID");
+    });
+  });
+
+  it.each(["missing", "cn-ip"])("拒绝 DNS 不存在或非域名规则集 %s", (provider) => {
+    withConfigWorkspace((configRoot) => {
+      transform(configRoot, "runtime/dns.yaml", (text) =>
+        text.replace("rule-set:cn,geolocation-cn", `rule-set:${provider}`),
+      );
+      expectCode(captureDiagnostics(configRoot), "CFG_DNS_RULESET_INVALID");
+    });
+  });
+
+  it("拒绝 DNS 策略组改名后的悬空引用", () => {
+    withConfigWorkspace((configRoot) => {
+      transform(configRoot, "runtime/dns.yaml", (text) =>
+        text.replace("#🚀 代理选择", "#不存在的组"),
+      );
+      expectCode(captureDiagnostics(configRoot), "CFG_UNKNOWN_REFERENCE");
+    });
+  });
+
   it("完整自定义 provider 可编译到 Project IR", () => {
     withConfigWorkspace((configRoot) => {
       transform(configRoot, "routing/provider-sources.yaml", (text) =>

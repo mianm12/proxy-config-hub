@@ -4,6 +4,7 @@ import type { RenameField, RenameOptions } from "../../domain/rename/options.ts"
 interface RuntimeSectionIr {
   readonly target: string;
   readonly apply: "overlay" | "replace" | "if-absent";
+  readonly perField?: true;
   readonly value: unknown;
 }
 

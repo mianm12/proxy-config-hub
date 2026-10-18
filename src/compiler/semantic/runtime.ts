@@ -45,6 +45,14 @@ function compileRuntimePlan(
     if ("value" in item && item.apply !== "if-absent") {
       diagnostics.error("CFG_RUNTIME_APPLY_INVALID", "runtime value item 只允许 if-absent", source);
     }
+    const perField = "per-field" in item && item["per-field"] === true;
+    if (perField && (item.apply !== "if-absent" || item.target === "root")) {
+      diagnostics.error(
+        "CFG_RUNTIME_APPLY_INVALID",
+        "per-field 只允许用于非 root source 的 if-absent",
+        source,
+      );
+    }
     if (DYNAMIC_OUTPUT_KEYS.has(item.target)) {
       diagnostics.error(
         "CFG_RUNTIME_OWNED_FIELD",
@@ -69,7 +77,12 @@ function compileRuntimePlan(
       }
     }
 
-    return { target: item.target, apply: item.apply, value };
+    return {
+      target: item.target,
+      apply: item.apply,
+      value,
+      ...(perField ? { perField: true as const } : {}),
+    };
   });
 }
 

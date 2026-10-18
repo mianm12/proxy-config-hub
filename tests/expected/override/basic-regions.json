@@ -67,7 +67,7 @@
         "find-process-mode": "strict",
         "profile": {
           "store-selected": true,
-          "store-fake-ip": false
+          "store-fake-ip": true
         },
         "geodata-mode": true,
         "geo-auto-update": true,
@@ -139,52 +139,24 @@
             "119.29.29.29#DIRECT"
           ],
           "nameserver": [
-            "https://dns.alidns.com/dns-query",
-            "https://doh.pub/dns-query",
-            "tls://dns.alidns.com:853",
-            "tls://223.5.5.5:853",
-            "tls://223.6.6.6:853",
-            "tls://dot.pub:853"
+            "https://cloudflare-dns.com/dns-query#🚀 代理选择",
+            "https://dns.google/dns-query#🚀 代理选择"
           ],
-          "proxy-server-nameserver": [
-            "https://dns.alidns.com/dns-query",
-            "https://doh.pub/dns-query",
-            "tls://dns.alidns.com:853",
-            "tls://223.5.5.5:853",
-            "tls://223.6.6.6:853",
-            "tls://dot.pub:853"
-          ],
-          "direct-nameserver": [
-            "https://dns.alidns.com/dns-query",
-            "https://doh.pub/dns-query",
-            "tls://dns.alidns.com:853",
-            "tls://223.5.5.5:853",
-            "tls://223.6.6.6:853",
-            "tls://dot.pub:853"
-          ],
-          "direct-nameserver-follow-policy": true,
-          "fallback": [
-            "https://cloudflare-dns.com/dns-query",
-            "https://dns.google/dns-query"
-          ],
-          "fallback-filter": {
-            "geoip": true,
-            "geoip-code": "CN",
-            "ipcidr": [
-              "240.0.0.0/4",
-              "0.0.0.0/32"
-            ],
-            "domain": [
-              "+.google.com",
-              "+.facebook.com",
-              "+.twitter.com",
-              "+.youtube.com",
-              "+.google.cn",
-              "+.googleapis.cn",
-              "+.googleapis.com",
-              "+.gvt1.com"
+          "nameserver-policy": {
+            "rule-set:cn,geolocation-cn": [
+              "https://dns.alidns.com/dns-query#DIRECT",
+              "https://doh.pub/dns-query#DIRECT"
             ]
           },
+          "proxy-server-nameserver": [
+            "https://dns.alidns.com/dns-query#DIRECT",
+            "https://doh.pub/dns-query#DIRECT"
+          ],
+          "direct-nameserver": [
+            "https://dns.alidns.com/dns-query#DIRECT",
+            "https://doh.pub/dns-query#DIRECT"
+          ],
+          "direct-nameserver-follow-policy": false,
           "fake-ip-filter": [
             "+.lan",
             "+.local",

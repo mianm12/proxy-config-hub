@@ -54,6 +54,45 @@ describe("override 行为回归", () => {
     .filter((name) => name.endsWith(".json"))
     .sort();
 
+  it("补全部分客户端配置并保留显式关闭与端口，缺省启用 Fake-IP 持久化", () => {
+    const input = {
+      ...loadTemplateConfig(),
+      "mixed-port": 22227,
+      tun: { enable: false, stack: "gvisor" },
+      profile: { "store-selected": false },
+    };
+    const snapshot = structuredClone(input);
+    const result = compileOverride(input, project).config;
+    expect(result["mixed-port"]).toBe(22227);
+    expect(result["tun"]).toMatchObject({
+      enable: false,
+      stack: "gvisor",
+      "auto-route": true,
+      "dns-hijack": ["any:53", "tcp://any:53"],
+    });
+    expect(result["profile"]).toEqual({ "store-selected": false, "store-fake-ip": true });
+    expect(
+      compileOverride({ ...input, profile: { "store-fake-ip": false } }, project).config["profile"],
+    ).toEqual({ "store-selected": true, "store-fake-ip": false });
+    expect(input).toEqual(snapshot);
+  });
+
+  it("DNS 分离节点、国内与默认查询出口，直连解析不追随代理策略", () => {
+    const result = compileOverride(loadTemplateConfig(), project).config;
+    const direct = ["https://dns.alidns.com/dns-query#DIRECT", "https://doh.pub/dns-query#DIRECT"];
+    expect(result["dns"]).toMatchObject({
+      nameserver: [
+        "https://cloudflare-dns.com/dns-query#🚀 代理选择",
+        "https://dns.google/dns-query#🚀 代理选择",
+      ],
+      "nameserver-policy": { "rule-set:cn,geolocation-cn": direct },
+      "proxy-server-nameserver": direct,
+      "direct-nameserver": direct,
+      "direct-nameserver-follow-policy": false,
+    });
+    expect(result["dns"]).not.toHaveProperty("fallback");
+  });
+
   for (const fixtureFile of expectedNames) {
     const fixtureId = path.basename(fixtureFile, ".json");
     const fixture = fixtureSchema.parse(readJson(path.join(fixtureRoot, fixtureFile)));

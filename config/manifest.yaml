@@ -10,6 +10,7 @@ runtime:
   - source: runtime/profile.yaml
     target: profile
     apply: if-absent
+    per-field: true
   - source: runtime/dns.yaml
     target: dns
     apply: replace
@@ -19,6 +20,7 @@ runtime:
   - source: runtime/tun.yaml
     target: tun
     apply: if-absent
+    per-field: true
   - value: false
     target: allow-lan
     apply: if-absent

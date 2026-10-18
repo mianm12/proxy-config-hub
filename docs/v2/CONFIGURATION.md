@@ -81,6 +81,7 @@ runtime:
   - source: runtime/profile.yaml
     target: profile
     apply: if-absent
+    per-field: true
   - source: runtime/dns.yaml
     target: dns
     apply: replace
@@ -90,6 +91,7 @@ runtime:
   - source: runtime/tun.yaml
     target: tun
     apply: if-absent
+    per-field: true
   - value: false
     target: allow-lan
     apply: if-absent
@@ -230,19 +232,34 @@ rule-pipeline:
 | `replace`   | 用 source 完整替换 target                     |
 | `if-absent` | 只有 target 为 `undefined` 时写入             |
 
+非 root 的 source item 可显式加 `per-field: true`：target 缺失时写入整节，已存在时只补全值为 `undefined` 的直接子字段。`false`、`0`、空数组及已有嵌套对象均保留，不递归合并；非对象 target 抛出结构化错误。
+
 当前映射：
 
 - base/geodata 顶层键合并进 `runtime/base.yaml`，使用 root overlay。
-- `mixed-port: 7897` 与 profile 缓存配置使用 if-absent，只在宿主未提供对应字段时写入。
+- `mixed-port: 7897` 使用 if-absent，保留客户端端口。
+- profile 使用 if-absent + per-field，缺省启用 `store-selected` 和 `store-fake-ip`，保留客户端显式开关。
 - DNS 使用 replace。
 - sniffer 使用 replace。
-- TUN 使用 if-absent。
+- TUN 使用 if-absent + per-field，补全路由、接口探测与 DNS 劫持字段，保留客户端显式的 `enable`、`stack` 等设置。
 - `allow-lan: false` 作为 manifest 单值 item，目标为 `allow-lan`，使用 `if-absent`；不得用 truthy/falsy 判断替代 undefined 判断。
 - `proxies`、`proxy-groups`、`rule-providers`、`rules` 由运行时装配器独占，runtime source 和 target 均不得声明这些键。
 
 ### 5.2 不支持通用 deep merge
 
 复杂 deep merge 很难判断数组是覆盖、追加还是去重。若某段需要部分保留，应拆成明确模块或为该字段设计专用语义，而不是引入全局 merge 魔法。
+
+### 5.3 DNS 查询分流
+
+- `default-nameserver` 通过直连 IP 引导解析 DNS 上游域名。
+- `proxy-server-nameserver` 独立使用阿里与腾讯 DoH 直连解析代理节点域名，避免解析依赖代理自身。
+- `nameserver-policy` 复用 `cn`、`geolocation-cn` 域名规则集，国内域名使用相同的直连 DoH。
+- 其他默认查询使用 Cloudflare 与 Google DoH，通过 `🚀 代理选择` 连接；实际出口取决于该组选择。
+- `direct-nameserver` 使用直连 DoH，且不追随 policy，保持 DIRECT 出口的解析一致性。
+
+不再同时配置 `fallback` 和 GEO 筛选。编译器校验 DNS policy 的 rule-set 引用与类型，并要求上游 `#` 出口引用稳定策略组或 `DIRECT/REJECT/RULES`；共享配置不绑定宿主接口名或动态节点名。DNS 其余原生参数由官方 Mihomo 校验。
+
+Fake-IP 持久化依赖内核数据目录可写且重启后保留。这里的 DNS 分流仅约束进入内核的查询；局域网专用域名解析、应用自带 DoH、系统 DNS 和 IPv6 网络设置需在部署时单独验收。
 
 ## 6. 节点目录
 

@@ -6,6 +6,7 @@ import {
   validateGeneratedGroupNames,
 } from "./semantic/cross-domain.ts";
 import { compileGroups } from "./semantic/groups.ts";
+import { validateDnsReferences } from "./semantic/dns.ts";
 import { compileNodes } from "./semantic/nodes.ts";
 import { compileRename } from "./semantic/rename.ts";
 import { compileRouting } from "./semantic/routing.ts";
@@ -20,6 +21,7 @@ function compileProject(configRoot: string): ProjectIr {
   const nodes = compileNodes(rawProject, diagnostics);
   const groups = compileGroups(rawProject, diagnostics);
   const routing = compileRouting(rawProject, groups.groups, diagnostics);
+  validateDnsReferences(rawProject, groups.groups, routing.providers, diagnostics);
   const rename = compileRename(rawProject);
   validateGeneratedGroupNames(rawProject, nodes, groups, diagnostics);
   validateGeneratedGroupLayout(rawProject, nodes, groups, diagnostics);

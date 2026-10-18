@@ -9,6 +9,7 @@ const runtimeSourceItemSchema = z
     source: relativeConfigPathSchema,
     target: z.string().min(1),
     apply: runtimeApplySchema,
+    "per-field": z.literal(true).optional(),
   })
   .strict();
 

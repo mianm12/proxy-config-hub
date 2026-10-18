@@ -26,6 +26,41 @@ describe("override runtime", () => {
     expect(input).toEqual(snapshot);
   });
 
+  it("按字段补全保留显式 false、空数组和嵌套对象，不递归合并且不修改输入", () => {
+    const input = {
+      tun: { enable: false, stack: "gvisor", "dns-hijack": [], nested: { host: true } },
+    };
+    const snapshot = structuredClone(input);
+    const plan: RuntimeSectionIr[] = [
+      {
+        target: "tun",
+        apply: "if-absent",
+        perField: true,
+        value: {
+          enable: true,
+          stack: "mixed",
+          "dns-hijack": ["any:53"],
+          "auto-route": true,
+          nested: { preset: true },
+        },
+      },
+    ];
+    const output = applyRuntimePlan(input, plan);
+
+    expect(output["tun"]).toEqual({ ...input.tun, "auto-route": true });
+    expect(output["tun"]).not.toBe(input.tun);
+    expect(input).toEqual(snapshot);
+    expect(applyRuntimePlan({}, plan)["tun"]).toEqual(plan[0]?.value);
+  });
+
+  it.each([null, false, [], "invalid"])("按字段补全拒绝非对象配置节 %j", (tun) => {
+    expect(() =>
+      applyRuntimePlan({ tun }, [
+        { target: "tun", apply: "if-absent", perField: true, value: { enable: true } },
+      ]),
+    ).toThrow("OVERRIDE_RUNTIME_SECTION_INVALID");
+  });
+
   it("关键词选择器支持 any、all 和排除词，正则选择器保持显式", () => {
     expect(
       matchesSelector("自建-中转-01", {
