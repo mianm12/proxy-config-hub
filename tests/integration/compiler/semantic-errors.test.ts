@@ -233,8 +233,8 @@ describe("semantic diagnostics", () => {
     withConfigWorkspace((configRoot) => {
       transform(configRoot, "routing/provider-sources.yaml", (text) =>
         text.replace(
-          "https://raw.githubusercontent.com/MetaCubeX",
-          "https://token@raw.githubusercontent.com/MetaCubeX",
+          "https://cdn.jsdelivr.net/gh/MetaCubeX",
+          "https://token@cdn.jsdelivr.net/gh/MetaCubeX",
         ),
       );
       const error = captureDiagnostics(configRoot);

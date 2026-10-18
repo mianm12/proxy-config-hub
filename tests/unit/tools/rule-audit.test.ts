@@ -7,23 +7,31 @@ import {
 } from "../../../src/tools/audit-rules.ts";
 
 describe("远程规则审计", () => {
-  it("只为 MetaCubeX 标准 MRS 使用同仓库 YAML 可审计源", () => {
+  it.each([
+    "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/openai",
+    "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@meta/geo/geosite/openai",
+  ])("为 MetaCubeX 标准 MRS 使用同仓库 YAML 可审计源：%s", (baseUrl) => {
     expect(
       resolveAuditSource({
         format: "mrs",
-        url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/openai.mrs",
+        url: `${baseUrl}.mrs`,
       }),
     ).toEqual({
       format: "yaml",
       opaque: false,
-      url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/openai.yaml",
+      url: `${baseUrl}.yaml`,
     });
-    expect(
-      resolveAuditSource({ format: "mrs", url: "https://example.com/custom/company.mrs" }),
-    ).toEqual({
+  });
+
+  it.each([
+    "https://example.com/custom/company.mrs",
+    "https://cdn.jsdelivr.net/gh/example/custom@main/company.mrs",
+    "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat-other@meta/company.mrs",
+  ])("不推断第三方 MRS 的 YAML 审计源：%s", (url) => {
+    expect(resolveAuditSource({ format: "mrs", url })).toEqual({
       format: "mrs",
       opaque: true,
-      url: "https://example.com/custom/company.mrs",
+      url,
     });
   });
 

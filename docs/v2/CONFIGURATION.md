@@ -461,7 +461,7 @@ groups:
 sources:
   metacubex_geosite:
     id-template: "{name}"
-    url-template: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/{name}.mrs"
+    url-template: "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@meta/geo/geosite/{name}.mrs"
     path-template: "./ruleset/{id}.mrs"
     provider:
       type: http
@@ -471,7 +471,7 @@ sources:
 
   metacubex_geoip:
     id-template: "{name}-ip"
-    url-template: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/{name}.mrs"
+    url-template: "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@meta/geo/geoip/{name}.mrs"
     path-template: "./ruleset/{id}.mrs"
     provider:
       type: http

@@ -105,11 +105,13 @@ function loadRuleProviders(): readonly AuditProvider[] {
 
 function resolveAuditSource(provider: Pick<AuditProvider, "url" | "format">): AuditSource {
   const parsed = new URL(provider.url);
+  const isMetaRulesSource =
+    (parsed.hostname === "raw.githubusercontent.com" &&
+      parsed.pathname.startsWith("/MetaCubeX/meta-rules-dat/")) ||
+    (parsed.hostname === "cdn.jsdelivr.net" &&
+      parsed.pathname.startsWith("/gh/MetaCubeX/meta-rules-dat@"));
   const isMetaRulesMrs =
-    provider.format === "mrs" &&
-    parsed.hostname === "raw.githubusercontent.com" &&
-    parsed.pathname.startsWith("/MetaCubeX/meta-rules-dat/") &&
-    parsed.pathname.endsWith(".mrs");
+    provider.format === "mrs" && isMetaRulesSource && parsed.pathname.endsWith(".mrs");
 
   return isMetaRulesMrs
     ? { url: `${provider.url.slice(0, -4)}.yaml`, format: "yaml", opaque: false }

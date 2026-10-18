@@ -5,6 +5,12 @@
       "config": {
         "profile-name": "fixture-profile",
         "ipv6": true,
+        "geox-url": {
+          "geoip": "https://example.invalid/geoip.dat",
+          "geosite": "https://example.invalid/geosite.dat",
+          "mmdb": "https://example.invalid/country.mmdb",
+          "asn": "https://example.invalid/GeoLite2-ASN.mmdb"
+        },
         "mixed-port": 22227,
         "profile": { "store-selected": true, "store-fake-ip": true },
         "allow-lan": false,

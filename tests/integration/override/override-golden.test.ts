@@ -74,6 +74,19 @@ describe("override 行为回归", () => {
 
         expect(input).toEqual(inputSnapshot);
         expect(result.config["ipv6"]).toBe(false);
+        expect(result.config["geox-url"]).toEqual({
+          geoip: "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@release/geoip.dat",
+          geosite: "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@release/geosite.dat",
+          mmdb: "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@release/country.mmdb",
+          asn: "https://github.com/xishang0128/geoip/releases/download/latest/GeoLite2-ASN.mmdb",
+        });
+        const providers = z
+          .record(z.string(), z.looseObject({ url: z.string() }))
+          .parse(result.config["rule-providers"]);
+        expect(Object.keys(providers)).toHaveLength(93);
+        for (const provider of Object.values(providers)) {
+          expect(new URL(provider.url).origin).toBe("https://cdn.jsdelivr.net");
+        }
         expect(result.config).toEqual(goldenCase?.config);
       });
     });
