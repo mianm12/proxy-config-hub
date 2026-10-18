@@ -233,6 +233,7 @@
         ],
         "mixed-port": 7897,
         "mode": "rule",
+        "ipv6": false,
         "log-level": "info",
         "unified-delay": true,
         "tcp-concurrent": true,

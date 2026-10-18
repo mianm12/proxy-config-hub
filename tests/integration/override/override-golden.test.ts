@@ -73,6 +73,7 @@ describe("override 行为回归", () => {
         const result = compileOverride(input, project);
 
         expect(input).toEqual(inputSnapshot);
+        expect(result.config["ipv6"]).toBe(false);
         expect(result.config).toEqual(goldenCase?.config);
       });
     });
