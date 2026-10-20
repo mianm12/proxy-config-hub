@@ -16,7 +16,7 @@ describe("v2 config 结构", () => {
     expect(project.runtime).toHaveLength(5);
     expect(project.modules).toHaveLength(11);
     expect(groups).toHaveLength(34);
-    expect(providerReferences).toHaveLength(93);
+    expect(providerReferences).toHaveLength(94);
     expect(project.routingRegions.data.regions).toHaveLength(28);
     expect(project.nodeCatalog.data.regions).toHaveLength(27);
     expect(project.renameProfiles.data.profiles).toHaveProperty("airport");

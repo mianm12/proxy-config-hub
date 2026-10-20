@@ -101,6 +101,9 @@
             "https://dns.google/dns-query#🚀 代理选择"
           ],
           "nameserver-policy": {
+            "rule-set:router-management": [
+              "dhcp://en0"
+            ],
             "rule-set:cn,geolocation-cn": [
               "https://dns.alidns.com/dns-query#DIRECT",
               "https://doh.pub/dns-query#DIRECT"
@@ -114,8 +117,10 @@
             "https://dns.alidns.com/dns-query#DIRECT",
             "https://doh.pub/dns-query#DIRECT"
           ],
-          "direct-nameserver-follow-policy": false,
+          "direct-nameserver-follow-policy": true,
           "fake-ip-filter": [
+            "rule-set:router-management",
+            "rule-set:private",
             "+.lan",
             "+.local",
             "localhost",
@@ -533,6 +538,28 @@
             "path": "./ruleset/category-ads-all.mrs",
             "interval": 86400,
             "format": "mrs"
+          },
+          "router-management": {
+            "type": "inline",
+            "behavior": "domain",
+            "format": "yaml",
+            "payload": [
+              "asusrouter.com",
+              "www.asusrouter.com",
+              "router.asus.com",
+              "miwifi.com",
+              "www.miwifi.com",
+              "tplogin.cn",
+              "+.tplinkwifi.net",
+              "+.zte.home",
+              "routerlogin.com",
+              "www.routerlogin.com",
+              "+.tendawifi.com",
+              "+.hiwifi.com",
+              "+.phicomm.me",
+              "+.peiluyou.com",
+              "+.leike.cc"
+            ]
           },
           "private": {
             "type": "http",
@@ -1273,6 +1300,7 @@
         },
         "rules": [
           "RULE-SET,category-ads-all,🛑 广告拦截",
+          "RULE-SET,router-management,🏠 私有网络",
           "RULE-SET,private,🏠 私有网络",
           "RULE-SET,private-ip,🏠 私有网络,no-resolve",
           "RULE-SET,openai,🤖 AI 服务",

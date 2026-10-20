@@ -16,6 +16,8 @@ nameserver:
   - "https://dns.google/dns-query#🚀 代理选择"
 
 nameserver-policy:
+  "rule-set:router-management":
+    - dhcp://en0
   "rule-set:cn,geolocation-cn":
     - https://dns.alidns.com/dns-query#DIRECT
     - https://doh.pub/dns-query#DIRECT
@@ -27,9 +29,11 @@ proxy-server-nameserver:
 direct-nameserver:
   - https://dns.alidns.com/dns-query#DIRECT
   - https://doh.pub/dns-query#DIRECT
-direct-nameserver-follow-policy: false
+direct-nameserver-follow-policy: true
 
 fake-ip-filter:
+  - "rule-set:router-management"
+  - "rule-set:private"
   - "+.lan"
   - "+.local"
   - localhost

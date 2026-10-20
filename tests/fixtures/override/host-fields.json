@@ -5,6 +5,11 @@
       "config": {
         "profile-name": "fixture-profile",
         "ipv6": true,
+        "dns": {
+          "ipv6": true,
+          "nameserver": ["192.0.2.53"],
+          "fake-ip-filter": ["+.example.invalid"]
+        },
         "geox-url": {
           "geoip": "https://example.invalid/geoip.dat",
           "geosite": "https://example.invalid/geosite.dat",

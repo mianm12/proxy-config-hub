@@ -15,7 +15,7 @@ describe("Project IR", () => {
     const providerIds = new Set(project.providers.map(({ id }) => id));
 
     expect(project.groups).toHaveLength(34);
-    expect(project.providers).toHaveLength(93);
+    expect(project.providers).toHaveLength(94);
     expect(project.routingRegions).toHaveLength(28);
     expect(
       project.groupLayout.every((item) => item.kind === "generated" || groupIds.has(item.id)),

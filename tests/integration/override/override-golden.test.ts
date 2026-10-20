@@ -77,20 +77,64 @@ describe("override 行为回归", () => {
     expect(input).toEqual(snapshot);
   });
 
-  it("DNS 分离节点、国内与默认查询出口，直连解析不追随代理策略", () => {
+  it("私有域名排除 Fake-IP，仅路由器管理域名使用 DHCP，保留公共解析和 IPv6 限制", () => {
     const result = compileOverride(loadTemplateConfig(), project).config;
     const direct = ["https://dns.alidns.com/dns-query#DIRECT", "https://doh.pub/dns-query#DIRECT"];
     expect(result["dns"]).toMatchObject({
+      ipv6: false,
+      "enhanced-mode": "fake-ip",
+      "default-nameserver": ["223.5.5.5#DIRECT", "119.29.29.29#DIRECT"],
       nameserver: [
         "https://cloudflare-dns.com/dns-query#🚀 代理选择",
         "https://dns.google/dns-query#🚀 代理选择",
       ],
-      "nameserver-policy": { "rule-set:cn,geolocation-cn": direct },
       "proxy-server-nameserver": direct,
       "direct-nameserver": direct,
-      "direct-nameserver-follow-policy": false,
+      "direct-nameserver-follow-policy": true,
+    });
+    expect(result["dns"]).toHaveProperty(
+      "fake-ip-filter",
+      expect.arrayContaining(["rule-set:router-management", "rule-set:private"]),
+    );
+    expect(result["dns"]).toHaveProperty("nameserver-policy", {
+      "rule-set:router-management": ["dhcp://en0"],
+      "rule-set:cn,geolocation-cn": direct,
+    });
+    expect(result["ipv6"]).toBe(false);
+    expect(result["tun"]).toMatchObject({
+      "auto-route": true,
+      "dns-hijack": ["any:53", "tcp://any:53"],
     });
     expect(result["dns"]).not.toHaveProperty("fallback");
+
+    const routers = z
+      .object({
+        "router-management": z.object({
+          type: z.literal("inline"),
+          behavior: z.literal("domain"),
+          format: z.literal("yaml"),
+          payload: z.array(z.string()),
+        }),
+      })
+      .parse(result["rule-providers"])["router-management"];
+    expect(routers.payload).toEqual(
+      expect.arrayContaining([
+        "asusrouter.com",
+        "www.asusrouter.com",
+        "router.asus.com",
+        "miwifi.com",
+        "tplogin.cn",
+        "+.zte.home",
+      ]),
+    );
+    for (const unrelated of ["+.ts.net", "+.local", "+.lan"]) {
+      expect(routers.payload).not.toContain(unrelated);
+    }
+    const rules = z.array(z.string()).parse(result["rules"]);
+    expect(rules.indexOf("RULE-SET,router-management,🏠 私有网络")).toBeGreaterThanOrEqual(0);
+    expect(rules.indexOf("RULE-SET,router-management,🏠 私有网络")).toBeLessThan(
+      rules.indexOf("RULE-SET,private,🏠 私有网络"),
+    );
   });
 
   for (const fixtureFile of expectedNames) {
@@ -120,10 +164,20 @@ describe("override 行为回归", () => {
           asn: "https://github.com/xishang0128/geoip/releases/download/latest/GeoLite2-ASN.mmdb",
         });
         const providers = z
-          .record(z.string(), z.looseObject({ url: z.string() }))
+          .record(
+            z.string(),
+            z.union([
+              z.looseObject({ type: z.literal("http"), url: z.string() }),
+              z.looseObject({ type: z.literal("inline"), payload: z.array(z.string()) }),
+            ]),
+          )
           .parse(result.config["rule-providers"]);
-        expect(Object.keys(providers)).toHaveLength(93);
-        for (const provider of Object.values(providers)) {
+        expect(Object.keys(providers)).toHaveLength(94);
+        const remoteProviders = Object.values(providers).filter(
+          (provider) => provider.type === "http",
+        );
+        expect(remoteProviders).toHaveLength(93);
+        for (const provider of remoteProviders) {
           expect(new URL(provider.url).origin).toBe("https://cdn.jsdelivr.net");
         }
         expect(result.config).toEqual(goldenCase?.config);
