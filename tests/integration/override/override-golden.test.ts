@@ -67,6 +67,7 @@ describe("override 行为回归", () => {
     expect(result["tun"]).toMatchObject({
       enable: false,
       stack: "gvisor",
+      "inet6-address": ["fdfe:dcba:9876::1/126"],
       "auto-route": true,
       "dns-hijack": ["any:53", "tcp://any:53"],
     });
@@ -77,7 +78,7 @@ describe("override 行为回归", () => {
     expect(input).toEqual(snapshot);
   });
 
-  it("私有域名排除 Fake-IP，管理域名按品牌使用 LAN DNS，保留公共解析和 IPv6 限制", () => {
+  it("TUN 接管 IPv6，DNS 保持关闭 AAAA 并使用加密引导，保留域名分流", () => {
     const result = compileOverride(loadTemplateConfig(), project).config;
     const direct = ["https://dns.alidns.com/dns-query#DIRECT", "https://doh.pub/dns-query#DIRECT"];
     const policy = z
@@ -86,7 +87,10 @@ describe("override 行为回归", () => {
     expect(result["dns"]).toMatchObject({
       ipv6: false,
       "enhanced-mode": "fake-ip",
-      "default-nameserver": ["223.5.5.5#DIRECT", "119.29.29.29#DIRECT"],
+      "default-nameserver": [
+        "https://223.5.5.5/dns-query#DIRECT",
+        "https://1.12.12.12/dns-query#DIRECT",
+      ],
       nameserver: [
         "https://cloudflare-dns.com/dns-query#🚀 代理选择",
         "https://dns.google/dns-query#🚀 代理选择",
@@ -105,9 +109,11 @@ describe("override 行为回归", () => {
       "router.asus.com": ["192.168.50.1#DIRECT"],
       "rule-set:cn,geolocation-cn": direct,
     });
-    expect(result["ipv6"]).toBe(false);
+    expect(result["ipv6"]).toBe(true);
     expect(result["tun"]).toMatchObject({
+      "inet6-address": ["fdfe:dcba:9876::1/126"],
       "auto-route": true,
+      "strict-route": true,
       "dns-hijack": ["any:53", "tcp://any:53"],
     });
     expect(result["dns"]).not.toHaveProperty("fallback");
@@ -167,7 +173,8 @@ describe("override 行为回归", () => {
         const result = compileOverride(input, project);
 
         expect(input).toEqual(inputSnapshot);
-        expect(result.config["ipv6"]).toBe(false);
+        expect(result.config["ipv6"]).toBe(true);
+        expect(result.config["dns"]).toHaveProperty("ipv6", false);
         expect(result.config["geox-url"]).toEqual({
           geoip: "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@release/geoip.dat",
           geosite: "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@release/geosite.dat",

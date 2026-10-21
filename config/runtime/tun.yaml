@@ -1,5 +1,7 @@
 enable: true
 stack: mixed
+inet6-address:
+  - fdfe:dcba:9876::1/126
 auto-route: true
 auto-detect-interface: true
 dns-hijack:

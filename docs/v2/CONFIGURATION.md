@@ -243,7 +243,7 @@ rule-pipeline:
 - profile 使用 if-absent + per-field，缺省启用 `store-selected` 和 `store-fake-ip`，保留客户端显式开关。
 - DNS 使用 replace。
 - sniffer 使用 replace。
-- TUN 使用 if-absent + per-field，补全路由、接口探测与 DNS 劫持字段，保留客户端显式的 `enable`、`stack` 等设置。
+- TUN 使用 if-absent + per-field，补全 IPv6 地址、路由、接口探测与 DNS 劫持字段，保留客户端显式的 `enable`、`stack` 等设置。顶层 `ipv6: true` 允许 TUN 接管 IPv6；`dns.ipv6: false` 独立控制 AAAA 空响应，不代表系统 IPv6 被关闭。
 - `allow-lan: false` 作为 manifest 单值 item，目标为 `allow-lan`，使用 `if-absent`；不得用 truthy/falsy 判断替代 undefined 判断。
 - `proxies`、`proxy-groups`、`rule-providers`、`rules` 由运行时装配器独占，runtime source 和 target 均不得声明这些键。
 
@@ -253,7 +253,7 @@ rule-pipeline:
 
 ### 5.3 DNS 查询分流
 
-- `default-nameserver` 通过直连 IP 引导解析 DNS 上游域名。
+- `default-nameserver` 通过阿里与腾讯纯 IP DoH（`https://223.5.5.5/dns-query#DIRECT`、`https://1.12.12.12/dns-query#DIRECT`）引导解析 DNS 上游域名，避免引导查询使用明文 UDP/TCP 53，并保留跨厂商冗余。腾讯已[公告不再推荐免费版 IP 接入](https://docs.dnspod.cn/notices/mian-fei-ban-dot-dohbu-zai-gong-kai-ipjie-ru-de-gong-gao/)，因此部署时需验证其可用性；不以关闭证书校验或恢复明文 DNS 作为兜底。
 - `proxy-server-nameserver` 独立使用阿里与腾讯 DoH 直连解析代理节点域名，避免解析依赖代理自身。
 - `routing/router-management.yaml` 是品牌、管理域名与 LAN DNS 的唯一配置源，由 manifest 的 `routing.router-management` 显式加载。编译器同时生成逐域名 `nameserver-policy` 和 `router-management` 内联 domain provider，供 Fake-IP 排除和私有网络分流共同引用，不依赖远程规则下载。域名范围参考 [MetaCubeX private 域名集合](https://github.com/MetaCubeX/meta-rules-dat/blob/meta/geo/geosite/private.list)，只摘取路由器管理域名，不包含整个 private 集合。
 - `routing/modules/core.yaml` 通过 `{ generated: router_management }` 引用生成的 provider，所在 block 决定分流目标与顺序。`runtime/dns.yaml` 只维护普通 DNS 策略和 Fake-IP 排除引用；编译器为品牌映射中的 IPv4 DNS 自动追加 `#DIRECT`，保留精确域名及 `+.` 后缀范围，不依赖网卡名或 DHCP 探测。
@@ -275,11 +275,11 @@ brands:
 
 `brand`、`domains` 和 `dns` 都必须非空；域名只允许小写精确域名或 `+.域名`，DNS 只填 IPv4 地址，不手写 `#DIRECT`。品牌与域名不得重复；原生 `nameserver-policy` 不得再次声明相同管理域名或引用 `rule-set:router-management`，冲突会在编译时定位报错。生成引用必须精确出现一次，DNS 必须通过 `apply: replace` 的 source 装配。生成顺序跟随品牌及域名声明顺序，普通策略接在生成策略之后。现有候选地址及来源链接直接维护在 [品牌映射](../../config/routing/router-management.yaml) 中；`peiluyou` 仍是品牌映射未核实的兼容项。
 
-这些地址来自常见默认 LAN 配置，不保证对应设备启用了 DNS 服务或能解析管理域名。此方案仅覆盖部分默认网段：改过 LAN 地址、AP/中继模式、运营商定制型号和公司网络需另行验收；失败时不做公共 DNS 回退。同一品牌的多个地址由 Mihomo 并发查询，不是按列表顺序回退；若另一台可达设备更早返回否定答案，仍可能影响正确解析。该配置不要求修改系统 DNS，保留全局与 DNS 的 `ipv6: false` 以及原 TUN DNS 劫持配置。
+这些地址来自常见默认 LAN 配置，不保证对应设备启用了 DNS 服务或能解析管理域名。此方案仅覆盖部分默认网段：改过 LAN 地址、AP/中继模式、运营商定制型号和公司网络需另行验收；失败时不做公共 DNS 回退。同一品牌的多个地址由 Mihomo 并发查询，不是按列表顺序回退；若另一台可达设备更早返回否定答案，仍可能影响正确解析。该配置不要求修改系统 DNS；顶层开启 IPv6，TUN 使用 `fdfe:dcba:9876::1/126` 接管 IPv6，DNS 继续关闭 AAAA 响应，并保留原 TUN DNS 劫持配置。
 
 华硕三个管理域名默认只使用已验证的 `192.168.50.1`。单 DNS 对照中，该地址返回正确 LAN IP，而 `192.168.1.1` 返回空答案或 NXDOMAIN；双 DNS 并发时否定答案可能先返回并被缓存。Mihomo 不会等待带 A 记录的结果再择优。因此，使用旧版或自定义 LAN 网段时，应在品牌映射中替换华硕的 DNS 地址，不应把不同网段的地址当作备用项追加。其他品牌的候选地址仍需在各自网络中独立验收。
 
-Fake-IP 持久化依赖内核数据目录可写且重启后保留。这里的 DNS 分流仅约束进入内核的查询；应用自带 DoH、系统 DNS 和 IPv6 网络设置需在部署时单独验收。路由器管理域名应验收 A 返回当前内网地址、AAAA 返回空答案、访问命中私有网络直连；上游 `private` 中的非管理域名应返回真实解析结果或正确的否定响应，不能要求每个特殊名称都有 IP；同时验证普通域名继续返回 Fake-IP、国内与默认解析出口不变。
+Fake-IP 持久化依赖内核数据目录可写且重启后保留。这里的 DNS 分流仅约束进入内核的查询；应用自带 DoH、系统 DNS 和 IPv6 网络设置需在部署时单独验收。macOS/Windows 的局域网 DNS 不能依靠 TUN 自动全部劫持；客户端可能覆盖运行设置，必须核对实际 TUN IPv6 地址和路由。`strict-route` 不能替代内核退出时的系统级断线保护。路由器管理域名应验收 A 返回当前内网地址、AAAA 返回空答案、访问命中私有网络直连；上游 `private` 中的非管理域名应返回真实解析结果或正确的否定响应，不能要求每个特殊名称都有 IP；同时验证普通域名继续返回 Fake-IP、国内与默认解析出口不变，以及公网 IPv6 TCP/UDP 和 DNS 请求未旁路。
 
 ## 6. 节点目录
 

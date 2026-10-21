@@ -4,7 +4,7 @@
       "name": "宿主字段与已有 runtime 字段透传",
       "config": {
         "profile-name": "fixture-profile",
-        "ipv6": true,
+        "ipv6": false,
         "dns": {
           "ipv6": true,
           "nameserver": ["192.0.2.53"],
