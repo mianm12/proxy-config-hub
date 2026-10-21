@@ -33,6 +33,7 @@ config/
 ├── routing/
 │   ├── group-templates.yaml
 │   ├── provider-sources.yaml
+│   ├── router-management.yaml
 │   └── modules/
 │       ├── system.yaml
 │       ├── core.yaml
@@ -104,6 +105,7 @@ nodes:
 routing:
   group-templates: routing/group-templates.yaml
   provider-sources: routing/provider-sources.yaml
+  router-management: routing/router-management.yaml
   modules:
     - routing/modules/system.yaml
     - routing/modules/core.yaml
@@ -253,16 +255,27 @@ rule-pipeline:
 
 - `default-nameserver` 通过直连 IP 引导解析 DNS 上游域名。
 - `proxy-server-nameserver` 独立使用阿里与腾讯 DoH 直连解析代理节点域名，避免解析依赖代理自身。
-- `router-management` 内联域名集合在 `routing/modules/core.yaml` 统一维护华硕、小米、TP-Link、中兴、NETGEAR、腾达等管理入口；DNS policy、Fake-IP 排除和私有网络分流共同引用它，不依赖远程规则下载。清单参考 [MetaCubeX private 域名集合](https://github.com/MetaCubeX/meta-rules-dat/blob/meta/geo/geosite/private.list)，只摘取路由器管理域名，不包含整个 private 集合。
-- 管理域名通过 `dhcp://en0` 查询该网卡 DHCP 下发的 DNS，返回真实 IP；不固定路由器地址，也不将公共 DNS 混入这项策略。
-- Fake-IP 排除同时引用上游 `private` 域名集合和本地 `router-management` 集合：前者覆盖私有及特殊用途域名，后者确保远程规则未就绪时管理入口仍不分配 Fake-IP。已有的 `.lan`、`.local`、localhost 和应用兼容条目保留；`private-ip` 是 IP 集合，不用于此处。整个 `private` 只扩大 Fake-IP 排除范围，不整体改走 DHCP DNS；Tailscale、mDNS、Plex 等仍需按实际使用情况配置和验收各自的解析路径。
+- `routing/router-management.yaml` 是品牌、管理域名与 LAN DNS 的唯一配置源，由 manifest 的 `routing.router-management` 显式加载。编译器同时生成逐域名 `nameserver-policy` 和 `router-management` 内联 domain provider，供 Fake-IP 排除和私有网络分流共同引用，不依赖远程规则下载。域名范围参考 [MetaCubeX private 域名集合](https://github.com/MetaCubeX/meta-rules-dat/blob/meta/geo/geosite/private.list)，只摘取路由器管理域名，不包含整个 private 集合。
+- `routing/modules/core.yaml` 通过 `{ generated: router_management }` 引用生成的 provider，所在 block 决定分流目标与顺序。`runtime/dns.yaml` 只维护普通 DNS 策略和 Fake-IP 排除引用；编译器为品牌映射中的 IPv4 DNS 自动追加 `#DIRECT`，保留精确域名及 `+.` 后缀范围，不依赖网卡名或 DHCP 探测。
+- Fake-IP 排除同时引用上游 `private` 域名集合和本地 `router-management` 集合：前者覆盖私有及特殊用途域名，后者确保远程规则未就绪时管理入口仍不分配 Fake-IP。已有的 `.lan`、`.local`、localhost 和应用兼容条目保留；`private-ip` 是 IP 集合，不用于此处。整个 `private` 只扩大 Fake-IP 排除范围，不整体改用固定 LAN DNS；Tailscale、mDNS、Plex 等仍需按实际使用情况配置和验收各自的解析路径。
 - `nameserver-policy` 复用 `cn`、`geolocation-cn` 域名规则集，国内域名使用相同的直连 DoH。
 - 其他默认查询使用 Cloudflare 与 Google DoH，通过 `🚀 代理选择` 连接；实际出口取决于该组选择。
-- `direct-nameserver` 保留直连 DoH，并启用 `direct-nameserver-follow-policy`，确保连接阶段重新解析管理域名时仍使用 DHCP DNS。国内策略使用的 DoH 与默认直连解析相同，其他未命中策略的直连域名继续使用原直连 DoH。
+- `direct-nameserver` 保留直连 DoH，并启用 `direct-nameserver-follow-policy`，确保连接阶段重新解析管理域名时仍使用对应品牌的 LAN DNS。国内策略使用的 DoH 与默认直连解析相同，其他未命中策略的直连域名继续使用原直连 DoH。
 
 不再同时配置 `fallback` 和 GEO 筛选。编译器校验 DNS policy 的 rule-set 引用与类型，并要求上游 `#` 出口引用稳定策略组或 `DIRECT/REJECT/RULES`。DNS 其余原生参数由官方 Mihomo 校验。
 
-`dhcp://en0` 是针对当前 Mac Wi-Fi 的显式部署选择：改用有线网络、其他系统或其他网卡时，应调整这里的接口名并重新验收。DHCP 下发的 DNS 必须支持当前路由器的管理域名；如果下发公共 DNS 或多个解析结果不一致的 DNS，不能保证成功，不做静默公共 DNS 回退。切换网络后的 DHCP 更新也需实测。该配置不要求修改系统 DNS，保留全局与 DNS 的 `ipv6: false` 以及原 TUN DNS 劫持配置。
+增加品牌或域名只需修改这一份映射，例如：
+
+```yaml
+brands:
+  - brand: 示例品牌
+    domains: [router.example, "+.wifi.example"]
+    dns: [192.168.10.1]
+```
+
+`brand`、`domains` 和 `dns` 都必须非空；域名只允许小写精确域名或 `+.域名`，DNS 只填 IPv4 地址，不手写 `#DIRECT`。品牌与域名不得重复；原生 `nameserver-policy` 不得再次声明相同管理域名或引用 `rule-set:router-management`，冲突会在编译时定位报错。生成引用必须精确出现一次，DNS 必须通过 `apply: replace` 的 source 装配。生成顺序跟随品牌及域名声明顺序，普通策略接在生成策略之后。现有候选地址及来源链接直接维护在 [品牌映射](../../config/routing/router-management.yaml) 中；`peiluyou` 仍是品牌映射未核实的兼容项。
+
+这些地址来自常见默认 LAN 配置，不保证对应设备启用了 DNS 服务或能解析管理域名。此方案仅覆盖部分默认网段：改过 LAN 地址、AP/中继模式、运营商定制型号和公司网络需另行验收；失败时不做公共 DNS 回退。同一品牌的多个地址由 Mihomo 并发查询，不是按列表顺序回退；若另一台可达设备更早返回否定答案，仍可能影响正确解析。该配置不要求修改系统 DNS，保留全局与 DNS 的 `ipv6: false` 以及原 TUN DNS 劫持配置。
 
 Fake-IP 持久化依赖内核数据目录可写且重启后保留。这里的 DNS 分流仅约束进入内核的查询；应用自带 DoH、系统 DNS 和 IPv6 网络设置需在部署时单独验收。路由器管理域名应验收 A 返回当前内网地址、AAAA 返回空答案、访问命中私有网络直连；上游 `private` 中的非管理域名应返回真实解析结果或正确的否定响应，不能要求每个特殊名称都有 IP；同时验证普通域名继续返回 Fake-IP、国内与默认解析出口不变。
 

@@ -50,6 +50,7 @@ const manifestSchema = z
       .object({
         "group-templates": relativeConfigPathSchema,
         "provider-sources": relativeConfigPathSchema,
+        "router-management": relativeConfigPathSchema,
         modules: z.array(relativeConfigPathSchema).min(1),
         "group-layout": z.array(groupLayoutItemSchema).min(1),
         "rule-pipeline": z

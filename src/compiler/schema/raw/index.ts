@@ -8,3 +8,5 @@ export { renameProfilesSchema } from "./rename.ts";
 export type { RawRenameProfiles } from "./rename.ts";
 export { runtimeConfigSchema } from "./runtime.ts";
 export type { RawRuntimeConfig } from "./runtime.ts";
+export { routerManagementSchema } from "./router-management.ts";
+export type { RawRouterManagement } from "./router-management.ts";

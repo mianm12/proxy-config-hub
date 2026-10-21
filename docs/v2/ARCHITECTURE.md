@@ -97,6 +97,8 @@ runtime item 使用明确的应用模式：
 
 非 root source 可用 `per-field: true` 将 if-absent 应用于直接子字段，用于补全 TUN/profile；已有数组和嵌套对象整体保留，不引入递归合并。DNS 对稳定策略组和域名规则集的引用在编译期校验。
 
+路由器品牌映射由 manifest 显式加载，在编译期同时生成 DNS policy 与内联 domain provider；品牌信息不进入运行时。路由模块通过 `generated: router_management` 确定 provider 的目标与顺序，最终仍使用原有 Project IR，不新增运行时生成或合并机制。
+
 `proxies`、`proxy-groups`、`rule-providers` 和 `rules` 由运行时装配器独占，runtime 配置不得声明。
 
 ### 4.2 路由配置

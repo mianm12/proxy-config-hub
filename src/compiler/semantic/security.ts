@@ -72,6 +72,7 @@ function validateNoSecrets(project: RawProject, diagnostics: DiagnosticCollector
     project.chains,
     project.groupTemplates,
     project.providerSources,
+    project.routerManagement,
     ...project.modules,
     project.renameProfiles,
   ];

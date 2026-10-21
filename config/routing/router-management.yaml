@@ -1,0 +1,44 @@
+# 域名同时生成 DNS policy 和 router-management payload；DNS 自动追加 #DIRECT。
+# 同品牌的多个地址并发查询，不表示顺序回退。
+brands:
+  # https://www.asus.com/global/support/faq/1011245/
+  - brand: 华硕
+    domains: [asusrouter.com, www.asusrouter.com, router.asus.com]
+    dns: [192.168.50.1, 192.168.1.1]
+  # https://www.mi.com/service/miwifi/firstuse
+  - brand: 小米 / Redmi
+    domains: [miwifi.com, www.miwifi.com]
+    dns: [192.168.31.1]
+  # https://service-provider.tp-link.com/uk/faq/44/
+  - brand: TP-Link
+    domains: [tplogin.cn, "+.tplinkwifi.net"]
+    dns: [192.168.1.1, 192.168.0.1]
+  # E5700 固件说明：https://www.ztehome.com.cn/support/serviceMore.php?category=Software
+  - brand: 中兴家用路由器
+    domains: ["+.zte.home"]
+    dns: [192.168.5.1]
+  # https://kb.netgear.com/27199/I-can-t-access-my-router-what-do-I-do
+  - brand: NETGEAR
+    domains: [routerlogin.com, www.routerlogin.com]
+    dns: [192.168.1.1, 192.168.0.1]
+  # https://www.tendacn.com/faq/2003661
+  - brand: 腾达
+    domains: ["+.tendawifi.com"]
+    dns: [192.168.1.1, 192.168.0.1]
+  # 贝锐插件说明：https://service.oray.com/question/4614.html
+  - brand: 极路由
+    domains: ["+.hiwifi.com"]
+    dns: [192.168.199.1]
+  # 厂商手册镜像：https://manualzz.com/doc/7322002/phicomm-fir-router-quick-start-guide
+  - brand: 斐讯
+    domains: ["+.phicomm.me"]
+    dns: [192.168.2.1]
+  # 未核实品牌映射，仅尝试常见 LAN DNS，保留原有分流。
+  - brand: peiluyou 旧清单兼容项
+    domains: ["+.peiluyou.com"]
+    dns: [192.168.1.1, 192.168.0.1]
+  # https://www.netcoretec.com/service-support/faq/self-check/564.html
+  # https://www.netcoretec.com/upload2022/portal/20201103/202011031038424125.pdf
+  - brand: 磊科
+    domains: ["+.leike.cc"]
+    dns: [192.168.0.1, 192.168.1.1]

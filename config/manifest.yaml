@@ -33,6 +33,7 @@ nodes:
 routing:
   group-templates: routing/group-templates.yaml
   provider-sources: routing/provider-sources.yaml
+  router-management: routing/router-management.yaml
   modules:
     - routing/modules/system.yaml
     - routing/modules/core.yaml

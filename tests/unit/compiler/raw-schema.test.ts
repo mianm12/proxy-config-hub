@@ -5,6 +5,7 @@ import {
   groupTemplatesSchema,
   providerSourcesSchema,
   renameProfilesSchema,
+  routerManagementSchema,
   routingModuleSchema,
 } from "../../../src/compiler/schema/raw/index.ts";
 
@@ -32,6 +33,45 @@ function parseTransitSelector(selector: unknown) {
 }
 
 describe("v2 raw schemas", () => {
+  it("品牌映射支持精确域名、后缀域名和多个 IPv4 DNS", () => {
+    expect(
+      routerManagementSchema.safeParse({
+        brands: [
+          {
+            brand: "示例品牌",
+            domains: ["router.example", "+.router.example"],
+            dns: ["192.0.2.1", "192.0.2.2"],
+          },
+        ],
+      }).success,
+    ).toBe(true);
+  });
+
+  it.each([
+    { brand: " " },
+    { domains: [] },
+    { domains: ["https://router.example"] },
+    { domains: ["Router.Example"] },
+    { domains: ["rule-set:private"] },
+    { dns: [] },
+    { dns: ["192.168.999.1"] },
+    { dns: ["192.0.2.1#DIRECT"] },
+    { extra: true },
+  ])("拒绝不完整或非法品牌映射 %j", (invalid) => {
+    expect(
+      routerManagementSchema.safeParse({
+        brands: [
+          {
+            brand: "示例品牌",
+            domains: ["router.example"],
+            dns: ["192.0.2.1"],
+            ...invalid,
+          },
+        ],
+      }).success,
+    ).toBe(false);
+  });
+
   it("接受有限策略组模板与结构化成员引用", () => {
     const result = groupTemplatesSchema.safeParse({
       templates: {
@@ -85,6 +125,7 @@ describe("v2 raw schemas", () => {
           target: "ai_service",
           providers: [
             { source: "metacubex_geosite", name: "openai" },
+            { generated: "router_management" },
             {
               id: "company_public",
               provider: {

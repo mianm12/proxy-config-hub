@@ -16,8 +16,7 @@ nameserver:
   - "https://dns.google/dns-query#🚀 代理选择"
 
 nameserver-policy:
-  "rule-set:router-management":
-    - dhcp://en0
+  # 管理域名的逐品牌策略由 routing/router-management.yaml 编译生成。
   "rule-set:cn,geolocation-cn":
     - https://dns.alidns.com/dns-query#DIRECT
     - https://doh.pub/dns-query#DIRECT

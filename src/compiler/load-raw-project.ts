@@ -8,6 +8,7 @@ import {
   nodeCatalogSchema,
   providerSourcesSchema,
   renameProfilesSchema,
+  routerManagementSchema,
   routingModuleSchema,
   routingRegionsSchema,
   runtimeConfigSchema,
@@ -17,6 +18,7 @@ import {
   type RawNodeCatalog,
   type RawProviderSources,
   type RawRenameProfiles,
+  type RawRouterManagement,
   type RawRoutingModule,
   type RawRoutingRegions,
   type RawRuntimeConfig,
@@ -44,6 +46,7 @@ interface RawProject {
   readonly chains: LoadedYaml<RawChains>;
   readonly groupTemplates: LoadedYaml<RawGroupTemplates>;
   readonly providerSources: LoadedYaml<RawProviderSources>;
+  readonly routerManagement: LoadedYaml<RawRouterManagement>;
   readonly modules: readonly LoadedYaml<RawRoutingModule>[];
   readonly renameProfiles: LoadedYaml<RawRenameProfiles>;
 }
@@ -99,6 +102,13 @@ function loadRawProject(configRoot: string): RawProject {
     ]),
     providerSourcesSchema,
   );
+  const routerManagement = loadTypedYaml(
+    resolveManifestReference(manifest.data.routing["router-management"], [
+      "routing",
+      "router-management",
+    ]),
+    routerManagementSchema,
+  );
   const modules = manifest.data.routing.modules.map((requestedPath, index) =>
     loadTypedYaml(
       resolveManifestReference(requestedPath, ["routing", "modules", index]),
@@ -119,6 +129,7 @@ function loadRawProject(configRoot: string): RawProject {
     chains,
     groupTemplates,
     providerSources,
+    routerManagement,
     modules,
     renameProfiles,
   };

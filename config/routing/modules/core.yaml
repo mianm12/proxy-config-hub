@@ -13,28 +13,7 @@ rule-blocks:
   - id: private
     target: private
     providers:
-      # DNS 策略、Fake-IP 排除和私有网络分流共用这一份管理域名清单。
-      - id: router-management
-        provider:
-          type: inline
-          behavior: domain
-          format: yaml
-        mihomo:
-          payload:
-            - asusrouter.com
-            - www.asusrouter.com
-            - router.asus.com
-            - miwifi.com
-            - www.miwifi.com
-            - tplogin.cn
-            - "+.tplinkwifi.net"
-            - "+.zte.home"
-            - routerlogin.com
-            - www.routerlogin.com
-            - "+.tendawifi.com"
-            - "+.hiwifi.com"
-            - "+.phicomm.me"
-            - "+.peiluyou.com"
-            - "+.leike.cc"
+      # 域名与 DNS 共用 manifest 指定的品牌映射，当前位置决定分流顺序。
+      - { generated: router_management }
       - { source: metacubex_geosite, name: private }
       - { source: metacubex_geoip, name: private, no-resolve: true }

@@ -69,6 +69,7 @@ const customProviderReferenceSchema = z
 const providerReferenceSchema = z.union([
   sourceProviderReferenceSchema,
   customProviderReferenceSchema,
+  z.object({ generated: z.literal("router_management") }).strict(),
 ]);
 
 export {

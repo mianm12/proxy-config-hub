@@ -77,9 +77,12 @@ describe("override 行为回归", () => {
     expect(input).toEqual(snapshot);
   });
 
-  it("私有域名排除 Fake-IP，仅路由器管理域名使用 DHCP，保留公共解析和 IPv6 限制", () => {
+  it("私有域名排除 Fake-IP，管理域名按品牌使用 LAN DNS，保留公共解析和 IPv6 限制", () => {
     const result = compileOverride(loadTemplateConfig(), project).config;
     const direct = ["https://dns.alidns.com/dns-query#DIRECT", "https://doh.pub/dns-query#DIRECT"];
+    const policy = z
+      .object({ "nameserver-policy": z.record(z.string(), z.array(z.string())) })
+      .parse(result["dns"])["nameserver-policy"];
     expect(result["dns"]).toMatchObject({
       ipv6: false,
       "enhanced-mode": "fake-ip",
@@ -96,8 +99,8 @@ describe("override 行为回归", () => {
       "fake-ip-filter",
       expect.arrayContaining(["rule-set:router-management", "rule-set:private"]),
     );
-    expect(result["dns"]).toHaveProperty("nameserver-policy", {
-      "rule-set:router-management": ["dhcp://en0"],
+    expect(policy).toMatchObject({
+      "asusrouter.com": ["192.168.50.1#DIRECT", "192.168.1.1#DIRECT"],
       "rule-set:cn,geolocation-cn": direct,
     });
     expect(result["ipv6"]).toBe(false);
@@ -117,6 +120,12 @@ describe("override 行为回归", () => {
         }),
       })
       .parse(result["rule-providers"])["router-management"];
+    // 两份生成结果必须覆盖相同域名；完整地址契约由 golden 保护。
+    expect(
+      Object.keys(policy)
+        .filter((key) => key !== "rule-set:cn,geolocation-cn")
+        .sort(),
+    ).toEqual([...routers.payload].sort());
     expect(routers.payload).toEqual(
       expect.arrayContaining([
         "asusrouter.com",

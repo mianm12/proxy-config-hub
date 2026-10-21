@@ -2,9 +2,16 @@ import type { GroupIr, ProviderConfigIr, ProviderIr, RuleIr } from "../ir/projec
 import type { LoadedYaml, RawProject } from "../load-raw-project.ts";
 import type { RawRoutingModule } from "../schema/raw/index.ts";
 import type { DiagnosticCollector } from "./diagnostic-collector.ts";
+import {
+  ROUTER_MANAGEMENT_ID,
+  type RouterManagementCompilationResult,
+} from "./router-management.ts";
 
 type RawRuleBlock = RawRoutingModule["rule-blocks"][number];
-type RawProviderReference = NonNullable<RawRuleBlock["providers"]>[number];
+type RawProviderReference = Exclude<
+  NonNullable<RawRuleBlock["providers"]>[number],
+  { generated: "router_management" }
+>;
 
 interface BlockReference {
   readonly module: LoadedYaml<RawRoutingModule>;
@@ -282,6 +289,7 @@ function expandProvider(
 function compileRouting(
   project: RawProject,
   groups: readonly GroupIr[],
+  routerManagement: RouterManagementCompilationResult,
   diagnostics: DiagnosticCollector,
 ): RoutingCompilationResult {
   const groupsById = new Map(groups.map((group) => [group.id, group]));
@@ -406,7 +414,15 @@ function compileRouting(
 
     (block.providers ?? []).forEach((reference, providerIndex) => {
       const source = module.source.locate(["rule-blocks", blockIndex, "providers", providerIndex]);
-      const provider = expandProvider(reference, block.target, source, project, diagnostics);
+      const provider =
+        "generated" in reference
+          ? {
+              id: ROUTER_MANAGEMENT_ID,
+              target: block.target,
+              noResolve: false,
+              config: routerManagement.provider,
+            }
+          : expandProvider(reference, block.target, source, project, diagnostics);
       if (provider === undefined) return;
 
       if (!PROVIDER_ID_PATTERN.test(provider.id)) {

@@ -2,10 +2,12 @@ import { z } from "zod";
 
 import type { GroupIr, ProviderIr } from "../ir/project-ir.ts";
 import type { RawProject } from "../load-raw-project.ts";
+import {
+  dnsPolicySchema as policySchema,
+  dnsServersSchema as serversSchema,
+} from "../schema/raw/runtime.ts";
 import type { DiagnosticCollector } from "./diagnostic-collector.ts";
 
-const serversSchema = z.union([z.string().min(1), z.array(z.string().min(1)).min(1)]);
-const policySchema = z.record(z.string(), serversSchema);
 const dnsReferencesSchema = z.object({
   "default-nameserver": serversSchema.optional(),
   nameserver: serversSchema.optional(),

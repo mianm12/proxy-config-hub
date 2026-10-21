@@ -46,6 +46,135 @@ function expectCode(error: ConfigCompilationError, code: string): void {
 }
 
 describe("semantic diagnostics", () => {
+  it("只修改品牌映射即可同步生成 DNS 策略和有序内联 provider", () => {
+    withConfigWorkspace((configRoot) => {
+      transform(
+        configRoot,
+        "routing/router-management.yaml",
+        () => `brands:
+  - brand: 示例甲
+    domains: [router-a.test, "+.alias-a.test"]
+    dns: [192.0.2.1, 192.0.2.2]
+  - brand: 示例乙
+    domains: [router-b.test]
+    dns: [198.51.100.1]
+`,
+      );
+      const project = compileProject(configRoot);
+      const dns = project.runtimePlan.find(({ target }) => target === "dns")?.value;
+      expect(dns).toHaveProperty("nameserver-policy", {
+        "router-a.test": ["192.0.2.1#DIRECT", "192.0.2.2#DIRECT"],
+        "+.alias-a.test": ["192.0.2.1#DIRECT", "192.0.2.2#DIRECT"],
+        "router-b.test": ["198.51.100.1#DIRECT"],
+        "rule-set:cn,geolocation-cn": [
+          "https://dns.alidns.com/dns-query#DIRECT",
+          "https://doh.pub/dns-query#DIRECT",
+        ],
+      });
+      expect(project.providers[1]).toEqual({
+        id: "router-management",
+        target: "private",
+        noResolve: false,
+        config: {
+          type: "inline",
+          behavior: "domain",
+          format: "yaml",
+          mihomo: { payload: ["router-a.test", "+.alias-a.test", "router-b.test"] },
+        },
+      });
+      expect(project.rules[1]).toEqual({
+        kind: "provider",
+        provider: "router-management",
+        target: "private",
+        noResolve: false,
+      });
+    });
+  });
+
+  it("定位品牌映射中的重复域名", () => {
+    withConfigWorkspace((configRoot) => {
+      transform(configRoot, "routing/router-management.yaml", (text) =>
+        text.replace("www.miwifi.com", "asusrouter.com"),
+      );
+      const error = captureDiagnostics(configRoot);
+      expectCode(error, "CFG_ROUTER_DOMAIN_DUPLICATE");
+      expect(
+        error.diagnostics.some(
+          ({ code, source }) =>
+            code === "CFG_ROUTER_DOMAIN_DUPLICATE" &&
+            source?.file === path.join(configRoot, "routing/router-management.yaml") &&
+            source.path === "brands[1].domains[1]" &&
+            source.line !== undefined,
+        ),
+      ).toBe(true);
+    });
+  });
+
+  it("拒绝重复品牌", () => {
+    withConfigWorkspace((configRoot) => {
+      transform(configRoot, "routing/router-management.yaml", (text) =>
+        text.replace("brand: TP-Link", "brand: 华硕"),
+      );
+      expectCode(captureDiagnostics(configRoot), "CFG_DUPLICATE_NAME");
+    });
+  });
+
+  it.each(["asusrouter.com", "ASUSROUTER.COM.", "rule-set:cn,router-management"])(
+    "拒绝手写策略覆盖品牌映射 %s",
+    (key) => {
+      withConfigWorkspace((configRoot) => {
+        transform(configRoot, "runtime/dns.yaml", (text) =>
+          text.replace("nameserver-policy:", `nameserver-policy:\n  "${key}": [223.5.5.5]`),
+        );
+        const error = captureDiagnostics(configRoot);
+        expectCode(error, "CFG_ROUTER_DNS_CONFLICT");
+        expect(
+          error.diagnostics.some(
+            ({ code, source }) =>
+              code === "CFG_ROUTER_DNS_CONFLICT" &&
+              source?.file.endsWith("runtime/dns.yaml") === true &&
+              source.line !== undefined,
+          ),
+        ).toBe(true);
+      });
+    },
+  );
+
+  it.each([0, 2])("拒绝生成 provider 引用次数不为一：%s", (count) => {
+    withConfigWorkspace((configRoot) => {
+      transform(configRoot, "routing/modules/core.yaml", (text) =>
+        text.replace(
+          "      - { generated: router_management }\n",
+          "      - { generated: router_management }\n".repeat(count),
+        ),
+      );
+      expectCode(captureDiagnostics(configRoot), "CFG_ROUTER_PROVIDER_REFERENCE");
+    });
+  });
+
+  it.each(["missing", "if-absent"])("拒绝不匹配的 DNS 装配入口 %s", (invalid) => {
+    withConfigWorkspace((configRoot) => {
+      transform(configRoot, "manifest.yaml", (text) =>
+        text.replace(
+          "    target: dns\n    apply: replace",
+          invalid === "missing"
+            ? "    target: unused_dns\n    apply: replace"
+            : "    target: dns\n    apply: if-absent",
+        ),
+      );
+      expectCode(captureDiagnostics(configRoot), "CFG_ROUTER_DNS_TARGET");
+    });
+  });
+
+  it("生成策略不能掩盖原有 nameserver-policy 的类型错误", () => {
+    withConfigWorkspace((configRoot) => {
+      transform(configRoot, "runtime/dns.yaml", (text) =>
+        text.replace("nameserver-policy:", "nameserver-policy: []\nunused-policy:"),
+      );
+      expectCode(captureDiagnostics(configRoot), "CFG_DNS_INVALID");
+    });
+  });
+
   it.each(["root", "replace"])("拒绝不适用的 per-field 组合 %s", (invalid) => {
     withConfigWorkspace((configRoot) => {
       transform(configRoot, "manifest.yaml", (text) =>

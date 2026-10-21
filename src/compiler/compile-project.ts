@@ -10,6 +10,7 @@ import { validateDnsReferences } from "./semantic/dns.ts";
 import { compileNodes } from "./semantic/nodes.ts";
 import { compileRename } from "./semantic/rename.ts";
 import { compileRouting } from "./semantic/routing.ts";
+import { compileRouterManagement } from "./semantic/router-management.ts";
 import { compileRuntimePlan } from "./semantic/runtime.ts";
 import { validateNoSecrets } from "./semantic/security.ts";
 
@@ -17,10 +18,11 @@ function compileProject(configRoot: string): ProjectIr {
   const rawProject = loadRawProject(configRoot);
   const diagnostics = new DiagnosticCollector();
   validateNoSecrets(rawProject, diagnostics);
-  const runtimePlan = compileRuntimePlan(rawProject, diagnostics);
+  const routerManagement = compileRouterManagement(rawProject, diagnostics);
+  const runtimePlan = compileRuntimePlan(rawProject, routerManagement, diagnostics);
   const nodes = compileNodes(rawProject, diagnostics);
   const groups = compileGroups(rawProject, diagnostics);
-  const routing = compileRouting(rawProject, groups.groups, diagnostics);
+  const routing = compileRouting(rawProject, groups.groups, routerManagement, diagnostics);
   validateDnsReferences(rawProject, groups.groups, routing.providers, diagnostics);
   const rename = compileRename(rawProject);
   validateGeneratedGroupNames(rawProject, nodes, groups, diagnostics);

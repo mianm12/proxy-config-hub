@@ -1,11 +1,16 @@
 import type { RuntimeSectionIr } from "../ir/project-ir.ts";
 import type { RawProject } from "../load-raw-project.ts";
 import type { DiagnosticCollector } from "./diagnostic-collector.ts";
+import {
+  mergeRouterDnsPolicy,
+  type RouterManagementCompilationResult,
+} from "./router-management.ts";
 
 const DYNAMIC_OUTPUT_KEYS = new Set(["proxies", "proxy-groups", "rule-providers", "rules"]);
 
 function compileRuntimePlan(
   project: RawProject,
+  routerManagement: RouterManagementCompilationResult,
   diagnostics: DiagnosticCollector,
 ): readonly RuntimeSectionIr[] {
   const loadedByIndex = new Map(project.runtime.map((loaded) => [loaded.manifestIndex, loaded]));
@@ -62,9 +67,12 @@ function compileRuntimePlan(
     }
 
     const loaded = loadedByIndex.get(index);
-    const value = "source" in item ? loaded?.data : item.value;
+    let value = "source" in item ? loaded?.data : item.value;
     if (value === undefined) {
       diagnostics.error("CFG_UNKNOWN_REFERENCE", "runtime source 未加载", source);
+    }
+    if (item.target === "dns" && loaded !== undefined) {
+      value = mergeRouterDnsPolicy(loaded, routerManagement, diagnostics);
     }
     if (item.target === "root" && loaded !== undefined) {
       for (const key of Object.keys(loaded.data)) {

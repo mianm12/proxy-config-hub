@@ -15,6 +15,10 @@ describe("v2 config 结构", () => {
     expect(project.manifest.data["schema-version"]).toBe(2);
     expect(project.runtime).toHaveLength(5);
     expect(project.modules).toHaveLength(11);
+    expect(project.routerManagement.file).toBe(
+      path.resolve(process.cwd(), "config/routing/router-management.yaml"),
+    );
+    expect(providerReferences).toContainEqual({ generated: "router_management" });
     expect(groups).toHaveLength(34);
     expect(providerReferences).toHaveLength(94);
     expect(project.routingRegions.data.regions).toHaveLength(28);

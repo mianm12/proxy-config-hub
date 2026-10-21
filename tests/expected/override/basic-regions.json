@@ -143,8 +143,60 @@
             "https://dns.google/dns-query#🚀 代理选择"
           ],
           "nameserver-policy": {
-            "rule-set:router-management": [
-              "dhcp://en0"
+            "asusrouter.com": [
+              "192.168.50.1#DIRECT",
+              "192.168.1.1#DIRECT"
+            ],
+            "www.asusrouter.com": [
+              "192.168.50.1#DIRECT",
+              "192.168.1.1#DIRECT"
+            ],
+            "router.asus.com": [
+              "192.168.50.1#DIRECT",
+              "192.168.1.1#DIRECT"
+            ],
+            "miwifi.com": [
+              "192.168.31.1#DIRECT"
+            ],
+            "www.miwifi.com": [
+              "192.168.31.1#DIRECT"
+            ],
+            "tplogin.cn": [
+              "192.168.1.1#DIRECT",
+              "192.168.0.1#DIRECT"
+            ],
+            "+.tplinkwifi.net": [
+              "192.168.1.1#DIRECT",
+              "192.168.0.1#DIRECT"
+            ],
+            "+.zte.home": [
+              "192.168.5.1#DIRECT"
+            ],
+            "routerlogin.com": [
+              "192.168.1.1#DIRECT",
+              "192.168.0.1#DIRECT"
+            ],
+            "www.routerlogin.com": [
+              "192.168.1.1#DIRECT",
+              "192.168.0.1#DIRECT"
+            ],
+            "+.tendawifi.com": [
+              "192.168.1.1#DIRECT",
+              "192.168.0.1#DIRECT"
+            ],
+            "+.hiwifi.com": [
+              "192.168.199.1#DIRECT"
+            ],
+            "+.phicomm.me": [
+              "192.168.2.1#DIRECT"
+            ],
+            "+.peiluyou.com": [
+              "192.168.1.1#DIRECT",
+              "192.168.0.1#DIRECT"
+            ],
+            "+.leike.cc": [
+              "192.168.0.1#DIRECT",
+              "192.168.1.1#DIRECT"
             ],
             "rule-set:cn,geolocation-cn": [
               "https://dns.alidns.com/dns-query#DIRECT",
