@@ -25,7 +25,7 @@
         "mixed-port": 22227,
         "profile": { "store-selected": true, "store-fake-ip": true },
         "allow-lan": false,
-        "tun": { "enable": true, "stack": "gvisor" },
+        "tun": { "enable": true, "stack": "gvisor", "mtu": 1400 },
         "experimental": { "fixture-flag": true },
         "proxy-providers": {
           "fixture-provider": { "type": "http", "url": "https://example.invalid/subscription" }

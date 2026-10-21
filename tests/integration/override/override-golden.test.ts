@@ -67,6 +67,7 @@ describe("override 行为回归", () => {
     expect(result["tun"]).toMatchObject({
       enable: false,
       stack: "gvisor",
+      mtu: 1500,
       "inet6-address": ["fdfe:dcba:9876::1/126"],
       "auto-route": true,
       "dns-hijack": ["any:53", "tcp://any:53"],
@@ -75,6 +76,9 @@ describe("override 行为回归", () => {
     expect(
       compileOverride({ ...input, profile: { "store-fake-ip": false } }, project).config["profile"],
     ).toEqual({ "store-selected": true, "store-fake-ip": false });
+    expect(
+      compileOverride({ ...input, tun: { ...input.tun, mtu: 1400 } }, project).config["tun"],
+    ).toHaveProperty("mtu", 1400);
     expect(input).toEqual(snapshot);
   });
 
@@ -175,6 +179,11 @@ describe("override 行为回归", () => {
         expect(input).toEqual(inputSnapshot);
         expect(result.config["ipv6"]).toBe(true);
         expect(result.config["dns"]).toHaveProperty("ipv6", false);
+        expect(result.config["proxy-groups"]).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({ type: "url-test", tolerance: 50, lazy: true }),
+          ]),
+        );
         expect(result.config["geox-url"]).toEqual({
           geoip: "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@release/geoip.dat",
           geosite: "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@release/geosite.dat",

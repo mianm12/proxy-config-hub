@@ -1,5 +1,6 @@
 enable: true
 stack: mixed
+mtu: 1500
 inet6-address:
   - fdfe:dcba:9876::1/126
 auto-route: true

@@ -243,7 +243,7 @@ rule-pipeline:
 - profile 使用 if-absent + per-field，缺省启用 `store-selected` 和 `store-fake-ip`，保留客户端显式开关。
 - DNS 使用 replace。
 - sniffer 使用 replace。
-- TUN 使用 if-absent + per-field，补全 IPv6 地址、路由、接口探测与 DNS 劫持字段，保留客户端显式的 `enable`、`stack` 等设置。顶层 `ipv6: true` 允许 TUN 接管 IPv6；`dns.ipv6: false` 独立控制 AAAA 空响应，不代表系统 IPv6 被关闭。
+- TUN 使用 if-absent + per-field，补全 MTU、IPv6 地址、路由、接口探测与 DNS 劫持字段，保留客户端显式的 `enable`、`stack`、`mtu` 等设置。缺省 `mtu: 1500` 用于统一宿主未指定时的行为，不保证提速，也不等同于 WAN 接口的 MTU。顶层 `ipv6: true` 允许 TUN 接管 IPv6；`dns.ipv6: false` 独立控制 AAAA 空响应，不代表系统 IPv6 被关闭。
 - `allow-lan: false` 作为 manifest 单值 item，目标为 `allow-lan`，使用 `if-absent`；不得用 truthy/falsy 判断替代 undefined 判断。
 - `proxies`、`proxy-groups`、`rule-providers`、`rules` 由运行时装配器独占，runtime source 和 target 均不得声明这些键。
 
@@ -443,8 +443,11 @@ templates:
     mihomo:
       url: https://www.gstatic.com/generate_204
       interval: 300
-      lazy: false
+      tolerance: 50
+      lazy: true
 ```
+
+自动选择组使用 50 ms 的切换容差，减少小幅延迟波动引起的节点切换；当前节点不可用时仍可切换。`lazy: true` 在未使用该组时跳过定时测速，减少后台请求，但重新使用时测速信息可能不够新。上述设置不保证固定出口。
 
 ### 7.1 成员引用类型
 

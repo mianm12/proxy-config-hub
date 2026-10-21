@@ -18,6 +18,7 @@
         "tun": {
           "enable": true,
           "stack": "gvisor",
+          "mtu": 1400,
           "inet6-address": [
             "fdfe:dcba:9876::1/126"
           ],
@@ -241,7 +242,8 @@
             "type": "url-test",
             "url": "https://www.gstatic.com/generate_204",
             "interval": 300,
-            "lazy": false,
+            "tolerance": 50,
+            "lazy": true,
             "proxies": [
               "香港-Host-01"
             ]
