@@ -112,16 +112,13 @@
           ],
           "nameserver-policy": {
             "asusrouter.com": [
-              "192.168.50.1#DIRECT",
-              "192.168.1.1#DIRECT"
+              "192.168.50.1#DIRECT"
             ],
             "www.asusrouter.com": [
-              "192.168.50.1#DIRECT",
-              "192.168.1.1#DIRECT"
+              "192.168.50.1#DIRECT"
             ],
             "router.asus.com": [
-              "192.168.50.1#DIRECT",
-              "192.168.1.1#DIRECT"
+              "192.168.50.1#DIRECT"
             ],
             "miwifi.com": [
               "192.168.31.1#DIRECT"

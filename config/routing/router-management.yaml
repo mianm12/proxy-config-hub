@@ -4,7 +4,8 @@ brands:
   # https://www.asus.com/global/support/faq/1011245/
   - brand: 华硕
     domains: [asusrouter.com, www.asusrouter.com, router.asus.com]
-    dns: [192.168.50.1, 192.168.1.1]
+    # 1.1 的否定答案会抢先于 50.1 的正确答案；旧网段应替换此地址，不追加候选。
+    dns: [192.168.50.1]
   # https://www.mi.com/service/miwifi/firstuse
   - brand: 小米 / Redmi
     domains: [miwifi.com, www.miwifi.com]

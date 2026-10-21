@@ -100,7 +100,9 @@ describe("override 行为回归", () => {
       expect.arrayContaining(["rule-set:router-management", "rule-set:private"]),
     );
     expect(policy).toMatchObject({
-      "asusrouter.com": ["192.168.50.1#DIRECT", "192.168.1.1#DIRECT"],
+      "asusrouter.com": ["192.168.50.1#DIRECT"],
+      "www.asusrouter.com": ["192.168.50.1#DIRECT"],
+      "router.asus.com": ["192.168.50.1#DIRECT"],
       "rule-set:cn,geolocation-cn": direct,
     });
     expect(result["ipv6"]).toBe(false);
