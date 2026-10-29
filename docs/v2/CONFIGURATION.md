@@ -743,6 +743,8 @@ profiles:
 
 Sub-Store 中优先使用 `ProxyUtils.getISO` 识别地区，再回落到内置 catalog；Emoji 始终由最终 ISO 生成。无法识别的节点不会删除，而是输出 `🏳️ ZZ` 并产生 `RENAME_UNKNOWN_REGION` warning。
 
+地区识别前，`type: ss` 节点会从名称副本中移除独立的 `SS`、`SS2022`、`Shadowsocks` 和 `Shadowsocks2022` 协议标签（忽略大小写，`2022` 前可有空白、连字符或下划线），避免将 `SS2022` 中的 `SS` 误判为南苏丹。例如 `VIRCS-US-SS2022` 识别为美国，只有 `SS2022` 的名称归为未知地区。SS 节点仅写 `SS` 无法区分协议与地区，应使用 `南苏丹`、`🇸🇸` 或 `SSD` 明确地区。清理同时适用于宿主识别和 catalog 后备，不改变原始节点、协议字段及特征提取。
+
 内置特征固定按网络版本、接入属性、运营商/优化、路线、用途、传输/安全的顺序输出。`V6/IPv6` 统一为 `IPv6`，路线类按 `IPLC/IEPL > 专线 > 中转 > 直连` 只保留最具体项，`XHTTP/REALITY/Vision/TLS/CDN` 统一拼写。`extra-traits` 进行大小写不敏感的字面匹配，并按声明顺序追加配置拼写。
 
 重命名前会跳过强确定的订阅信息项：流量、到期、重置，以“建议/提示/公告/通知”开头的提示，以及同时包含官网类关键词和 URL 的广告。普通 `GB` 地区代码、含“测试”的节点名、普通 URL 或单独出现的英文 `Traffic` 不会被过滤。被跳过的项产生 `RENAME_SUBSCRIPTION_METADATA_SKIPPED` warning。

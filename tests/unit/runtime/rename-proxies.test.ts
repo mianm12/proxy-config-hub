@@ -23,6 +23,15 @@ const US: RegionIr = {
   aliases: [],
   cities: [],
 };
+const SS: RegionIr = {
+  id: "SS",
+  name: "南苏丹",
+  emoji: "🇸🇸",
+  codes: ["SS", "SSD"],
+  names: { zh: ["南苏丹"], en: ["South Sudan"] },
+  aliases: [],
+  cities: [],
+};
 const PROFILE: RenameProfileIr = {
   id: "fixture",
   fields: ["subscription", "flag", "iso", "protocol", "traits", "multiplier", "sequence"],
@@ -154,6 +163,68 @@ describe("renameProxies", () => {
 
     expect(result.proxies[0]?.name).toBe("[节点] 🇹🇼 TW [hysteria2] 家宽 直连 01");
   });
+
+  it.each(["VIRCS-US-SS2022-self-chain", "US [SS] 01", "SS-US-01", "US_SS_2022_01", "美国SS2022"])(
+    "SS 协议标签不会覆盖名称中的地区：%s",
+    (name) => {
+      // 宿主的 ISO 匹配允许数字作为边界，且 SS 的枚举顺序早于 US。
+      const hostResolver = (value: string): string | undefined =>
+        /(^|[^a-zA-Z])SS([^a-zA-Z]|$)/u.test(value) ? "SS" : undefined;
+      const input = [{ name, type: "ss", server: "192.0.2.1" }];
+      const snapshot = structuredClone(input);
+      const result = renameProxies(input, PROFILE, [US], hostResolver);
+
+      expect(result.proxies[0]?.name).toBe("[节点] 🇺🇸 US [ss] 01");
+      expect(result.proxies[0]?.["server"]).toBe("192.0.2.1");
+      expect(input).toEqual(snapshot);
+    },
+  );
+
+  it("只有 SS 协议标签时保留为未知地区", () => {
+    const result = renameProxies([{ name: "SS2022 01", type: "ss" }], PROFILE, [US], (name) =>
+      name.includes("SS") ? "SS" : undefined,
+    );
+
+    expect(result.proxies[0]?.name).toBe("[节点] 🏳️ ZZ [ss] 01");
+    expect(result.diagnostics).toContainEqual(
+      expect.objectContaining({
+        code: "RENAME_UNKNOWN_REGION",
+        context: { index: 0, name: "SS2022 01" },
+      }),
+    );
+  });
+
+  it("内置 catalog 也忽略协议标签，且不产生虚假的地区冲突", () => {
+    const result = renameProxies([{ name: "SS2022-US", type: "ss" }], PROFILE, [SS, US]);
+
+    expect(result.proxies[0]?.name).toBe("[节点] 🇺🇸 US [ss] 01");
+    expect(result.diagnostics).toEqual([]);
+  });
+
+  it.each(["南苏丹 SS2022 01", "🇸🇸 SS2022 01"])("保留真实南苏丹信号：%s", (name) => {
+    const result = renameProxies([{ name, type: "ss" }], PROFILE, [US], (value) =>
+      /南苏丹|🇸🇸/u.test(value) ? "SS" : undefined,
+    );
+
+    expect(result.proxies[0]?.name).toBe("[节点] 🇸🇸 SS [ss] 01");
+  });
+
+  it("其他协议的 SS 地区代码仍可由宿主识别", () => {
+    const result = renameProxies([{ name: "SS 01", type: "trojan" }], PROFILE, [US], (name) =>
+      name.includes("SS") ? "SS" : undefined,
+    );
+
+    expect(result.proxies[0]?.name).toBe("[节点] 🇸🇸 SS [trojan] 01");
+  });
+
+  it.each(["SSD SS2022 01", "South Sudan Shadowsocks2022 01"])(
+    "协议清理保留完整地区代码与名称：%s",
+    (name) => {
+      const result = renameProxies([{ name, type: "ss" }], PROFILE, [SS]);
+
+      expect(result.proxies[0]?.name).toBe("[节点] 🇸🇸 SS [ss] 01");
+    },
+  );
 
   it.each([
     ["新加坡", "SG", "🇸🇬"],

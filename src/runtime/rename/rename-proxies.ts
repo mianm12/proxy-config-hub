@@ -84,10 +84,16 @@ function resolveIso(
   hostResolver: GeoIsoResolver | undefined,
   diagnostics: Diagnostic[],
   index: number,
+  protocol: string | undefined,
 ): string {
-  if (name !== undefined && hostResolver !== undefined) {
+  // SS 同时是协议缩写和地区代码；只清理 SS 节点的独立协议标签，避免覆盖真实地区信号。
+  const regionName =
+    protocol === "ss"
+      ? name?.replace(/(^|[^a-z0-9])(?:ss|shadowsocks)(?:[-_\s]?2022)?(?=$|[^a-z0-9])/giu, "$1 ")
+      : name;
+  if (regionName !== undefined && hostResolver !== undefined) {
     try {
-      const rawIso = hostResolver(name);
+      const rawIso = hostResolver(regionName);
       const iso = normalizeRegionCode(rawIso);
       if (iso !== undefined) return iso;
       if (rawIso !== undefined) {
@@ -108,8 +114,8 @@ function resolveIso(
     }
   }
 
-  if (name !== undefined) {
-    const resolution = resolveRegion(name, catalog);
+  if (regionName !== undefined) {
+    const resolution = resolveRegion(regionName, catalog);
     diagnostics.push(...resolution.diagnostics);
     const catalogIso = normalizeRegionCode(resolution.region?.id ?? resolution.region?.codes[0]);
     if (catalogIso !== undefined) return catalogIso;
@@ -277,7 +283,7 @@ function renameProxies(
         context: { index, reason: protocolResult.kind },
       });
     }
-    const iso = resolveIso(name, catalog, hostResolver, diagnostics, index);
+    const iso = resolveIso(name, catalog, hostResolver, diagnostics, index, protocol);
     const values: RenameValues = {
       subscription: subscription.value,
       flag: isoToFlag(iso),

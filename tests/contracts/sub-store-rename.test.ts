@@ -167,6 +167,24 @@ describe("Sub-Store rename bundle", () => {
     expect(result.map(({ name }) => name)).toEqual(["[订阅] 🇰🇭 KH [trojan] 01"]);
   });
 
+  it("SS2022 节点的协议标签不会被宿主识别为南苏丹", async () => {
+    const runtime = loadOperator({ profile: "self_hosted" }, (name) =>
+      /(^|[^a-zA-Z])SS([^a-zA-Z]|$)/u.test(name) ? "SS" : undefined,
+    );
+    const input = {
+      name: "VIRCS-US-SS2022",
+      type: "ss",
+      _subDisplayName: "自建-落地",
+      server: "192.0.2.1",
+      port: 24443,
+    };
+    const result = await runtime.operator([input], "ClashMeta", {});
+
+    expect(result[0]).toEqual({ ...input, name: "[自建-落地] 🇺🇸 US [ss] vircs 01" });
+    expect(input.name).toBe("VIRCS-US-SS2022");
+    expect(runtime.logs).toEqual([]);
+  });
+
   it("产物不包含构建期依赖、Node API、绝对路径或额外文件", () => {
     const bundle = fs.readFileSync(RENAME_BUNDLE, "utf8");
 
